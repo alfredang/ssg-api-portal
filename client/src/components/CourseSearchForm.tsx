@@ -3,6 +3,7 @@ import { useState } from 'react';
 interface CourseSearchFormProps {
   onSearch: (params: {
     uen: string;
+    keyword: string;
     dateFrom: string;
     dateTo: string;
     pageSize: number;
@@ -22,6 +23,7 @@ function getDefaultDateTo() {
 
 export default function CourseSearchForm({ onSearch, loading }: CourseSearchFormProps) {
   const [uen, setUen] = useState('201200696W');
+  const [keyword, setKeyword] = useState('');
   const [dateFrom, setDateFrom] = useState(getDefaultDateFrom);
   const [dateTo, setDateTo] = useState(getDefaultDateTo);
   const [pageSize, setPageSize] = useState(10);
@@ -31,6 +33,7 @@ export default function CourseSearchForm({ onSearch, loading }: CourseSearchForm
     if (!uen.trim()) return;
     onSearch({
       uen: uen.trim(),
+      keyword: keyword.trim(),
       dateFrom,
       dateTo,
       pageSize,
@@ -47,6 +50,18 @@ export default function CourseSearchForm({ onSearch, loading }: CourseSearchForm
           value={uen}
           onChange={(e) => setUen(e.target.value)}
           placeholder="e.g. 201200696W"
+          disabled={loading}
+        />
+      </div>
+
+      <div className="search-input-group">
+        <label htmlFor="keyword">Keyword</label>
+        <input
+          id="keyword"
+          type="text"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          placeholder="e.g. data analytics"
           disabled={loading}
         />
       </div>

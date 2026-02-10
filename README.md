@@ -1,6 +1,8 @@
-# SSG Course Directory Explorer
+# SSG API Portal
 
-A React web app to look up course details from the SSG-WSG (SkillsFuture Singapore) API by course reference number. Uses OAuth 2.0 client credentials for authentication via an Express backend proxy.
+A React web app to explore the SSG-WSG (SkillsFuture Singapore) API. Look up course details by reference number, search courses by UEN and keyword, with OAuth 2.0 and mTLS certificate authentication via an Express backend proxy.
+
+![SSG API Portal](ssg-api-portal.png)
 
 ## Architecture
 
@@ -12,12 +14,13 @@ Browser (React) → /api/courses/:refNo → Express Proxy → SSG API (public-ap
 ```
 
 - **Frontend**: Vite + React + TypeScript
-- **Backend**: Express (OAuth token management + API proxy)
-- **API**: SSG-WSG Course Directory API v1.2
+- **Backend**: Express (OAuth token management + mTLS certificate auth + API proxy)
+- **APIs**: SSG-WSG Course Directory API v1.2 (OAuth) + Course Registry API v8.0 (mTLS)
 
 ## Features
 
-- Search courses by reference number (e.g. `SCN-198202248E-01-CRS-N-0027685`)
+- **Course Lookup** — Search by reference number (e.g. `SCN-198202248E-01-CRS-N-0027685`)
+- **Course Search** — Search by UEN, keyword, date range with server-side and client-side filtering
 - Option to include/exclude expired courses
 - Displays course overview (title, objective, content, cost, duration)
 - Training provider details (name, address, contact persons)

@@ -226,7 +226,7 @@ router.post('/courses/search', async (req, res) => {
 
     if (desiredTotal <= SSG_MAX_PAGE_SIZE) {
       // Single page fetch — fits within API limit
-      const searchBody = { ...body, pageSize: desiredTotal, page: requestedPage || 0 };
+      const searchBody = { ...body, keyword: keyword || '', pageSize: desiredTotal, page: requestedPage || 0 };
       console.log('Course search request (single page):', JSON.stringify(searchBody));
       const data = await fetchCourseSearchPage(searchBody, uen);
       return res.json(data);
@@ -241,7 +241,7 @@ router.post('/courses/search', async (req, res) => {
     let lastStatus = 200;
 
     for (let i = 0; i < pagesToFetch; i++) {
-      const searchBody = { ...body, pageSize: SSG_MAX_PAGE_SIZE, page: i };
+      const searchBody = { ...body, keyword: keyword || '', pageSize: SSG_MAX_PAGE_SIZE, page: i };
       console.log(`  Fetching page ${i}...`);
       const pageData = await fetchCourseSearchPage(searchBody, uen);
 
