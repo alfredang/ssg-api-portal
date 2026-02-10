@@ -1,10 +1,10 @@
-import type { Course, CodeDescription } from '../types/course';
+import type { Course, CodeDescription, Tag } from '../types/course';
 
 interface CourseMetadataProps {
   course: Course;
 }
 
-function TagList({ label, items }: { label: string; items?: CodeDescription[] }) {
+function TagList({ label, items }: { label: string; items?: (CodeDescription | Tag)[] }) {
   if (!items || items.length === 0) return null;
   return (
     <div className="tag-group">
@@ -20,14 +20,15 @@ function TagList({ label, items }: { label: string; items?: CodeDescription[] })
 
 export default function CourseMetadata({ course }: CourseMetadataProps) {
   const hasAnyMetadata =
-    course.modeOfTrainings?.length ||
-    course.methodOfDeliveries?.length ||
-    course.mediumOfInstructions?.length ||
-    course.areaOfTrainings?.length ||
-    course.jobLevels?.length ||
-    course.sectors?.length ||
-    course.targetWorkforceSegment ||
-    course.publicFundingIndicator;
+    course.modesOfLearning?.length ||
+    course.languages?.length ||
+    course.tags?.length ||
+    course.skills?.length ||
+    course.bundles?.length ||
+    course.areaOfTraining ||
+    course.targetAudience ||
+    course.natureOfTraining ||
+    course.suitableJobRoles;
 
   if (!hasAnyMetadata) return null;
 
@@ -35,55 +36,77 @@ export default function CourseMetadata({ course }: CourseMetadataProps) {
     <div className="card course-metadata">
       <h3>Additional Details</h3>
 
-      <TagList label="Mode of Training" items={course.modeOfTrainings} />
-      <TagList label="Method of Delivery" items={course.methodOfDeliveries} />
-      <TagList label="Medium of Instruction" items={course.mediumOfInstructions} />
-      <TagList label="Area of Training" items={course.areaOfTrainings} />
-      <TagList label="Job Levels" items={course.jobLevels} />
-      <TagList label="Sectors" items={course.sectors} />
-
-      {course.targetWorkforceSegment && (
+      {course.modesOfLearning?.length > 0 && (
         <div className="tag-group">
-          <span className="tag-label">Target Workforce</span>
+          <span className="tag-label">Modes of Learning</span>
           <div className="tags">
-            <span className="tag">{course.targetWorkforceSegment.description}</span>
-          </div>
-        </div>
-      )}
-
-      {course.publicFundingIndicator && (
-        <div className="tag-group">
-          <span className="tag-label">Public Funding</span>
-          <div className="tags">
-            <span className="tag">{course.publicFundingIndicator.description}</span>
-          </div>
-        </div>
-      )}
-
-      {course.jobRoles?.length > 0 && (
-        <div className="tag-group">
-          <span className="tag-label">Related Job Roles</span>
-          <div className="tags">
-            {course.jobRoles.map((role, i) => (
-              <span key={i} className="tag">
-                {role.title}
-                {role.salaryRange && ` ($${role.salaryRange})`}
-              </span>
+            {course.modesOfLearning.map((m, i) => (
+              <span key={i} className="tag">{m.type.description} ({m.hours}h)</span>
             ))}
           </div>
         </div>
       )}
 
-      {course.modules?.length > 0 && (
-        <div className="modules-section">
-          <h4>Modules</h4>
-          <ul>
-            {course.modules.map((mod, i) => (
-              <li key={i}>
-                <strong>{mod.courseReferenceNumber}</strong> - {mod.courseTitle}
-              </li>
+      <TagList label="Languages" items={course.languages} />
+      <TagList label="Tags" items={course.tags} />
+
+      {course.areaOfTraining && (
+        <div className="tag-group">
+          <span className="tag-label">Area of Training</span>
+          <div className="tags">
+            <span className="tag">{course.areaOfTraining.description}</span>
+          </div>
+        </div>
+      )}
+
+      {course.targetAudience && (
+        <div className="tag-group">
+          <span className="tag-label">Target Audience</span>
+          <div className="tags">
+            <span className="tag">{course.targetAudience.description}</span>
+          </div>
+        </div>
+      )}
+
+      {course.natureOfTraining && (
+        <div className="tag-group">
+          <span className="tag-label">Nature of Training</span>
+          <div className="tags">
+            <span className="tag">{course.natureOfTraining.description}</span>
+          </div>
+        </div>
+      )}
+
+      {course.suitableJobRoles && (
+        <div className="tag-group">
+          <span className="tag-label">Suitable Job Roles</span>
+          <div className="tags">
+            {course.suitableJobRoles.split(',').map((role, i) => (
+              <span key={i} className="tag">{role.trim()}</span>
             ))}
-          </ul>
+          </div>
+        </div>
+      )}
+
+      {course.skills?.length > 0 && (
+        <div className="tag-group">
+          <span className="tag-label">Skills</span>
+          <div className="tags">
+            {course.skills.map((skill, i) => (
+              <span key={i} className="tag">{skill.description} ({skill.framework})</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {course.bundles?.length > 0 && (
+        <div className="tag-group">
+          <span className="tag-label">Bundles</span>
+          <div className="tags">
+            {course.bundles.map((b, i) => (
+              <span key={i} className="tag">{b.description} ({b.type})</span>
+            ))}
+          </div>
         </div>
       )}
     </div>

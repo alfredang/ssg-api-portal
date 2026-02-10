@@ -6,6 +6,9 @@ const proxyRoutes = require('./proxy');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Parse JSON request bodies
+app.use(express.json());
+
 // API proxy routes
 app.use('/api', proxyRoutes);
 

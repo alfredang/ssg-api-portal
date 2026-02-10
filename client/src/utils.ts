@@ -1,15 +1,11 @@
 /**
- * Formats an SSG API date integer (YYYYMMDD) to a readable string.
- * e.g. 20191022 → "22 Oct 2019"
+ * Formats an ISO date string to a readable string.
+ * e.g. "2026-02-05T02:50:08Z" → "5 Feb 2026"
  */
-export function formatDate(dateInt: number | undefined | null): string {
-  if (!dateInt) return '-';
-  const str = String(dateInt);
-  if (str.length !== 8) return str;
-  const year = str.slice(0, 4);
-  const month = parseInt(str.slice(4, 6), 10) - 1;
-  const day = str.slice(6, 8);
-  const date = new Date(parseInt(year), month, parseInt(day));
+export function formatDate(dateStr: string | undefined | null): string {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return String(dateStr);
   return date.toLocaleDateString('en-SG', {
     day: 'numeric',
     month: 'short',

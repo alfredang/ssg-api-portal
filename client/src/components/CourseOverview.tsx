@@ -11,13 +11,11 @@ export default function CourseOverview({ course }: CourseOverviewProps) {
       <div className="course-header">
         <h2>{course.title}</h2>
         <div className="badges">
-          {course.status && (
-            <span className={`badge badge-${course.status.code === '1' ? 'active' : 'inactive'}`}>
-              {course.status.description}
-            </span>
-          )}
-          {course.category && (
-            <span className="badge badge-category">{course.category.description}</span>
+          <span className={`badge badge-${course.isActive === 'Yes' ? 'active' : 'inactive'}`}>
+            {course.isActive === 'Yes' ? 'Active' : 'Inactive'}
+          </span>
+          {course.trainingMode && (
+            <span className="badge badge-category">{course.trainingMode.description}</span>
           )}
         </div>
       </div>
@@ -27,70 +25,70 @@ export default function CourseOverview({ course }: CourseOverviewProps) {
           <span className="meta-label">Reference No.</span>
           <span className="meta-value">{course.referenceNumber}</span>
         </div>
-        {course.skillsConnectReferenceNumber && (
+        {course.migratedReferenceNumber && (
           <div className="meta-item">
-            <span className="meta-label">SkillsConnect Ref</span>
-            <span className="meta-value">{course.skillsConnectReferenceNumber}</span>
+            <span className="meta-label">Migrated Ref</span>
+            <span className="meta-value">{course.migratedReferenceNumber}</span>
           </div>
         )}
         <div className="meta-item">
           <span className="meta-label">Duration</span>
           <span className="meta-value">
-            {course.numberOfTrainingDay} day(s) / {course.totalTrainingDurationHour} hour(s)
+            {course.noOfTrainingDays} day(s) / {course.totalTrainingDurationHours} hour(s)
           </span>
         </div>
         <div className="meta-item">
           <span className="meta-label">Cost per Trainee</span>
           <span className="meta-value">
-            {course.totalCostOfTrainingPerTrainee != null
-              ? `$${course.totalCostOfTrainingPerTrainee.toFixed(2)}`
+            {course.costOfTrainingPerTrainee?.cost != null
+              ? `${course.costOfTrainingPerTrainee.currency || 'SGD'} $${course.costOfTrainingPerTrainee.cost.toFixed(2)}`
               : 'N/A'}
           </span>
         </div>
-        {course.qualificationAttained && (
+        {course.areaOfTraining && (
           <div className="meta-item">
-            <span className="meta-label">Qualification</span>
-            <span className="meta-value">{course.qualificationAttained.description}</span>
+            <span className="meta-label">Area of Training</span>
+            <span className="meta-value">{course.areaOfTraining.description}</span>
           </div>
         )}
-        {course.initiatives && (
+        {course.programmeType && (
           <div className="meta-item">
-            <span className="meta-label">Initiatives</span>
-            <span className="meta-value">{course.initiatives}</span>
+            <span className="meta-label">Programme Type</span>
+            <span className="meta-value">{course.programmeType.description}</span>
           </div>
         )}
-        {course.createDate && (
+        {course.meta?.createdDate && (
           <div className="meta-item">
             <span className="meta-label">Created</span>
-            <span className="meta-value">{formatDate(course.createDate)}</span>
+            <span className="meta-value">{formatDate(course.meta.createdDate)}</span>
           </div>
         )}
-        {course.isExaminable && (
+        {course.isCourseExaminable && (
           <div className="meta-item">
             <span className="meta-label">Examinable</span>
-            <span className="meta-value">{course.isExaminable}</span>
+            <span className="meta-value">{course.isCourseExaminable}</span>
           </div>
         )}
       </div>
 
-      {course.objective && (
+      {course.objectives && (
         <div className="course-section">
-          <h3>Objective</h3>
-          <p>{course.objective}</p>
+          <h3>Objectives</h3>
+          <p>{course.objectives}</p>
         </div>
       )}
 
-      {course.content && (
+      {course.description && (
         <div className="course-section">
-          <h3>Content</h3>
-          <p>{course.content}</p>
+          <h3>Description</h3>
+          <p>{course.description}</p>
         </div>
       )}
 
-      {course.entryRequirement && (
+      {course.minimumEntryRequirements && (
         <div className="course-section">
           <h3>Entry Requirements</h3>
-          <div dangerouslySetInnerHTML={{ __html: course.entryRequirement }} />
+          <p>{course.minimumEntryRequirements}</p>
         </div>
       )}
     </div>
