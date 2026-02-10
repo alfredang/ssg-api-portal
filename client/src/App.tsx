@@ -179,7 +179,6 @@ function App() {
   const loading = lookupApi.loading || searchApi.loading;
   const error = lookupApi.error || searchApi.error;
   const rawCourses = lookupApi.data?.data?.courses || searchApi.data?.data?.courses;
-  const searchMeta = searchApi.data?.meta;
 
   const courses = useMemo(() => {
     if (!rawCourses) return undefined;

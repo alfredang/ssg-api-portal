@@ -20,10 +20,17 @@ const router = express.Router();
 // ─────────────────────────────────────────────────────────────────
 
 // mTLS credentials for certificate-authenticated APIs (api.ssg-wsg.sg)
-const certPath = process.env.CERT_PATH || './server/.cert/skilleto_tertiary_cert_v3.pem';
-const keyPath = process.env.CERT_KEY_PATH || './server/.cert/skilleto_private_key_v3.pem';
-const cert = fs.readFileSync(path.resolve(certPath));
-const key = fs.readFileSync(path.resolve(keyPath));
+// Support base64-encoded certs via env vars (for Vercel/serverless) or file paths (for local dev)
+let cert, key;
+if (process.env.CERT_PEM_BASE64 && process.env.CERT_KEY_PEM_BASE64) {
+  cert = Buffer.from(process.env.CERT_PEM_BASE64, 'base64');
+  key = Buffer.from(process.env.CERT_KEY_PEM_BASE64, 'base64');
+} else {
+  const certPath = process.env.CERT_PATH || './server/.cert/skilleto_tertiary_cert_v3.pem';
+  const keyPath = process.env.CERT_KEY_PATH || './server/.cert/skilleto_private_key_v3.pem';
+  cert = fs.readFileSync(path.resolve(certPath));
+  key = fs.readFileSync(path.resolve(keyPath));
+}
 const certApiBase = process.env.SSG_CERT_API_BASE_URL || 'https://api.ssg-wsg.sg';
 
 // OAuth helper for public APIs (public-api.ssg-wsg.sg)

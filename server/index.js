@@ -4,7 +4,6 @@ const path = require('path');
 const proxyRoutes = require('./proxy');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
 
 // Parse JSON request bodies
 app.use(express.json());
@@ -20,6 +19,13 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+// Export for Vercel serverless
+module.exports = app;
+
+// Start server only when run directly
+if (require.main === module) {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
