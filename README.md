@@ -28,12 +28,16 @@ SSG API Portal is a React web app for exploring the SSG-WSG (SkillsFuture Singap
 
 | Feature | Description |
 |---------|-------------|
-| **Course Lookup** | Search by course reference number (e.g. `SCN-198202248E-01-CRS-N-0027685`) |
-| **Course Search** | Search by UEN, keyword, and date range with server-side and client-side filtering |
-| **Course Details** | View course overview, objectives, content, cost, and duration |
-| **Training Providers** | View provider name, address, and contact persons |
-| **Course Runs** | Browse registration dates, schedules, venues, and vacancy info |
-| **Metadata** | Explore mode of training, delivery method, sectors, and job roles |
+| **Course Lookup** | Search by course reference number |
+| **Course Search** | Search by UEN, keyword, and date range with filtering |
+| **Course Details** | View course overview, objectives, cost, and duration |
+| **Course Feedback** | Retrieve course quality and outcome ratings |
+| **Training Providers** | Course sessions, attendance, publish/edit course runs, trainer management |
+| **Grant Calculator** | Baseline scheme, personalised grants, search and view grants |
+| **SkillsFuture Credit Pay** | View/cancel claims, upload docs, encrypt/decrypt requests |
+| **Enrolments** | Create, update, search, view enrolments and fee collections |
+| **Assessments** | Create, update/void, search, view assessments |
+| **Known API Issues** | Live dashboard showing API status (403, 200) from curl tests |
 | **Dual Auth** | OAuth 2.0 for public APIs + mTLS certificates for registry APIs |
 
 ## Tech Stack
@@ -43,7 +47,7 @@ SSG API Portal is a React web app for exploring the SSG-WSG (SkillsFuture Singap
 | **Frontend** | React 19, TypeScript 5.9, Vite 7 |
 | **Backend** | Express 5, Node.js 22 |
 | **Authentication** | OAuth 2.0 (client credentials) + mTLS (client certificates) |
-| **APIs** | SSG-WSG Course Directory API v1.2 + Course Registry API v8.0 |
+| **APIs** | SSG-WSG Course, Grant, SF Credit, Enrolment, Assessment APIs |
 | **Deployment** | Vercel (serverless functions + static hosting) |
 | **HTTP Client** | Axios (frontend), native `https` (backend mTLS) |
 
@@ -191,13 +195,35 @@ vercel --prod
 
 ## API Reference
 
-This app proxies requests to two SSG-WSG APIs:
+This app proxies requests to SSG-WSG production APIs with cert-first + OAuth fallback:
 
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/api/courses/:refNo` | GET | OAuth | Lookup course by reference number |
-| `/api/courses/details/:refNo` | GET | mTLS | Get detailed course information |
-| `/api/courses/search` | POST | mTLS | Search courses by UEN, keyword, date range |
+| Endpoint | Method | Version | Description |
+|----------|--------|---------|-------------|
+| `/api/courses/:refNo` | GET | v1.2 | Lookup course by reference number |
+| `/api/courses/details/:refNo` | GET | v8.0 | Get detailed course information |
+| `/api/courses/search` | POST | v8.0 | Search courses by UEN, keyword, date range |
+| `/api/courses/:refNo/quality` | GET | v2.0 | Course quality ratings |
+| `/api/courses/:refNo/outcome` | GET | v2.0 | Course outcome ratings |
+| `/api/courses/runs/:runId/sessions` | GET | v1.5 | Course sessions |
+| `/api/courses/runs/:runId/sessions/attendance` | GET | v1.5 | Session attendance |
+| `/api/courses/courseRuns/reference` | GET | v1.0 | Course runs by reference |
+| `/api/grants/baseline` | POST | v3.0 | Grant calculator — baseline |
+| `/api/grants/personalised` | POST | v3.0 | Grant calculator — personalised |
+| `/api/grants/search` | POST | v1.0 | Search grants |
+| `/api/grants/details/:grantRefNo` | GET | v1 | View grant details |
+| `/api/grants/codes/fundingComponent` | GET | v1 | Grants code lookup |
+| `/api/sf-credits/claims/:claimId` | GET | v2 | View SF credit claim |
+| `/api/sf-credits/claims/:claimId/cancel` | POST | v2 | Cancel SF credit claim |
+| `/api/sf-credits/claims/:claimId/supportingdocuments` | POST | v2 | Upload supporting docs |
+| `/api/sf-credits/claims/encryptRequests` | POST | v2 | Encrypt claim request |
+| `/api/sf-credits/claims/decryptRequests` | POST | v2 | Decrypt claim request |
+| `/api/enrolments` | POST | v3.0 | Create enrolment |
+| `/api/enrolments/details/:refNo` | GET/POST | v3.0 | View/Update enrolment |
+| `/api/enrolments/search` | POST | v3.0 | Search enrolments |
+| `/api/enrolments/feeCollections/:refNo` | POST | v3.0 | Update fee collection |
+| `/api/assessments` | POST | v1 | Create assessment |
+| `/api/assessments/details/:refNo` | GET/POST | v1 | View/Update assessment |
+| `/api/assessments/search` | POST | v1 | Search assessments |
 
 ## Contributing
 

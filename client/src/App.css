@@ -607,3 +607,118 @@ td {
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
+
+/* Course Quality */
+.quality-respondents {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.quality-ratings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.quality-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.quality-label {
+  width: 160px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #374151;
+  flex-shrink: 0;
+}
+
+.quality-stars {
+  font-size: 1.1rem;
+  color: #f59e0b;
+  letter-spacing: 0.1em;
+}
+
+.quality-score {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-left: auto;
+}
+
+.quality-meta {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+/* Session Attendance */
+.attendance-run-info {
+  margin-bottom: 1.5rem;
+}
+
+.attendance-session {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.attendance-session-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.75rem;
+}
+
+.attendance-table-wrapper {
+  overflow-x: auto;
+  margin-top: 0.75rem;
+}
+
+.attendance-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.attendance-table th,
+.attendance-table td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.attendance-table th {
+  font-weight: 600;
+  color: #374151;
+  background: #f9fafb;
+  white-space: nowrap;
+}
+
+.attendance-table td {
+  color: #4b5563;
+}
+
+.attendance-status {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.attendance-status--confirmed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.attendance-status--pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.attendance-status--absent {
+  background: #fee2e2;
+  color: #991b1b;
+}
