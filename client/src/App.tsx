@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useApi } from './hooks/useApi';
-import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications, postSkillExtract, postSkillSearch, getSkillsFrameworkJobs, getSkillsFrameworkSkills, getSkillsFrameworkGscCodes, getSkillsFrameworkTscCodes, getSkillsFrameworkTscCodesDetails, getSkillsFrameworkCcsDetails, getSkillsFrameworkTscDetails, getSkillsFrameworkJobRoles, getSkillsFrameworkJobRoleProfile, getSkillsFrameworkOccupations, getSkillsFrameworkJobRoleCodes, getSkillsFrameworkSectorProfile, generateCertificate, generateKeypair, generateEncryptionKey, getTrainingProviderCourses } from './api/courseApi';
+import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications, postSkillExtract, postSkillSearch, getSkillsFrameworkJobs, getSkillsFrameworkSkills, getSkillsFrameworkGscCodes, getSkillsFrameworkTscCodes, getSkillsFrameworkTscCodesDetails, getSkillsFrameworkCcsDetails, getSkillsFrameworkTscDetails, getSkillsFrameworkJobRoles, getSkillsFrameworkJobRoleProfile, getSkillsFrameworkOccupations, getSkillsFrameworkJobRoleCodes, generateCertificate, generateKeypair, generateEncryptionKey, getTrainingProviderCourses } from './api/courseApi';
 import SearchForm from './components/SearchForm';
 import CourseSearchForm from './components/CourseSearchForm';
 import CourseOverview from './components/CourseOverview';
@@ -26,7 +26,8 @@ type Page = 'course-lookup' | 'course-search' | 'popular-courses' | 'tp-courses'
   | 'sfw-job-roles' | 'sfw-skills' | 'sfw-gsc-codes' | 'sfw-ccs-details' | 'sfw-tsc-codes' | 'sfw-tsc-codes-details' | 'sfw-tsc-details' | 'sfw-job-roles-search' | 'sfw-job-role-profile' | 'sfw-occupations' | 'sfw-job-role-codes' | 'sfw-sector-profile'
   | 'tools-generate-cert' | 'tools-generate-keypair' | 'tools-encryption-key'
   | 'default-values'
-  | 'api-issues';
+  | 'api-issues'
+  | 'api-references';
 
 interface NavCategory {
   label: string;
