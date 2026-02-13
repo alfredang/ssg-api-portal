@@ -381,3 +381,20 @@ export async function postSkillExtract(body: { textData: string; modelVersion: s
   const response = await apiClient.post<Record<string, unknown>>('/skill-extract', body);
   return response.data;
 }
+
+export async function postSkillSearch(body: { textData: string; modelVersion: string }) {
+  const response = await apiClient.post<Record<string, unknown>>('/skill-search', body);
+  return response.data;
+}
+
+// Skills Framework APIs
+
+export async function getSkillsFrameworkJobs(params: Record<string, string>) {
+  const response = await apiClient.get<Record<string, unknown>>('/skills-framework/jobs', { params });
+  return response.data;
+}
+
+export async function getSkillsFrameworkSkills(params: Record<string, string>) {
+  const response = await apiClient.get<Record<string, unknown>>('/skills-framework/skills', { params });
+  return response.data;
+}

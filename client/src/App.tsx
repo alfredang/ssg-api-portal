@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useApi } from './hooks/useApi';
-import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications, postSkillExtract } from './api/courseApi';
+import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications, postSkillExtract, postSkillSearch, getSkillsFrameworkJobs, getSkillsFrameworkSkills } from './api/courseApi';
 import SearchForm from './components/SearchForm';
 import CourseSearchForm from './components/CourseSearchForm';
 import CourseOverview from './components/CourseOverview';
@@ -22,9 +22,8 @@ type Page = 'course-lookup' | 'course-search' | 'popular-courses'
   | 'enrol-create' | 'enrol-update' | 'enrol-search' | 'enrol-view' | 'enrol-fee-collection' | 'enrol-codes'
   | 'assess-create' | 'assess-update' | 'assess-search' | 'assess-view' | 'assess-codes'
   | 'sp-qualifications'
-  | 'sea-skill-extract'
-  | 'skills-framework'
-  | 'resources' | 'articles' | 'events'
+  | 'sea-skill-extract' | 'sea-skill-search'
+  | 'sfw-job-roles' | 'sfw-skills'
   | 'api-issues';
 
 interface NavCategory {
@@ -114,12 +113,16 @@ const NAV_ITEMS: NavCategory[] = [
     label: 'SEA',
     children: [
       { id: 'sea-skill-extract', label: 'Skill Extraction' },
+      { id: 'sea-skill-search', label: 'Skill Search' },
     ],
   },
-  { label: 'Skills Framework', id: 'skills-framework' },
-  { label: 'Resources', id: 'resources' },
-  { label: 'Articles', id: 'articles' },
-  { label: 'Events', id: 'events' },
+  {
+    label: 'Skills Framework',
+    children: [
+      { id: 'sfw-job-roles', label: 'Get Job Role Details' },
+      { id: 'sfw-skills', label: 'Get Skills Details' },
+    ],
+  },
   { label: 'Known API Issues', id: 'api-issues' },
 ];
 
@@ -266,6 +269,9 @@ function App() {
   const assessCodesApi = useApi<EnrolmentResponse>();
   const spQualificationsApi = useApi<Record<string, unknown>>();
   const seaSkillExtractApi = useApi<Record<string, unknown>>();
+  const seaSkillSearchApi = useApi<Record<string, unknown>>();
+  const sfwJobRolesApi = useApi<Record<string, unknown>>();
+  const sfwSkillsApi = useApi<Record<string, unknown>>();
 
   const handleLookup = async (params: { refNo: string; uen: string; courseRunStartDate: string }) => {
     searchApi.reset();
@@ -421,6 +427,18 @@ function App() {
     await seaSkillExtractApi.execute(() => postSkillExtract(body));
   };
 
+  const handleSeaSkillSearch = async (body: { textData: string; modelVersion: string }) => {
+    await seaSkillSearchApi.execute(() => postSkillSearch(body));
+  };
+
+  const handleSfwJobRoles = async (params: Record<string, string>) => {
+    await sfwJobRolesApi.execute(() => getSkillsFrameworkJobs(params));
+  };
+
+  const handleSfwSkills = async (params: Record<string, string>) => {
+    await sfwSkillsApi.execute(() => getSkillsFrameworkSkills(params));
+  };
+
   const handleSessionsLookup = async (params: {
     runId: string;
     uen: string;
@@ -502,10 +520,6 @@ function App() {
     'sf-credit-pay': 'SkillsFuture Credit Pay',
     'enrolments': 'Enrolments',
     'assessments': 'Assessments',
-    'skills-framework': 'Skills Framework',
-    'resources': 'Resources',
-    'articles': 'Articles',
-    'events': 'Events',
     'update-trainer': 'Update / Delete Trainer',
   };
 
@@ -3159,6 +3173,181 @@ function App() {
               <h3>Skill Extraction Response</h3>
               <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                 {JSON.stringify(seaSkillExtractApi.data, null, 2)}
+              </pre>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    if (activePage === 'sea-skill-search') {
+      return (
+        <>
+          <h2 className="page-title">Skill Search</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
+            Search for skills from text descriptions. POST <code>/skillSearch</code>.
+          </p>
+          <form className="course-result" onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            handleSeaSkillSearch({
+              textData: fd.get('textData') as string,
+              modelVersion: fd.get('modelVersion') as string,
+            });
+          }}>
+            <div className="form-group">
+              <label htmlFor="ssTextData">Text Data</label>
+              <textarea id="ssTextData" name="textData" rows={5} defaultValue="string" disabled={seaSkillSearchApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="ssModelVersion">Model Version</label>
+              <input id="ssModelVersion" name="modelVersion" type="text" defaultValue="1.1-240712" disabled={seaSkillSearchApi.loading} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button type="submit" disabled={seaSkillSearchApi.loading}>
+                {seaSkillSearchApi.loading ? 'Searching...' : 'Search Skills'}
+              </button>
+            </div>
+          </form>
+          {seaSkillSearchApi.error && <div className="error-alert">{seaSkillSearchApi.error}</div>}
+          {seaSkillSearchApi.loading && <div className="loading">Searching skills...</div>}
+          {seaSkillSearchApi.data && (
+            <div className="course-result" style={{ marginTop: 16 }}>
+              <h3>Skill Search Response</h3>
+              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                {JSON.stringify(seaSkillSearchApi.data, null, 2)}
+              </pre>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    if (activePage === 'sfw-job-roles') {
+      return (
+        <>
+          <h2 className="page-title">Get Job Role Details</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
+            Retrieve job role details from Skills Framework. GET <code>/sfw/skillsFramework/jobs</code> (v1.0).
+          </p>
+          <form className="course-result" onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            const params: Record<string, string> = {};
+            for (const [k, v] of fd.entries()) {
+              if (v) params[k] = v as string;
+            }
+            handleSfwJobRoles(params);
+          }}>
+            <div className="form-group">
+              <label htmlFor="sfwPage">Page</label>
+              <input id="sfwPage" name="page" type="text" defaultValue="1" disabled={sfwJobRolesApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="sfwPageSize">Page Size</label>
+              <input id="sfwPageSize" name="pageSize" type="text" defaultValue="200" disabled={sfwJobRolesApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="sfwSector">Sector Title (optional)</label>
+              <input id="sfwSector" name="sectorTitle" type="text" defaultValue="Wholesale Trade" disabled={sfwJobRolesApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="sfwTrack">Track Title (optional)</label>
+              <input id="sfwTrack" name="trackTitle" type="text" defaultValue="Finance and Regulations" disabled={sfwJobRolesApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="sfwJobrole">Job Role Title (optional)</label>
+              <input id="sfwJobrole" name="jobroleTitle" type="text" defaultValue="Head of Trade Finance" disabled={sfwJobRolesApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="sfwKeytask">Key Task Content (optional)</label>
+              <input id="sfwKeytask" name="keytaskContent" type="text" defaultValue="Manage department's recruitment and retention efforts" disabled={sfwJobRolesApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="sfwSkillTitle">Skill Title (optional)</label>
+              <input id="sfwSkillTitle" name="skillTitle" type="text" defaultValue="Organisational Analysis" disabled={sfwJobRolesApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="sfwVersion">SFW Version (optional)</label>
+              <input id="sfwVersion" name="sfwVersion" type="text" defaultValue="sfw1.0" disabled={sfwJobRolesApi.loading} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button type="submit" disabled={sfwJobRolesApi.loading}>
+                {sfwJobRolesApi.loading ? 'Loading...' : 'Get Job Role Details'}
+              </button>
+            </div>
+          </form>
+          {sfwJobRolesApi.error && <div className="error-alert">{sfwJobRolesApi.error}</div>}
+          {sfwJobRolesApi.loading && <div className="loading">Loading job role details...</div>}
+          {sfwJobRolesApi.data && (
+            <div className="course-result" style={{ marginTop: 16 }}>
+              <h3>Job Role Details Response</h3>
+              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                {JSON.stringify(sfwJobRolesApi.data, null, 2)}
+              </pre>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    if (activePage === 'sfw-skills') {
+      return (
+        <>
+          <h2 className="page-title">Get Skills Details</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
+            Retrieve skills details from Skills Framework. GET <code>/sfw/skillsFramework/skills</code> (v1.0).
+          </p>
+          <form className="course-result" onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            const params: Record<string, string> = {};
+            for (const [k, v] of fd.entries()) {
+              if (v) params[k] = v as string;
+            }
+            handleSfwSkills(params);
+          }}>
+            <div className="form-group">
+              <label htmlFor="sfwsPage">Page</label>
+              <input id="sfwsPage" name="page" type="text" defaultValue="1" disabled={sfwSkillsApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="sfwsPageSize">Page Size</label>
+              <input id="sfwsPageSize" name="pageSize" type="text" defaultValue="200" disabled={sfwSkillsApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="sfwsSector">Sector Title (optional)</label>
+              <input id="sfwsSector" name="sectorTitle" type="text" defaultValue="Wholesale Trade" disabled={sfwSkillsApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="sfwsSkillTitle">Skill Title (optional)</label>
+              <input id="sfwsSkillTitle" name="skillTitle" type="text" defaultValue="Organisational Analysis" disabled={sfwSkillsApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="sfwsTscCode">TSC Code (optional)</label>
+              <input id="sfwsTscCode" name="tscCode" type="text" defaultValue="WST-SPI-5002-1.1" disabled={sfwSkillsApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="sfwsSkillType">Skill Type (optional)</label>
+              <input id="sfwsSkillType" name="skillType" type="text" defaultValue="tsc" disabled={sfwSkillsApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="sfwsVersion">SFW Version (optional)</label>
+              <input id="sfwsVersion" name="sfwVersion" type="text" defaultValue="sfw1.0" disabled={sfwSkillsApi.loading} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button type="submit" disabled={sfwSkillsApi.loading}>
+                {sfwSkillsApi.loading ? 'Loading...' : 'Get Skills Details'}
+              </button>
+            </div>
+          </form>
+          {sfwSkillsApi.error && <div className="error-alert">{sfwSkillsApi.error}</div>}
+          {sfwSkillsApi.loading && <div className="loading">Loading skills details...</div>}
+          {sfwSkillsApi.data && (
+            <div className="course-result" style={{ marginTop: 16 }}>
+              <h3>Skills Details Response</h3>
+              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                {JSON.stringify(sfwSkillsApi.data, null, 2)}
               </pre>
             </div>
           )}

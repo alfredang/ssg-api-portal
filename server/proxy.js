@@ -1717,4 +1717,121 @@ router.post('/skill-extract', async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────────
+// Skills Framework APIs
+// ─────────────────────────────────────────────────────────────────
+
+// GET /api/skills-framework/jobs — Get Job Role Details
+// mTLS Certificate with OAuth fallback
+router.get('/skills-framework/jobs', async (req, res) => {
+  try {
+    const { page, pageSize, sectorTitle, trackTitle, jobroleTitle, keytaskContent, skillTitle, sfwVersion } = req.query;
+    const apiPath = '/sfw/skillsFramework/jobs';
+    const queryParams = {};
+    if (page) queryParams.page = page;
+    if (pageSize) queryParams.pageSize = pageSize;
+    if (sectorTitle) queryParams.sectorTitle = sectorTitle;
+    if (trackTitle) queryParams.trackTitle = trackTitle;
+    if (jobroleTitle) queryParams.jobroleTitle = jobroleTitle;
+    if (keytaskContent) queryParams.keytaskContent = keytaskContent;
+    if (skillTitle) queryParams.skillTitle = skillTitle;
+    if (sfwVersion) queryParams.sfwVersion = sfwVersion;
+
+    // Try certificate first
+    console.log('Skills Framework Jobs request (cert):', apiPath);
+    const certResult = await certApiGet(apiPath, queryParams, { apiVersion: 'v1.0' });
+    console.log('Skills Framework Jobs cert response status:', certResult.status);
+
+    if (certResult.status >= 200 && certResult.status < 300) {
+      console.log('Skills Framework Jobs: certificate auth succeeded');
+      let parsed;
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
+      return res.json(parsed);
+    }
+
+    // Certificate failed — fall back to OAuth
+    console.log('Skills Framework Jobs: certificate returned', certResult.status, '— falling back to OAuth');
+    const oauthResult = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.0' });
+    return res.json(oauthResult);
+  } catch (err) {
+    console.error('Skills Framework Jobs error:', err.message);
+    res.status(err.status || 500).json({
+      error: err.message,
+      details: err.body || null,
+    });
+  }
+});
+
+// GET /api/skills-framework/skills — Get Skills Details
+// mTLS Certificate with OAuth fallback
+router.get('/skills-framework/skills', async (req, res) => {
+  try {
+    const { page, pageSize, sectorTitle, skillTitle, tscCode, skillType, sfwVersion } = req.query;
+    const apiPath = '/sfw/skillsFramework/skills';
+    const queryParams = {};
+    if (page) queryParams.page = page;
+    if (pageSize) queryParams.pageSize = pageSize;
+    if (sectorTitle) queryParams.sectorTitle = sectorTitle;
+    if (skillTitle) queryParams.skillTitle = skillTitle;
+    if (tscCode) queryParams.tscCode = tscCode;
+    if (skillType) queryParams.skillType = skillType;
+    if (sfwVersion) queryParams.sfwVersion = sfwVersion;
+
+    // Try certificate first
+    console.log('Skills Framework Skills request (cert):', apiPath);
+    const certResult = await certApiGet(apiPath, queryParams, { apiVersion: 'v1.0' });
+    console.log('Skills Framework Skills cert response status:', certResult.status);
+
+    if (certResult.status >= 200 && certResult.status < 300) {
+      console.log('Skills Framework Skills: certificate auth succeeded');
+      let parsed;
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
+      return res.json(parsed);
+    }
+
+    // Certificate failed — fall back to OAuth
+    console.log('Skills Framework Skills: certificate returned', certResult.status, '— falling back to OAuth');
+    const oauthResult = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.0' });
+    return res.json(oauthResult);
+  } catch (err) {
+    console.error('Skills Framework Skills error:', err.message);
+    res.status(err.status || 500).json({
+      error: err.message,
+      details: err.body || null,
+    });
+  }
+});
+
+// POST /api/skill-search — Skill Search
+// mTLS Certificate with OAuth fallback
+router.post('/skill-search', async (req, res) => {
+  try {
+    const body = req.body;
+    const apiPath = '/skillSearch';
+
+    // Try certificate first
+    console.log('Skill Search request (cert):', apiPath);
+    const certResult = await certApiPost(apiPath, body, { apiVersion: 'v1' });
+    console.log('Skill Search cert response status:', certResult.status);
+
+    if (certResult.status >= 200 && certResult.status < 300) {
+      console.log('Skill Search: certificate auth succeeded');
+      let parsed;
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
+      return res.json(parsed);
+    }
+
+    // Certificate failed — fall back to OAuth
+    console.log('Skill Search: certificate returned', certResult.status, '— falling back to OAuth');
+    const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v1' });
+    return res.json(oauthResult);
+  } catch (err) {
+    console.error('Skill Search error:', err.message);
+    res.status(err.status || 500).json({
+      error: err.message,
+      details: err.body || null,
+    });
+  }
+});
+
 module.exports = router;
