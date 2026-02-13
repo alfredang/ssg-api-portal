@@ -374,3 +374,10 @@ export async function getQualifications(level?: string) {
   const response = await apiClient.get<Record<string, unknown>>('/skills-passport/qualifications', { params });
   return response.data;
 }
+
+// SEA (Skill Extraction API)
+
+export async function postSkillExtract(body: { textData: string; modelVersion: string }) {
+  const response = await apiClient.post<Record<string, unknown>>('/skill-extract', body);
+  return response.data;
+}

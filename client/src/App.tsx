@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useApi } from './hooks/useApi';
-import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications } from './api/courseApi';
+import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications, postSkillExtract } from './api/courseApi';
 import SearchForm from './components/SearchForm';
 import CourseSearchForm from './components/CourseSearchForm';
 import CourseOverview from './components/CourseOverview';
@@ -22,6 +22,7 @@ type Page = 'course-lookup' | 'course-search' | 'popular-courses'
   | 'enrol-create' | 'enrol-update' | 'enrol-search' | 'enrol-view' | 'enrol-fee-collection' | 'enrol-codes'
   | 'assess-create' | 'assess-update' | 'assess-search' | 'assess-view' | 'assess-codes'
   | 'sp-qualifications'
+  | 'sea-skill-extract'
   | 'skills-framework'
   | 'resources' | 'articles' | 'events'
   | 'api-issues';
@@ -107,6 +108,12 @@ const NAV_ITEMS: NavCategory[] = [
     label: 'Skills Passport',
     children: [
       { id: 'sp-qualifications', label: 'Retrieve Qualification' },
+    ],
+  },
+  {
+    label: 'SEA',
+    children: [
+      { id: 'sea-skill-extract', label: 'Skill Extraction' },
     ],
   },
   { label: 'Skills Framework', id: 'skills-framework' },
@@ -258,6 +265,7 @@ function App() {
   const assessViewApi = useApi<EnrolmentResponse>();
   const assessCodesApi = useApi<EnrolmentResponse>();
   const spQualificationsApi = useApi<Record<string, unknown>>();
+  const seaSkillExtractApi = useApi<Record<string, unknown>>();
 
   const handleLookup = async (params: { refNo: string; uen: string; courseRunStartDate: string }) => {
     searchApi.reset();
@@ -407,6 +415,10 @@ function App() {
 
   const handleSpQualifications = async (level?: string) => {
     await spQualificationsApi.execute(() => getQualifications(level));
+  };
+
+  const handleSeaSkillExtract = async (body: { textData: string; modelVersion: string }) => {
+    await seaSkillExtractApi.execute(() => postSkillExtract(body));
   };
 
   const handleSessionsLookup = async (params: {
@@ -3104,6 +3116,49 @@ function App() {
               <h3>Qualifications Response</h3>
               <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                 {JSON.stringify(spQualificationsApi.data, null, 2)}
+              </pre>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    if (activePage === 'sea-skill-extract') {
+      return (
+        <>
+          <h2 className="page-title">Skill Extraction</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
+            Extract skills from text descriptions. POST <code>/skillExtract</code>.
+          </p>
+          <form className="course-result" onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            handleSeaSkillExtract({
+              textData: fd.get('textData') as string,
+              modelVersion: fd.get('modelVersion') as string,
+            });
+          }}>
+            <div className="form-group">
+              <label htmlFor="seaTextData">Text Data</label>
+              <textarea id="seaTextData" name="textData" rows={5} defaultValue="Sustainable Built Environment - apply the systems approach to incorporate natural ecosystems into the built environment through design; gain the necessary knowledge and skills to design and operate green buildings in accordance with Green Mark standards; and embrace waste reduction strategies such as recycling, reuse, and recovery, and learn about eco-friendly building materials properties and performance" disabled={seaSkillExtractApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="seaModelVersion">Model Version</label>
+              <input id="seaModelVersion" name="modelVersion" type="text" defaultValue="1.1-240712" disabled={seaSkillExtractApi.loading} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button type="submit" disabled={seaSkillExtractApi.loading}>
+                {seaSkillExtractApi.loading ? 'Extracting...' : 'Extract Skills'}
+              </button>
+            </div>
+          </form>
+          {seaSkillExtractApi.error && <div className="error-alert">{seaSkillExtractApi.error}</div>}
+          {seaSkillExtractApi.loading && <div className="loading">Extracting skills...</div>}
+          {seaSkillExtractApi.data && (
+            <div className="course-result" style={{ marginTop: 16 }}>
+              <h3>Skill Extraction Response</h3>
+              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                {JSON.stringify(seaSkillExtractApi.data, null, 2)}
               </pre>
             </div>
           )}

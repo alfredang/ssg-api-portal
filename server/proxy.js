@@ -1681,4 +1681,40 @@ router.get('/skills-passport/qualifications', async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────────
+// SEA (Skill Extraction API)
+// ─────────────────────────────────────────────────────────────────
+
+// POST /api/skill-extract — Skill Extraction
+// mTLS Certificate with OAuth fallback
+router.post('/skill-extract', async (req, res) => {
+  try {
+    const body = req.body;
+    const apiPath = '/skillExtract';
+
+    // Try certificate first
+    console.log('Skill Extraction request (cert):', apiPath);
+    const certResult = await certApiPost(apiPath, body, { apiVersion: 'v1' });
+    console.log('Skill Extraction cert response status:', certResult.status);
+
+    if (certResult.status >= 200 && certResult.status < 300) {
+      console.log('Skill Extraction: certificate auth succeeded');
+      let parsed;
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
+      return res.json(parsed);
+    }
+
+    // Certificate failed — fall back to OAuth
+    console.log('Skill Extraction: certificate returned', certResult.status, '— falling back to OAuth');
+    const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v1' });
+    return res.json(oauthResult);
+  } catch (err) {
+    console.error('Skill Extraction error:', err.message);
+    res.status(err.status || 500).json({
+      error: err.message,
+      details: err.body || null,
+    });
+  }
+});
+
 module.exports = router;
