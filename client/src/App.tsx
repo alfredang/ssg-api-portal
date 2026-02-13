@@ -3810,15 +3810,36 @@ function App() {
 
           <h3 style={{ marginTop: 24, marginBottom: 8 }}>References</h3>
           <div className="course-result" style={{ padding: 16 }}>
-            <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 2 }}>
+            <h4 style={{ margin: '0 0 4px 0', fontSize: 13, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Portal</h4>
+            <ul style={{ margin: '0 0 12px 0', paddingLeft: 20, lineHeight: 2 }}>
               <li><a href="https://developer.ssg-wsg.gov.sg/webapp/api-discovery" target="_blank" rel="noopener noreferrer">API Discovery — Products</a></li>
               <li><a href="https://developer.ssg-wsg.gov.sg/webapp/guides" target="_blank" rel="noopener noreferrer">Get Started Guides</a></li>
-              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/docs/product/6kYpfJEWVb7NyYVVHvUmHi/group/2reSbYZjfhi3WWeLp4BlQ4" target="_blank" rel="noopener noreferrer">Courses API Reference</a></li>
-              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/docs/product/7KU1xrpxljJZnsIkJP6QNF/group/IUAJ3XXeGEZuk9yGpoUX3" target="_blank" rel="noopener noreferrer">Programmes for Individual — Grant Calculator API</a></li>
-              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/docs/product/7KU1xrpxljJZnsIkJP6QNF/group/3540ZmPQma3rcanoBfNYff" target="_blank" rel="noopener noreferrer">Programmes for Individual — Assessments API</a></li>
-              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/docs/product/4ZCqa7uABJeR6vtKUjsxyx/group/6NqcljmEXinhh5SP9drNXL" target="_blank" rel="noopener noreferrer">Skills API — Skills Passport</a></li>
-              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/guides/MOwcZA3asB0nmFaq8KJ71" target="_blank" rel="noopener noreferrer">Guide: App Settings (Credentials &amp; Certificates)</a></li>
-              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/guides/1kR6AzKYXtvPEXfXCZJHgu" target="_blank" rel="noopener noreferrer">Guide: Subscription Settings (Digital Signature, Encryption Key, Callbacks)</a></li>
+            </ul>
+            <h4 style={{ margin: '0 0 4px 0', fontSize: 13, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Courses</h4>
+            <ul style={{ margin: '0 0 12px 0', paddingLeft: 20, lineHeight: 2 }}>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/docs/product/6kYpfJEWVb7NyYVVHvUmHi/group/2reSbYZjfhi3WWeLp4BlQ4" target="_blank" rel="noopener noreferrer">Courses API</a></li>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/docs/product/6kYpfJEWVb7NyYVVHvUmHi/group/4ZAnZL1CuTqNCd8pqGJewr" target="_blank" rel="noopener noreferrer">Course Feedback API</a></li>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/docs/product/6kYpfJEWVb7NyYVVHvUmHi/group/374zmR5D0tQeS87eA1hrLV" target="_blank" rel="noopener noreferrer">Training Providers API</a></li>
+            </ul>
+            <h4 style={{ margin: '0 0 4px 0', fontSize: 13, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Programmes for Individual</h4>
+            <ul style={{ margin: '0 0 12px 0', paddingLeft: 20, lineHeight: 2 }}>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/docs/product/7KU1xrpxljJZnsIkJP6QNF/group/IUAJ3XXeGEZuk9yGpoUX3" target="_blank" rel="noopener noreferrer">Grant Calculator API</a></li>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/docs/product/7KU1xrpxljJZnsIkJP6QNF/group/2RTLOUTuE3Dkgf7MOdn0Cm" target="_blank" rel="noopener noreferrer">SkillsFuture Credit Pay API</a></li>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/docs/product/7KU1xrpxljJZnsIkJP6QNF/group/adg1EGw5xjv6Fs40BTrK8" target="_blank" rel="noopener noreferrer">Enrolments API</a></li>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/docs/product/7KU1xrpxljJZnsIkJP6QNF/group/3540ZmPQma3rcanoBfNYff" target="_blank" rel="noopener noreferrer">Assessments API</a></li>
+            </ul>
+            <h4 style={{ margin: '0 0 4px 0', fontSize: 13, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Skills</h4>
+            <ul style={{ margin: '0 0 12px 0', paddingLeft: 20, lineHeight: 2 }}>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/docs/product/4ZCqa7uABJeR6vtKUjsxyx/group/6NqcljmEXinhh5SP9drNXL" target="_blank" rel="noopener noreferrer">Skills Passport API</a></li>
+            </ul>
+            <h4 style={{ margin: '0 0 4px 0', fontSize: 13, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Resources</h4>
+            <ul style={{ margin: '0 0 12px 0', paddingLeft: 20, lineHeight: 2 }}>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/docs/product/6Gl44K5M46EuDgn7LCsAs2/group/5uyNzClV5UJk6Uo0wDg7Mt" target="_blank" rel="noopener noreferrer">Skills Framework API</a></li>
+            </ul>
+            <h4 style={{ margin: '0 0 4px 0', fontSize: 13, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Guides</h4>
+            <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 2 }}>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/guides/MOwcZA3asB0nmFaq8KJ71" target="_blank" rel="noopener noreferrer">App Settings (Credentials &amp; Certificates)</a></li>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/guides/1kR6AzKYXtvPEXfXCZJHgu" target="_blank" rel="noopener noreferrer">Subscription Settings (Digital Signature, Encryption Key, Callbacks)</a></li>
             </ul>
           </div>
         </>
