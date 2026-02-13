@@ -366,3 +366,11 @@ export async function getAssessmentCodes() {
   const response = await apiClient.get<EnrolmentResponse>('/assessments/codes/idType');
   return response.data;
 }
+
+// Skills Passport APIs
+
+export async function getQualifications(level?: string) {
+  const params = level ? { level } : {};
+  const response = await apiClient.get<Record<string, unknown>>('/skills-passport/qualifications', { params });
+  return response.data;
+}

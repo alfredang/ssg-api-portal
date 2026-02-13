@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useApi } from './hooks/useApi';
-import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes } from './api/courseApi';
+import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications } from './api/courseApi';
 import SearchForm from './components/SearchForm';
 import CourseSearchForm from './components/CourseSearchForm';
 import CourseOverview from './components/CourseOverview';
@@ -21,7 +21,8 @@ type Page = 'course-lookup' | 'course-search' | 'popular-courses'
   | 'sf-view-claim' | 'sf-cancel-claim' | 'sf-upload-docs' | 'sf-encrypt-request' | 'sf-decrypt-request'
   | 'enrol-create' | 'enrol-update' | 'enrol-search' | 'enrol-view' | 'enrol-fee-collection' | 'enrol-codes'
   | 'assess-create' | 'assess-update' | 'assess-search' | 'assess-view' | 'assess-codes'
-  | 'skills-passport' | 'skills-framework'
+  | 'sp-qualifications'
+  | 'skills-framework'
   | 'resources' | 'articles' | 'events'
   | 'api-issues';
 
@@ -102,7 +103,12 @@ const NAV_ITEMS: NavCategory[] = [
       { id: 'assess-codes', label: 'Assessment Code Lookup' },
     ],
   },
-  { label: 'Skills Passport', id: 'skills-passport' },
+  {
+    label: 'Skills Passport',
+    children: [
+      { id: 'sp-qualifications', label: 'Retrieve Qualification' },
+    ],
+  },
   { label: 'Skills Framework', id: 'skills-framework' },
   { label: 'Resources', id: 'resources' },
   { label: 'Articles', id: 'articles' },
@@ -251,6 +257,7 @@ function App() {
   const assessSearchApi = useApi<EnrolmentResponse>();
   const assessViewApi = useApi<EnrolmentResponse>();
   const assessCodesApi = useApi<EnrolmentResponse>();
+  const spQualificationsApi = useApi<Record<string, unknown>>();
 
   const handleLookup = async (params: { refNo: string; uen: string; courseRunStartDate: string }) => {
     searchApi.reset();
@@ -398,6 +405,10 @@ function App() {
     await assessCodesApi.execute(() => getAssessmentCodes());
   };
 
+  const handleSpQualifications = async (level?: string) => {
+    await spQualificationsApi.execute(() => getQualifications(level));
+  };
+
   const handleSessionsLookup = async (params: {
     runId: string;
     uen: string;
@@ -479,7 +490,6 @@ function App() {
     'sf-credit-pay': 'SkillsFuture Credit Pay',
     'enrolments': 'Enrolments',
     'assessments': 'Assessments',
-    'skills-passport': 'Skills Passport',
     'skills-framework': 'Skills Framework',
     'resources': 'Resources',
     'articles': 'Articles',
@@ -3058,6 +3068,43 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <h3>Assessment ID Type Codes</h3>
               <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessCodesApi.data, null, 2)}</pre>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    if (activePage === 'sp-qualifications') {
+      return (
+        <>
+          <h2 className="page-title">Retrieve Qualification</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
+            Retrieve qualification codes from Skills Passport. GET <code>/skillsPassport/codes/qualifications</code> (v1).
+          </p>
+          <form className="course-result" onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            const level = (fd.get('level') as string) || undefined;
+            handleSpQualifications(level);
+          }}>
+            <div className="form-group">
+              <label htmlFor="spLevel">Level (optional)</label>
+              <input id="spLevel" name="level" type="text" defaultValue="1" placeholder="e.g. 1, 2, 3..." disabled={spQualificationsApi.loading} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button type="submit" disabled={spQualificationsApi.loading}>
+                {spQualificationsApi.loading ? 'Loading...' : 'Retrieve Qualifications'}
+              </button>
+            </div>
+          </form>
+          {spQualificationsApi.error && <div className="error-alert">{spQualificationsApi.error}</div>}
+          {spQualificationsApi.loading && <div className="loading">Loading qualifications...</div>}
+          {spQualificationsApi.data && (
+            <div className="course-result" style={{ marginTop: 16 }}>
+              <h3>Qualifications Response</h3>
+              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                {JSON.stringify(spQualificationsApi.data, null, 2)}
+              </pre>
             </div>
           )}
         </>

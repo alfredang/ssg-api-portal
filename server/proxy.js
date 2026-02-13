@@ -1644,4 +1644,41 @@ router.get('/assessments/codes/idType', async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────────
+// Skills Passport APIs
+// ─────────────────────────────────────────────────────────────────
+
+// GET /api/skills-passport/qualifications — Retrieve Qualification codes
+// mTLS Certificate with OAuth fallback
+router.get('/skills-passport/qualifications', async (req, res) => {
+  try {
+    const { level } = req.query;
+    const apiPath = '/skillsPassport/codes/qualifications';
+    const queryParams = level ? { level } : {};
+
+    // Try certificate first
+    console.log('Skills Passport Qualifications request (cert):', apiPath);
+    const certResult = await certApiGet(apiPath, queryParams, { apiVersion: 'v1' });
+    console.log('Skills Passport Qualifications cert response status:', certResult.status);
+
+    if (certResult.status >= 200 && certResult.status < 300) {
+      console.log('Skills Passport Qualifications: certificate auth succeeded');
+      let parsed;
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
+      return res.json(parsed);
+    }
+
+    // Certificate failed — fall back to OAuth
+    console.log('Skills Passport Qualifications: certificate returned', certResult.status, '— falling back to OAuth');
+    const oauthResult = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1' });
+    return res.json(oauthResult);
+  } catch (err) {
+    console.error('Skills Passport Qualifications error:', err.message);
+    res.status(err.status || 500).json({
+      error: err.message,
+      details: err.body || null,
+    });
+  }
+});
+
 module.exports = router;
