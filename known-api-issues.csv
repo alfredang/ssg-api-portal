@@ -1,0 +1,23 @@
+API,Auth Method,HTTP Method,URL,API Version,Status,Error Message,Last Tested
+Retrieve Trainer Details,Certificate,GET,api.ssg-wsg.sg/trainingProviders/{uen}/trainers,v2.0,403,Access to this API has been disallowed,2026-02-13
+Retrieve Trainer Details,OAuth,GET,public-api.ssg-wsg.sg/trainingProviders/{uen}/trainers,v2.0,403,Access to this API has been disallowed,2026-02-13
+Update/Delete Trainer,Certificate,POST,api.ssg-wsg.sg/trainingProviders/{uen}/trainers/{trainerId},v2.0,400,Unable to perform decryption due invalid request (may need AES encryption),2026-02-13
+Update/Delete Trainer,OAuth,POST,public-api.ssg-wsg.sg/trainingProviders/{uen}/trainers/{trainerId},v2.0,403,Access to this API has been disallowed,2026-02-13
+Popular Courses,Certificate,GET,api.ssg-wsg.sg/courses/directory/popular,v1.1,403,API version has expired,2026-02-13
+Popular Courses,Certificate,GET,api.ssg-wsg.sg/courses/directory/popular,v2.0,403,Access to this API has been disallowed,2026-02-13
+Popular Courses,OAuth,GET,public-api.ssg-wsg.sg/courses/directory/popular,v1.1,403,API version has expired,2026-02-13
+Course Quality,Certificate,GET,api.ssg-wsg.sg/courses/directory/{refNo}/quality,v2.0,403,Access disallowed — OAuth fallback returns 200,2026-02-13
+Course Outcome,Certificate,GET,api.ssg-wsg.sg/courses/directory/{refNo}/outcome,v2.0,403,Access disallowed — OAuth fallback returns 200,2026-02-13
+Course Sessions,Certificate,GET,api.ssg-wsg.sg/courses/runs/{runId}/sessions,v1.5,403,Access to this API has been disallowed,2026-02-13
+Course Sessions,OAuth,GET,public-api.ssg-wsg.sg/courses/runs/{runId}/sessions,v1.5,Varies,Falls back from cert — response varies,2026-02-13
+Session Attendance,Certificate,GET,api.ssg-wsg.sg/courses/runs/{runId}/sessions/attendance,v1.5,403,Access to this API has been disallowed,2026-02-13
+Session Attendance,OAuth,GET,public-api.ssg-wsg.sg/courses/runs/{runId}/sessions/attendance,v1.5,Varies,Falls back from cert — response varies,2026-02-13
+Upload Attendance,Certificate + AES,POST,api.ssg-wsg.sg/courses/runs/{runId}/sessions/attendance,v1.5,Varies,No OAuth fallback — cert + AES only,2026-02-13
+Course Lookup,Certificate,GET,api.ssg-wsg.sg/courses/directory/{refNo},v1.2,403,Access to this API has been disallowed (OAuth fallback works),2026-02-13
+Course Runs by Ref No,Certificate,GET,api.ssg-wsg.sg/courses/courseRuns/reference,v1.0,403,Access to this API has been disallowed,2026-02-13
+Course Runs by Ref No,OAuth,GET,public-api.ssg-wsg.sg/courses/courseRuns/reference,v1.0,403,Access to this API has been disallowed,2026-02-13
+Course Search (TPG Registry),Certificate,POST,api.ssg-wsg.sg/tpg/courses/registry/search,v8.0,200,,2026-02-13
+Course Details (TPG Registry),Certificate,GET,api.ssg-wsg.sg/tpg/courses/registry/details/{refNo},v8.0,200,,2026-02-13
+Course Lookup by Ref No,OAuth (fallback),GET,public-api.ssg-wsg.sg/courses/directory/{refNo},v1.2,200,,2026-02-13
+Course Quality,OAuth (fallback),GET,public-api.ssg-wsg.sg/courses/directory/{refNo}/quality,v2.0,200,,2026-02-13
+Course Outcome,OAuth (fallback),GET,public-api.ssg-wsg.sg/courses/directory/{refNo}/outcome,v2.0,200,,2026-02-13
