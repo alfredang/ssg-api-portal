@@ -186,6 +186,17 @@ function CollapsibleSection({ title, children }: { title: string; children: Reac
   );
 }
 
+function AuthBadge({ method }: { method: 'cert' | 'cert+oauth' | 'cert+aes' | 'none' }) {
+  const styles: Record<string, { bg: string; color: string; label: string }> = {
+    'cert': { bg: '#dbeafe', color: '#1e40af', label: 'Certificate Only' },
+    'cert+oauth': { bg: '#d1fae5', color: '#065f46', label: 'Certificate + OAuth' },
+    'cert+aes': { bg: '#fef3c7', color: '#92400e', label: 'Certificate + AES' },
+    'none': { bg: '#f3f4f6', color: '#374151', label: 'Local Tool' },
+  };
+  const s = styles[method];
+  return <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600, background: s.bg, color: s.color, marginLeft: 6, verticalAlign: 'middle' }}>{s.label}</span>;
+}
+
 function Sidebar({ activePage, onNavigate }: { activePage: Page; onNavigate: (page: Page) => void }) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['Courses']));
 
@@ -667,6 +678,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Course Lookup by Ref No</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/courses/directory/&#123;refNo&#125;</code> (v1.2). <AuthBadge method="cert+oauth" /></p>
           <SearchForm onSearch={handleLookup} loading={loading} defaults={defaults} />
 
           {error && <div className="error-alert">{error}</div>}
@@ -692,6 +704,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Course Search</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/courses/registry/search</code> (v8.0). <AuthBadge method="cert" /></p>
           <CourseSearchForm onSearch={handleSearch} loading={loading} defaults={defaults} />
 
           {error && <div className="error-alert">{error}</div>}
@@ -730,6 +743,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Popular Courses</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/courses/directory/popular</code> (v1.1). <AuthBadge method="cert+oauth" /></p>
           <form
             className="search-form"
             autoComplete="off"
@@ -806,7 +820,7 @@ function App() {
         <>
           <h2 className="page-title">Courses by Training Provider UEN</h2>
           <p style={{ color: '#666', fontSize: 14, margin: '0 0 16px' }}>
-            GET to production API (api.ssg-wsg.sg) with mTLS certificate, OAuth fallback. API version v1.1.
+            GET <code>/tpg/courses/registry/search</code> (v8.0). <AuthBadge method="cert" />
           </p>
           <form
             className="search-form"
@@ -871,6 +885,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Course Quality Feedback</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/courses/directory/&#123;refNo&#125;/quality</code> (v2.0). <AuthBadge method="cert+oauth" /></p>
           <form
             className="search-form"
             autoComplete="off"
@@ -913,6 +928,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Course Outcome Feedback</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/courses/directory/&#123;refNo&#125;/outcome</code> (v2.0). <AuthBadge method="cert+oauth" /></p>
           <form
             className="search-form"
             autoComplete="off"
@@ -955,6 +971,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Course Sessions</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/courses/runs/&#123;runId&#125;/sessions</code> (v1.5). <AuthBadge method="cert+oauth" /></p>
           <form
             className="search-form"
             autoComplete="off"
@@ -1040,6 +1057,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Course Session Attendance</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/courses/runs/&#123;runId&#125;/sessions/attendance</code> (v1.5). <AuthBadge method="cert+oauth" /></p>
           <form
             className="search-form"
             autoComplete="off"
@@ -1124,6 +1142,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Retrieve Trainer Details</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/trainingProviders/&#123;uen&#125;/trainers</code> (v2.0). <AuthBadge method="cert+oauth" /></p>
           <form
             className="search-form"
             autoComplete="off"
@@ -1209,7 +1228,7 @@ function App() {
         <>
           <h2 className="page-title">Update / Delete Trainer</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            POST to production API — certificate first, OAuth fallback. Set action to &quot;update&quot; or &quot;delete&quot;.
+            POST <code>/trainingProviders/&#123;uen&#125;/trainers/&#123;trainerId&#125;</code> (v2.0). <AuthBadge method="cert+oauth" />
           </p>
           <form
             className="search-form"
@@ -1358,7 +1377,7 @@ function App() {
         <>
           <h2 className="page-title">Publish Course Run(s) with Sessions</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            POST to production API — certificate first, OAuth fallback. Publishes course run(s) with sessions and trainer details.
+            POST <code>/courses/courseRuns/publish</code> (v1.0). <AuthBadge method="cert+oauth" />
           </p>
           <form
             className="search-form"
@@ -1690,7 +1709,7 @@ function App() {
         <>
           <h2 className="page-title">Update / Delete Course Run with Sessions</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            POST to production API — certificate first, OAuth fallback. Set action to &quot;update&quot; or &quot;delete&quot; for the run and each session.
+            POST <code>/courses/courseRuns/edit/&#123;runId&#125;</code> (v1.0). <AuthBadge method="cert+oauth" />
           </p>
           <form
             className="search-form"
@@ -2048,6 +2067,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Retrieve Course Run by ID</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/courses/courseRuns/id/&#123;runId&#125;</code> (v1.0). <AuthBadge method="cert+oauth" /></p>
           <form
             className="search-form"
             autoComplete="off"
@@ -2097,6 +2117,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Course Runs by Reference Number</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/courses/courseRuns/reference</code> (v1.0). <AuthBadge method="cert+oauth" /></p>
           <form
             className="search-form"
             autoComplete="off"
@@ -2185,7 +2206,7 @@ function App() {
         <>
           <h2 className="page-title">Upload Course Session Attendance</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            POST to production API (api.ssg-wsg.sg) with mTLS certificate + AES-256 payload encryption.
+            POST <code>/courses/runs/&#123;runId&#125;/sessions/attendance</code> (v1.5). <AuthBadge method="cert+aes" />
           </p>
           <form
             className="search-form"
@@ -2337,7 +2358,7 @@ function App() {
         <>
           <h2 className="page-title">Grant Calculator — Baseline Scheme</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Calculate baseline grant amounts for courses. POST to <code>/grantCalculators/individual</code> (v3.0).
+            POST <code>/grantCalculators/individual</code> (v3.0). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -2431,7 +2452,7 @@ function App() {
         <>
           <h2 className="page-title">Grant Calculator — Personalised</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Calculate personalised grant amounts based on trainee profile. POST to <code>/grantCalculators/individual/personalised</code> (v3.0).
+            POST <code>/grantCalculators/individual/personalised</code> (v3.0). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -2543,7 +2564,7 @@ function App() {
         <>
           <h2 className="page-title">Search Grants</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Search for grants. POST to <code>/tpg/grants/search</code> (v1.0). Requires UEN header.
+            POST <code>/tpg/grants/search</code> (v1.0). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -2649,7 +2670,7 @@ function App() {
         <>
           <h2 className="page-title">View Grant Details</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            View details for a specific grant. GET <code>/tpg/grants/details/&#123;grantRefNo&#125;</code> (v1.0).
+            GET <code>/tpg/grants/details/&#123;grantRefNo&#125;</code> (v1.0). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -2687,7 +2708,7 @@ function App() {
         <>
           <h2 className="page-title">Grants Code Lookup</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Lookup funding component codes. GET <code>/tpg/codes/grants/fundingComponent</code> (v1.0).
+            GET <code>/tpg/codes/grants/fundingComponent</code> (v1.0). <AuthBadge method="cert+oauth" />
           </p>
           <div className="course-result">
             <button onClick={handleGrantCodes} disabled={grantCodesApi.loading}>
@@ -2715,7 +2736,7 @@ function App() {
         <>
           <h2 className="page-title">View Claim Details</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            View SkillsFuture Credit claim details. GET <code>/skillsFutureCredits/claims/&#123;claimId&#125;</code> (v2.0).
+            GET <code>/skillsFutureCredits/claims/&#123;claimId&#125;</code> (v2.0). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -2757,7 +2778,7 @@ function App() {
         <>
           <h2 className="page-title">Cancel Claim</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Cancel a SkillsFuture Credit claim. POST <code>/skillsFutureCredits/claims/&#123;claimId&#125;</code> (v2.0).
+            POST <code>/skillsFutureCredits/claims/&#123;claimId&#125;</code> (v2.0). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -2803,7 +2824,7 @@ function App() {
         <>
           <h2 className="page-title">Upload Supporting Documents</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Upload supporting documents for a claim. POST <code>/skillsFutureCredits/claims/&#123;claimId&#125;/supportingdocuments</code> (v2.0).
+            POST <code>/skillsFutureCredits/claims/&#123;claimId&#125;/supportingdocuments</code> (v2.0). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -2875,7 +2896,7 @@ function App() {
         <>
           <h2 className="page-title">Request Encryption</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Encrypt a claim request. POST <code>/skillsFutureCredits/claims/encryptRequests</code> (v2.0).
+            POST <code>/skillsFutureCredits/claims/encryptRequests</code> (v2.0). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -2963,7 +2984,7 @@ function App() {
         <>
           <h2 className="page-title">Request Decryption</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Decrypt a claim request status. POST <code>/skillsFutureCredits/claims/decryptRequests</code> (v2.0).
+            POST <code>/skillsFutureCredits/claims/decryptRequests</code> (v2.0). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -3003,7 +3024,7 @@ function App() {
         <>
           <h2 className="page-title">Create Enrolment</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Create a new enrolment. POST <code>/tpg/enrolments</code> (v3.0).
+            POST <code>/tpg/enrolments</code> (v3.0). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -3068,7 +3089,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Update/Cancel Enrolment</h2>
-          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/enrolments/details/&#123;enrolmentRefNo&#125;</code> (v3.0). Requires UEN header.</p>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/enrolments/details/&#123;enrolmentRefNo&#125;</code> (v3.0). <AuthBadge method="cert+oauth" /></p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
@@ -3115,7 +3136,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Search Enrolments</h2>
-          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/enrolments/search</code> (v3.0).</p>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/enrolments/search</code> (v3.0). <AuthBadge method="cert+oauth" /></p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
@@ -3165,7 +3186,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">View Enrolment</h2>
-          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/tpg/enrolments/details/&#123;enrolmentRefNo&#125;</code> (v3.0).</p>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/tpg/enrolments/details/&#123;enrolmentRefNo&#125;</code> (v3.0). <AuthBadge method="cert+oauth" /></p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
@@ -3191,7 +3212,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Update Enrolment Fee Collection</h2>
-          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/enrolments/feeCollections/&#123;enrolmentRefNo&#125;</code> (v3.0).</p>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/enrolments/feeCollections/&#123;enrolmentRefNo&#125;</code> (v3.0). <AuthBadge method="cert+oauth" /></p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
@@ -3220,7 +3241,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Enrolment Code Lookup</h2>
-          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/tpg/codes/enrolments/sponsorshipType</code> (v1).</p>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/tpg/codes/enrolments/sponsorshipType</code> (v1). <AuthBadge method="cert+oauth" /></p>
           <div className="course-result">
             <button onClick={handleEnrolCodes} disabled={enrolCodesApi.loading}>{enrolCodesApi.loading ? 'Loading...' : 'Fetch Sponsorship Type Codes'}</button>
           </div>
@@ -3241,7 +3262,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Create Assessment</h2>
-          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/assessments</code> (v1).</p>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/assessments</code> (v1). <AuthBadge method="cert+oauth" /></p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
@@ -3291,7 +3312,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Update/Void Assessment</h2>
-          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/assessments/details/&#123;assessmentRefNo&#125;</code> (v1).</p>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/assessments/details/&#123;assessmentRefNo&#125;</code> (v1). <AuthBadge method="cert+oauth" /></p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
@@ -3334,7 +3355,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Search Assessments</h2>
-          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/assessments/search</code> (v1).</p>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/assessments/search</code> (v1). <AuthBadge method="cert+oauth" /></p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
@@ -3381,7 +3402,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">View Assessment</h2>
-          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/tpg/assessments/details/&#123;assessmentRefNo&#125;</code> (v1).</p>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/tpg/assessments/details/&#123;assessmentRefNo&#125;</code> (v1). <AuthBadge method="cert+oauth" /></p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
@@ -3407,7 +3428,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Assessment Code Lookup</h2>
-          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/tpg/codes/assessments/idType</code> (v1).</p>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/tpg/codes/assessments/idType</code> (v1). <AuthBadge method="cert+oauth" /></p>
           <div className="course-result">
             <button onClick={handleAssessCodes} disabled={assessCodesApi.loading}>{assessCodesApi.loading ? 'Loading...' : 'Fetch Assessment ID Type Codes'}</button>
           </div>
@@ -3429,7 +3450,7 @@ function App() {
         <>
           <h2 className="page-title">Retrieve Qualification</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Retrieve qualification codes from Skills Passport. GET <code>/skillsPassport/codes/qualifications</code> (v1).
+            Retrieve qualification codes from Skills Passport. GET <code>/skillsPassport/codes/qualifications</code> (v1). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -3468,7 +3489,7 @@ function App() {
         <>
           <h2 className="page-title">Skill Extraction</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Extract skills from text descriptions. POST <code>/skillExtract</code>.
+            Extract skills from text descriptions. POST <code>/skillExtract</code>. <AuthBadge method="cert+oauth" />
           </p>
           <form className="search-form" autoComplete="off" style={{ display: 'block' }} onSubmit={(e) => {
             e.preventDefault();
@@ -3514,7 +3535,7 @@ function App() {
         <>
           <h2 className="page-title">Skill Search</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Search for skills from text descriptions. POST <code>/skillSearch</code>.
+            Search for skills from text descriptions. POST <code>/skillSearch</code>. <AuthBadge method="cert+oauth" />
           </p>
           <form className="search-form" autoComplete="off" style={{ display: 'block' }} onSubmit={(e) => {
             e.preventDefault();
@@ -3560,7 +3581,7 @@ function App() {
         <>
           <h2 className="page-title">Get Job Role Details</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Retrieve Job Role Details from Skills Framework. GET <code>/skillsFramework/jobRoles/details</code> (v1).
+            Retrieve Job Role Details from Skills Framework. GET <code>/skillsFramework/jobRoles/details</code> (v1). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -3602,7 +3623,7 @@ function App() {
         <>
           <h2 className="page-title">Get Skills Details</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Retrieve skills details from Skills Framework. GET <code>/sfw/skillsFramework/skills</code> (v1.0).
+            Retrieve skills details from Skills Framework. GET <code>/sfw/skillsFramework/skills</code> (v1.0). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -3668,7 +3689,7 @@ function App() {
         <>
           <h2 className="page-title">GSC Code Lookup</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Retrieve Generic Skills Competency (GSC) codes. GET <code>/skillsFramework/codes/skillsAndCompetencies/generic/autocomplete</code> (v1.1).
+            Retrieve Generic Skills Competency (GSC) codes. GET <code>/skillsFramework/codes/skillsAndCompetencies/generic/autocomplete</code> (v1.1). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -3710,7 +3731,7 @@ function App() {
         <>
           <h2 className="page-title">CCS Details</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Retrieve Critical Core Skills (CCS) details. GET <code>/skillsFramework/codes/skillsAndCompetencies/generic/details</code> (v1.1).
+            Retrieve Critical Core Skills (CCS) details. GET <code>/skillsFramework/codes/skillsAndCompetencies/generic/details</code> (v1.1). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -3768,7 +3789,7 @@ function App() {
         <>
           <h2 className="page-title">TSC Code Lookup</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Retrieve Technical Skills Competency (TSC) codes. GET <code>/skillsFramework/codes/skillsAndCompetencies/technical/autocomplete</code> (v1.1).
+            Retrieve Technical Skills Competency (TSC) codes. GET <code>/skillsFramework/codes/skillsAndCompetencies/technical/autocomplete</code> (v1.1). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -3810,7 +3831,7 @@ function App() {
         <>
           <h2 className="page-title">TSC Code Details</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Retrieve TSC codes with full details. GET <code>/skillsFramework/codes/skillsAndCompetencies/technical/autocomplete/details</code> (v1.1).
+            Retrieve TSC codes with full details. GET <code>/skillsFramework/codes/skillsAndCompetencies/technical/autocomplete/details</code> (v1.1). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -3852,7 +3873,7 @@ function App() {
         <>
           <h2 className="page-title">TSC Full Details</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Retrieve Technical Skills Competency (TSC) full details. GET <code>/skillsFramework/codes/skillsAndCompetencies/technical/details</code> (v1.1).
+            Retrieve Technical Skills Competency (TSC) full details. GET <code>/skillsFramework/codes/skillsAndCompetencies/technical/details</code> (v1.1). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -3910,7 +3931,7 @@ function App() {
         <>
           <h2 className="page-title">Search Job Roles</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Retrieve Job Roles from Skills Framework. GET <code>/skillsFramework/jobRoles</code> (v1).
+            Retrieve Job Roles from Skills Framework. GET <code>/skillsFramework/jobRoles</code> (v1). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -3996,7 +4017,7 @@ function App() {
         <>
           <h2 className="page-title">Job Role Profile</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Retrieve Job Role Profile from Skills Framework. GET <code>/skillsFramework/jobRoles/profile</code> (v1).
+            Retrieve Job Role Profile from Skills Framework. GET <code>/skillsFramework/jobRoles/profile</code> (v1). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -4038,7 +4059,7 @@ function App() {
         <>
           <h2 className="page-title">List Occupations</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Retrieve list of occupations from Skills Framework. GET <code>/skillsFramework/occupations</code> (v1).
+            Retrieve list of occupations from Skills Framework. GET <code>/skillsFramework/occupations</code> (v1). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -4080,7 +4101,7 @@ function App() {
         <>
           <h2 className="page-title">Job Role Codes by Occupation</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Retrieve Job Role Codes by Occupation ID. GET <code>/skillsFramework/{'{'} occupationId {'}'}/jobRoles</code> (v1).
+            Retrieve Job Role Codes by Occupation ID. GET <code>/skillsFramework/{'{'} occupationId {'}'}/jobRoles</code> (v1). <AuthBadge method="cert+oauth" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -4119,7 +4140,7 @@ function App() {
         <>
           <h2 className="page-title">Generate Certificate</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Generate a self-signed X.509 certificate using OpenSSL. Output files are in <code>.pem</code> format.
+            Generate a self-signed X.509 certificate using OpenSSL. Output files are in <code>.pem</code> format. <AuthBadge method="none" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -4207,7 +4228,7 @@ function App() {
         <>
           <h2 className="page-title">Generate Digital Signature</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Generate an RSA key pair using OpenSSL. Outputs private key (<code>key.pem</code>) and public key (<code>public.pem</code>) in .pem format, plus a stripped public key (no headers/newlines).
+            Generate an RSA key pair using OpenSSL. Outputs private key (<code>key.pem</code>) and public key (<code>public.pem</code>) in .pem format, plus a stripped public key (no headers/newlines). <AuthBadge method="none" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -4279,7 +4300,7 @@ function App() {
         <>
           <h2 className="page-title">Generate Encryption Key</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Generate a random base64-encoded encryption key using OpenSSL. Command: <code>openssl rand -base64 {'<bytes>'}</code>
+            Generate a random base64-encoded encryption key using OpenSSL. Command: <code>openssl rand -base64 {'<bytes>'}</code> <AuthBadge method="none" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
