@@ -1,23 +1,48 @@
 API,Auth Method,HTTP Method,URL,API Version,Status,Error Message,Last Tested
-Retrieve Trainer Details,Certificate,GET,api.ssg-wsg.sg/trainingProviders/{uen}/trainers,v2.0,403,Access to this API has been disallowed,2026-02-13
-Retrieve Trainer Details,OAuth,GET,public-api.ssg-wsg.sg/trainingProviders/{uen}/trainers,v2.0,403,Access to this API has been disallowed,2026-02-13
-Update/Delete Trainer,Certificate,POST,api.ssg-wsg.sg/trainingProviders/{uen}/trainers/{trainerId},v2.0,400,Unable to perform decryption due invalid request (may need AES encryption),2026-02-13
-Update/Delete Trainer,OAuth,POST,public-api.ssg-wsg.sg/trainingProviders/{uen}/trainers/{trainerId},v2.0,403,Access to this API has been disallowed,2026-02-13
-Popular Courses,Certificate,GET,api.ssg-wsg.sg/courses/directory/popular,v1.1,403,API version has expired,2026-02-13
-Popular Courses,Certificate,GET,api.ssg-wsg.sg/courses/directory/popular,v2.0,403,Access to this API has been disallowed,2026-02-13
-Popular Courses,OAuth,GET,public-api.ssg-wsg.sg/courses/directory/popular,v1.1,403,API version has expired,2026-02-13
-Course Quality,Certificate,GET,api.ssg-wsg.sg/courses/directory/{refNo}/quality,v2.0,403,Access disallowed — OAuth fallback returns 200,2026-02-13
-Course Outcome,Certificate,GET,api.ssg-wsg.sg/courses/directory/{refNo}/outcome,v2.0,403,Access disallowed — OAuth fallback returns 200,2026-02-13
-Course Sessions,Certificate,GET,api.ssg-wsg.sg/courses/runs/{runId}/sessions,v1.5,403,Access to this API has been disallowed,2026-02-13
-Course Sessions,OAuth,GET,public-api.ssg-wsg.sg/courses/runs/{runId}/sessions,v1.5,Varies,Falls back from cert — response varies,2026-02-13
-Session Attendance,Certificate,GET,api.ssg-wsg.sg/courses/runs/{runId}/sessions/attendance,v1.5,403,Access to this API has been disallowed,2026-02-13
-Session Attendance,OAuth,GET,public-api.ssg-wsg.sg/courses/runs/{runId}/sessions/attendance,v1.5,Varies,Falls back from cert — response varies,2026-02-13
-Upload Attendance,Certificate + AES,POST,api.ssg-wsg.sg/courses/runs/{runId}/sessions/attendance,v1.5,Varies,No OAuth fallback — cert + AES only,2026-02-13
-Course Lookup,Certificate,GET,api.ssg-wsg.sg/courses/directory/{refNo},v1.2,403,Access to this API has been disallowed (OAuth fallback works),2026-02-13
-Course Runs by Ref No,Certificate,GET,api.ssg-wsg.sg/courses/courseRuns/reference,v1.0,403,Access to this API has been disallowed,2026-02-13
-Course Runs by Ref No,OAuth,GET,public-api.ssg-wsg.sg/courses/courseRuns/reference,v1.0,403,Access to this API has been disallowed,2026-02-13
+Course Lookup by Ref No,Certificate,GET,api.ssg-wsg.sg/courses/directory/{refNo},v1.2,403,Access to this API has been disallowed,2026-02-13
+Course Lookup by Ref No,OAuth (fallback),GET,public-api.ssg-wsg.sg/courses/directory/{refNo},v1.2,200,,2026-02-13
 Course Search (TPG Registry),Certificate,POST,api.ssg-wsg.sg/tpg/courses/registry/search,v8.0,200,,2026-02-13
 Course Details (TPG Registry),Certificate,GET,api.ssg-wsg.sg/tpg/courses/registry/details/{refNo},v8.0,200,,2026-02-13
-Course Lookup by Ref No,OAuth (fallback),GET,public-api.ssg-wsg.sg/courses/directory/{refNo},v1.2,200,,2026-02-13
+Courses by TP UEN,Certificate,POST,api.ssg-wsg.sg/tpg/courses/registry/search (via UEN filter),v8.0,200,,2026-02-13
+Popular Courses,Certificate,GET,api.ssg-wsg.sg/courses/directory/popular,v1.1,403,Api Version has expired,2026-02-13
+Popular Courses,Certificate,GET,api.ssg-wsg.sg/courses/directory/popular,v2.0,403,Access to this API has been disallowed,2026-02-13
+Popular Courses,OAuth,GET,public-api.ssg-wsg.sg/courses/directory/popular,v1.1,403,Api Version has expired,2026-02-13
+Course Quality,Certificate,GET,api.ssg-wsg.sg/courses/directory/{refNo}/quality,v2.0,403,Access disallowed — OAuth fallback returns 200,2026-02-13
 Course Quality,OAuth (fallback),GET,public-api.ssg-wsg.sg/courses/directory/{refNo}/quality,v2.0,200,,2026-02-13
+Course Outcome,Certificate,GET,api.ssg-wsg.sg/courses/directory/{refNo}/outcome,v2.0,403,Access disallowed — OAuth fallback returns 200,2026-02-13
 Course Outcome,OAuth (fallback),GET,public-api.ssg-wsg.sg/courses/directory/{refNo}/outcome,v2.0,200,,2026-02-13
+Course Sessions,Certificate,GET,api.ssg-wsg.sg/courses/runs/{runId}/sessions,v1.5,403,Access to this API has been disallowed,2026-02-13
+Course Sessions,OAuth (fallback),GET,public-api.ssg-wsg.sg/courses/runs/{runId}/sessions,v1.5,403,Access to this API has been disallowed,2026-02-13
+Session Attendance,Certificate,GET,api.ssg-wsg.sg/courses/runs/{runId}/sessions/attendance,v1.5,403,Access to this API has been disallowed,2026-02-13
+Session Attendance,OAuth (fallback),GET,public-api.ssg-wsg.sg/courses/runs/{runId}/sessions/attendance,v1.5,403,Access to this API has been disallowed,2026-02-13
+Upload Attendance,Certificate + AES,POST,api.ssg-wsg.sg/courses/runs/{runId}/sessions/attendance,v1.5,Varies,No OAuth fallback — cert + AES only,2026-02-13
+Course Run by ID,Certificate,GET,api.ssg-wsg.sg/courses/courseRuns/id/{runId},v1.0,403,Access to this API has been disallowed,2026-02-13
+Course Runs by Ref No,Certificate + OAuth,GET,api.ssg-wsg.sg/courses/courseRuns/reference,v1.0,200,Works via OAuth fallback,2026-02-13
+Retrieve Trainer Details,Certificate,GET,api.ssg-wsg.sg/trainingProviders/{uen}/trainers,v2.0,500,Non-JSON response (possibly encrypted),2026-02-13
+Retrieve Trainer Details,OAuth,GET,public-api.ssg-wsg.sg/trainingProviders/{uen}/trainers,v2.0,500,Non-JSON response (possibly encrypted),2026-02-13
+Update/Delete Trainer,Certificate,POST,api.ssg-wsg.sg/trainingProviders/{uen}/trainers/{trainerId},v2.0,400,Unable to perform decryption due invalid request,2026-02-13
+Update/Delete Trainer,OAuth,POST,public-api.ssg-wsg.sg/trainingProviders/{uen}/trainers/{trainerId},v2.0,403,Access to this API has been disallowed,2026-02-13
+Publish Course Run,Certificate,POST,api.ssg-wsg.sg/courses/courseRuns/publish,v1.0,Untested,Requires valid course run payload,2026-02-13
+Edit Course Run,Certificate,POST,api.ssg-wsg.sg/courses/courseRuns/edit/{runId},v1.0,Untested,Requires valid course run payload,2026-02-13
+Grant Baseline,Certificate,POST,api.ssg-wsg.sg/grants/calculator/baseline,v3.0,403,This API version does not seem to exist,2026-02-13
+Grant Baseline,OAuth,POST,public-api.ssg-wsg.sg/grants/calculator/baseline,v3.0,403,This API version does not seem to exist,2026-02-13
+Grant Personalised,Certificate,POST,api.ssg-wsg.sg/grants/calculator/personalised,v3.0,403,This API version does not seem to exist,2026-02-13
+Grant Personalised,OAuth,POST,public-api.ssg-wsg.sg/grants/calculator/personalised,v3.0,403,This API version does not seem to exist,2026-02-13
+Grant Search,Certificate,POST,api.ssg-wsg.sg/grants/search,v1.0,500,Non-JSON response from OAuth fallback,2026-02-13
+Grant Details,Certificate + OAuth,GET,api.ssg-wsg.sg/grants/details/{grantRefNo},v1,200,Returns encrypted response,2026-02-13
+Grant Codes,Certificate + OAuth,GET,api.ssg-wsg.sg/grants/codes/fundingComponent,v1,500,Non-JSON response from OAuth fallback,2026-02-13
+SF View Claim,Certificate,GET,api.ssg-wsg.sg/skillsFutureCredits/claims/{claimId},v2,403,Access to this API has been disallowed,2026-02-13
+SF Cancel Claim,Certificate,POST,api.ssg-wsg.sg/skillsFutureCredits/claims/{claimId}/cancel,v2,400,Unable to perform decryption due invalid request,2026-02-13
+SF Encrypt Request,Certificate,POST,api.ssg-wsg.sg/skillsFutureCredits/claims/encryptRequests,v2,400,Unable to perform decryption due invalid request,2026-02-13
+SF Decrypt Request,Certificate,POST,api.ssg-wsg.sg/skillsFutureCredits/claims/decryptRequests,v2,400,Unable to perform decryption due invalid request,2026-02-13
+Enrolment Search,Certificate + OAuth,POST,api.ssg-wsg.sg/enrolments/search,v3.0,500,Non-JSON response from OAuth fallback,2026-02-13
+Enrolment View,Certificate + OAuth,GET,api.ssg-wsg.sg/enrolments/details/{refNo},v3.0,200,Returns encrypted response,2026-02-13
+Enrolment Codes,Certificate + OAuth,GET,api.ssg-wsg.sg/enrolments/codes/sponsorshipType,v3.0,500,Non-JSON response from OAuth fallback,2026-02-13
+Assessment Search,Certificate + OAuth,POST,api.ssg-wsg.sg/assessments/search,v1,500,Non-JSON response from OAuth fallback,2026-02-13
+Assessment View,Certificate + OAuth,GET,api.ssg-wsg.sg/assessments/details/{refNo},v1,200,Returns encrypted response,2026-02-13
+Assessment Codes,Certificate + OAuth,GET,api.ssg-wsg.sg/assessments/codes/idType,v1,500,Non-JSON response from OAuth fallback,2026-02-13
+Skills Passport Qualifications,Certificate + OAuth,GET,api.ssg-wsg.sg/skillsPassport/codes/qualifications,v1,404,Not Found (API returns 404 inside 200 response),2026-02-13
+Skill Extraction (SEA),Certificate + OAuth,POST,api.ssg-wsg.sg/skillExtract,v1,500,Non-JSON response from OAuth fallback,2026-02-13
+Skill Search (SEA),Certificate + OAuth,POST,api.ssg-wsg.sg/skillSearch,v1,500,Non-JSON response from OAuth fallback,2026-02-13
+Skills Framework Jobs,Certificate + OAuth,GET,api.ssg-wsg.sg/sfw/skillsFramework/jobs,v1.0,500,Non-JSON response from OAuth fallback,2026-02-13
+Skills Framework Skills,Certificate + OAuth,GET,api.ssg-wsg.sg/sfw/skillsFramework/skills,v1.0,500,Non-JSON response from OAuth fallback,2026-02-13

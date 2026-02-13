@@ -517,6 +517,14 @@ td {
   color: #4b5563;
 }
 
+tbody tr:nth-child(even) {
+  background: #f9fafb;
+}
+
+tbody tr:hover {
+  background: #f0f4ff;
+}
+
 .vacancy-badge {
   display: inline-block;
   padding: 0.2rem 0.5rem;
