@@ -398,3 +398,20 @@ export async function getSkillsFrameworkSkills(params: Record<string, string>) {
   const response = await apiClient.get<Record<string, unknown>>('/skills-framework/skills', { params });
   return response.data;
 }
+
+// Tools
+
+export async function generateCertificate(body: { commonName: string; organization: string; country: string; days: string; keySize: string }) {
+  const response = await apiClient.post<{ cert: string; key: string; command: string }>('/tools/generate-cert', body);
+  return response.data;
+}
+
+export async function generateKeypair(body: { keySize: string }) {
+  const response = await apiClient.post<{ privateKey: string; publicKeyPem: string; publicKeyStripped: string; commands: string[] }>('/tools/generate-keypair', body);
+  return response.data;
+}
+
+export async function generateEncryptionKey(body: { bytes: string }) {
+  const response = await apiClient.post<{ key: string; command: string }>('/tools/generate-encryption-key', body);
+  return response.data;
+}

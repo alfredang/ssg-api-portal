@@ -3,6 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const crypto = require('crypto');
+const { execSync } = require('child_process');
+const os = require('os');
 const { getAccessToken } = require('./oauth');
 
 const router = express.Router();
@@ -1830,6 +1832,141 @@ router.post('/skill-search', async (req, res) => {
     res.status(err.status || 500).json({
       error: err.message,
       details: err.body || null,
+    });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// Tools
+// ─────────────────────────────────────────────────────────────────
+
+// POST /api/tools/generate-cert — Generate self-signed certificate via OpenSSL
+router.post('/tools/generate-cert', (req, res) => {
+  const {
+    commonName = 'localhost',
+    organization = 'My Organization',
+    country = 'SG',
+    days = '3650',
+    keySize = '4096',
+  } = req.body;
+
+  // Validate inputs — only allow safe characters
+  const safePattern = /^[a-zA-Z0-9 ._\-]+$/;
+  for (const [field, value] of Object.entries({ commonName, organization, country })) {
+    if (!safePattern.test(value)) {
+      return res.status(400).json({ error: `Invalid characters in ${field}` });
+    }
+  }
+  if (!/^\d+$/.test(String(days)) || !/^\d+$/.test(String(keySize))) {
+    return res.status(400).json({ error: 'days and keySize must be numeric' });
+  }
+
+  let tmpDir;
+  try {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ssg-cert-'));
+    const certPath = path.join(tmpDir, 'cert.pem');
+    const keyPath = path.join(tmpDir, 'key.pem');
+
+    const subject = `/C=${country}/O=${organization}/CN=${commonName}`;
+    const cmd = `openssl req -x509 -newkey rsa:${keySize} -keyout "${keyPath}" -out "${certPath}" -days ${days} -nodes -subj "${subject}"`;
+
+    execSync(cmd, { stdio: 'pipe', timeout: 30000 });
+
+    const certPem = fs.readFileSync(certPath, 'utf8');
+    const keyPem = fs.readFileSync(keyPath, 'utf8');
+
+    res.json({
+      cert: certPem,
+      key: keyPem,
+      command: `openssl req -x509 -newkey rsa:${keySize} -keyout key.pem -out cert.pem -days ${days} -nodes -subj "${subject}"`,
+    });
+  } catch (err) {
+    console.error('Certificate generation error:', err.message);
+    res.status(500).json({
+      error: 'Failed to generate certificate',
+      details: err.stderr ? err.stderr.toString() : err.message,
+    });
+  } finally {
+    // Clean up temp files
+    if (tmpDir) {
+      try { fs.rmSync(tmpDir, { recursive: true }); } catch {}
+    }
+  }
+});
+
+// POST /api/tools/generate-keypair — Generate RSA key pair and extract public key
+router.post('/tools/generate-keypair', (req, res) => {
+  const { keySize = '2048' } = req.body;
+
+  if (!/^\d+$/.test(String(keySize))) {
+    return res.status(400).json({ error: 'keySize must be numeric' });
+  }
+
+  let tmpDir;
+  try {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ssg-keypair-'));
+    const keyPath = path.join(tmpDir, 'key.pem');
+    const pubPath = path.join(tmpDir, 'public.pem');
+
+    // Generate RSA private key
+    execSync(`openssl genrsa -out "${keyPath}" ${keySize}`, { stdio: 'pipe', timeout: 30000 });
+
+    // Extract public key in PEM format
+    execSync(`openssl rsa -in "${keyPath}" -outform PEM -pubout -out "${pubPath}"`, { stdio: 'pipe', timeout: 30000 });
+
+    const privateKey = fs.readFileSync(keyPath, 'utf8');
+    const publicKeyPem = fs.readFileSync(pubPath, 'utf8');
+
+    // Strip PEM header/footer and newlines to get raw base64
+    const publicKeyStripped = publicKeyPem
+      .replace(/-----BEGIN PUBLIC KEY-----/, '')
+      .replace(/-----END PUBLIC KEY-----/, '')
+      .replace(/\r?\n/g, '')
+      .trim();
+
+    res.json({
+      privateKey,
+      publicKeyPem,
+      publicKeyStripped,
+      commands: [
+        `openssl genrsa -out key.pem ${keySize}`,
+        'openssl rsa -in key.pem -outform PEM -pubout -out public.pem',
+      ],
+    });
+  } catch (err) {
+    console.error('Key pair generation error:', err.message);
+    res.status(500).json({
+      error: 'Failed to generate key pair',
+      details: err.stderr ? err.stderr.toString() : err.message,
+    });
+  } finally {
+    if (tmpDir) {
+      try { fs.rmSync(tmpDir, { recursive: true }); } catch {}
+    }
+  }
+});
+
+// POST /api/tools/generate-encryption-key — Generate random encryption key
+router.post('/tools/generate-encryption-key', (req, res) => {
+  const { bytes = '32' } = req.body;
+
+  if (!/^\d+$/.test(String(bytes))) {
+    return res.status(400).json({ error: 'bytes must be numeric' });
+  }
+
+  try {
+    const output = execSync(`openssl rand -base64 ${bytes}`, { stdio: 'pipe', timeout: 10000 });
+    const key = output.toString().trim();
+
+    res.json({
+      key,
+      command: `openssl rand -base64 ${bytes}`,
+    });
+  } catch (err) {
+    console.error('Encryption key generation error:', err.message);
+    res.status(500).json({
+      error: 'Failed to generate encryption key',
+      details: err.stderr ? err.stderr.toString() : err.message,
     });
   }
 });

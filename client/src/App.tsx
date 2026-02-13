@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useApi } from './hooks/useApi';
-import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications, postSkillExtract, postSkillSearch, getSkillsFrameworkJobs, getSkillsFrameworkSkills } from './api/courseApi';
+import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications, postSkillExtract, postSkillSearch, getSkillsFrameworkJobs, getSkillsFrameworkSkills, generateCertificate, generateKeypair, generateEncryptionKey } from './api/courseApi';
 import SearchForm from './components/SearchForm';
 import CourseSearchForm from './components/CourseSearchForm';
 import CourseOverview from './components/CourseOverview';
@@ -24,6 +24,7 @@ type Page = 'course-lookup' | 'course-search' | 'popular-courses'
   | 'sp-qualifications'
   | 'sea-skill-extract' | 'sea-skill-search'
   | 'sfw-job-roles' | 'sfw-skills'
+  | 'tools-generate-cert' | 'tools-generate-keypair' | 'tools-encryption-key'
   | 'api-issues';
 
 interface NavCategory {
@@ -121,6 +122,14 @@ const NAV_ITEMS: NavCategory[] = [
     children: [
       { id: 'sfw-job-roles', label: 'Get Job Role Details' },
       { id: 'sfw-skills', label: 'Get Skills Details' },
+    ],
+  },
+  {
+    label: 'Tools',
+    children: [
+      { id: 'tools-generate-cert', label: 'Generate Certificate' },
+      { id: 'tools-generate-keypair', label: 'Generate Digital Signature' },
+      { id: 'tools-encryption-key', label: 'Generate Encryption Key' },
     ],
   },
   { label: 'Known API Issues', id: 'api-issues' },
@@ -272,6 +281,9 @@ function App() {
   const seaSkillSearchApi = useApi<Record<string, unknown>>();
   const sfwJobRolesApi = useApi<Record<string, unknown>>();
   const sfwSkillsApi = useApi<Record<string, unknown>>();
+  const generateCertApi = useApi<{ cert: string; key: string; command: string }>();
+  const generateKeypairApi = useApi<{ privateKey: string; publicKeyPem: string; publicKeyStripped: string; commands: string[] }>();
+  const encryptionKeyApi = useApi<{ key: string; command: string }>();
 
   const handleLookup = async (params: { refNo: string; uen: string; courseRunStartDate: string }) => {
     searchApi.reset();
@@ -437,6 +449,18 @@ function App() {
 
   const handleSfwSkills = async (params: Record<string, string>) => {
     await sfwSkillsApi.execute(() => getSkillsFrameworkSkills(params));
+  };
+
+  const handleGenerateCert = async (body: { commonName: string; organization: string; country: string; days: string; keySize: string }) => {
+    await generateCertApi.execute(() => generateCertificate(body));
+  };
+
+  const handleGenerateKeypair = async (keySize: string) => {
+    await generateKeypairApi.execute(() => generateKeypair({ keySize }));
+  };
+
+  const handleEncryptionKey = async (bytes: string) => {
+    await encryptionKeyApi.execute(() => generateEncryptionKey({ bytes }));
   };
 
   const handleSessionsLookup = async (params: {
@@ -3350,6 +3374,210 @@ function App() {
                 {JSON.stringify(sfwSkillsApi.data, null, 2)}
               </pre>
             </div>
+          )}
+        </>
+      );
+    }
+
+    if (activePage === 'tools-generate-cert') {
+      return (
+        <>
+          <h2 className="page-title">Generate Certificate</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
+            Generate a self-signed X.509 certificate using OpenSSL. Output files are in <code>.pem</code> format.
+          </p>
+          <form className="course-result" onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            handleGenerateCert({
+              commonName: fd.get('commonName') as string,
+              organization: fd.get('organization') as string,
+              country: fd.get('country') as string,
+              days: fd.get('days') as string,
+              keySize: fd.get('keySize') as string,
+            });
+          }}>
+            <div className="form-group">
+              <label htmlFor="certCN">Common Name (CN)</label>
+              <input id="certCN" name="commonName" type="text" defaultValue="localhost" disabled={generateCertApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="certO">Organization (O)</label>
+              <input id="certO" name="organization" type="text" defaultValue="My Organization" disabled={generateCertApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="certC">Country (C)</label>
+              <input id="certC" name="country" type="text" defaultValue="SG" disabled={generateCertApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="certDays">Validity (days)</label>
+              <input id="certDays" name="days" type="text" defaultValue="3650" disabled={generateCertApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="certKeySize">Key Size (bits)</label>
+              <input id="certKeySize" name="keySize" type="text" defaultValue="4096" disabled={generateCertApi.loading} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button type="submit" disabled={generateCertApi.loading}>
+                {generateCertApi.loading ? 'Generating...' : 'Generate Certificate'}
+              </button>
+            </div>
+          </form>
+          {generateCertApi.error && <div className="error-alert">{generateCertApi.error}</div>}
+          {generateCertApi.loading && <div className="loading">Generating certificate with OpenSSL...</div>}
+          {generateCertApi.data && (
+            <>
+              <div className="course-result" style={{ marginTop: 16 }}>
+                <h3>OpenSSL Command Used</h3>
+                <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13 }}>
+                  {generateCertApi.data.command}
+                </pre>
+              </div>
+              <div className="course-result" style={{ marginTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3>cert.pem</h3>
+                  <button onClick={() => {
+                    const blob = new Blob([generateCertApi.data!.cert], { type: 'application/x-pem-file' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = 'cert.pem'; a.click();
+                    URL.revokeObjectURL(url);
+                  }}>Download cert.pem</button>
+                </div>
+                <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 300, fontSize: 13, marginTop: 8 }}>
+                  {generateCertApi.data.cert}
+                </pre>
+              </div>
+              <div className="course-result" style={{ marginTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3>key.pem</h3>
+                  <button onClick={() => {
+                    const blob = new Blob([generateCertApi.data!.key], { type: 'application/x-pem-file' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = 'key.pem'; a.click();
+                    URL.revokeObjectURL(url);
+                  }}>Download key.pem</button>
+                </div>
+                <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 300, fontSize: 13, marginTop: 8 }}>
+                  {generateCertApi.data.key}
+                </pre>
+              </div>
+            </>
+          )}
+        </>
+      );
+    }
+
+    if (activePage === 'tools-generate-keypair') {
+      return (
+        <>
+          <h2 className="page-title">Generate Digital Signature</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
+            Generate an RSA key pair using OpenSSL. Outputs private key (<code>key.pem</code>) and public key (<code>public.pem</code>) in .pem format, plus a stripped public key (no headers/newlines).
+          </p>
+          <form className="course-result" onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            handleGenerateKeypair(fd.get('keySize') as string);
+          }}>
+            <div className="form-group">
+              <label htmlFor="kpKeySize">Key Size (bits)</label>
+              <input id="kpKeySize" name="keySize" type="text" defaultValue="2048" disabled={generateKeypairApi.loading} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button type="submit" disabled={generateKeypairApi.loading}>
+                {generateKeypairApi.loading ? 'Generating...' : 'Generate Key Pair'}
+              </button>
+            </div>
+          </form>
+          {generateKeypairApi.error && <div className="error-alert">{generateKeypairApi.error}</div>}
+          {generateKeypairApi.loading && <div className="loading">Generating key pair with OpenSSL...</div>}
+          {generateKeypairApi.data && (
+            <>
+              <div className="course-result" style={{ marginTop: 16 }}>
+                <h3>OpenSSL Commands Used</h3>
+                <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13 }}>
+                  {generateKeypairApi.data.commands.join('\n')}
+                </pre>
+              </div>
+              <div className="course-result" style={{ marginTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3>key.pem (Private Key)</h3>
+                  <button onClick={() => {
+                    const blob = new Blob([generateKeypairApi.data!.privateKey], { type: 'application/x-pem-file' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = 'key.pem'; a.click();
+                    URL.revokeObjectURL(url);
+                  }}>Download key.pem</button>
+                </div>
+                <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 300, fontSize: 13, marginTop: 8 }}>
+                  {generateKeypairApi.data.privateKey}
+                </pre>
+              </div>
+              <div className="course-result" style={{ marginTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3>public.pem (Public Key)</h3>
+                  <button onClick={() => {
+                    const blob = new Blob([generateKeypairApi.data!.publicKeyPem], { type: 'application/x-pem-file' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = 'public.pem'; a.click();
+                    URL.revokeObjectURL(url);
+                  }}>Download public.pem</button>
+                </div>
+                <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 200, fontSize: 13, marginTop: 8 }}>
+                  {generateKeypairApi.data.publicKeyPem}
+                </pre>
+              </div>
+              <div className="course-result" style={{ marginTop: 16 }}>
+                <h3>Public Key (stripped — no headers/newlines)</h3>
+                <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13, wordBreak: 'break-all' }}>
+                  {generateKeypairApi.data.publicKeyStripped}
+                </pre>
+              </div>
+            </>
+          )}
+        </>
+      );
+    }
+
+    if (activePage === 'tools-encryption-key') {
+      return (
+        <>
+          <h2 className="page-title">Generate Encryption Key</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
+            Generate a random base64-encoded encryption key using OpenSSL. Command: <code>openssl rand -base64 {'<bytes>'}</code>
+          </p>
+          <form className="course-result" onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            handleEncryptionKey(fd.get('bytes') as string);
+          }}>
+            <div className="form-group">
+              <label htmlFor="ekBytes">Key Size (bytes)</label>
+              <input id="ekBytes" name="bytes" type="text" defaultValue="32" disabled={encryptionKeyApi.loading} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button type="submit" disabled={encryptionKeyApi.loading}>
+                {encryptionKeyApi.loading ? 'Generating...' : 'Generate Encryption Key'}
+              </button>
+            </div>
+          </form>
+          {encryptionKeyApi.error && <div className="error-alert">{encryptionKeyApi.error}</div>}
+          {encryptionKeyApi.loading && <div className="loading">Generating encryption key...</div>}
+          {encryptionKeyApi.data && (
+            <>
+              <div className="course-result" style={{ marginTop: 16 }}>
+                <h3>OpenSSL Command Used</h3>
+                <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13 }}>
+                  {encryptionKeyApi.data.command}
+                </pre>
+              </div>
+              <div className="course-result" style={{ marginTop: 16 }}>
+                <h3>Generated Key (base64)</h3>
+                <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13, wordBreak: 'break-all' }}>
+                  {encryptionKeyApi.data.key}
+                </pre>
+              </div>
+            </>
           )}
         </>
       );
