@@ -42,7 +42,7 @@ SSG API Portal is a React web app for exploring the SSG-WSG (SkillsFuture Singap
 | **SEA** | Skill extraction and skill search APIs |
 | **Skills Framework** | Job role details and skills details lookup |
 | **Tools** | Generate certificates, RSA keypairs, and encryption keys |
-| **Known API Issues** | Live dashboard showing API status (403, 200) from curl tests |
+| **Known API Issues** | Collapsible dashboard grouped by category with error counts and references |
 | **Dual Auth** | OAuth 2.0 for public APIs + mTLS certificates for registry APIs |
 
 ## Tech Stack
@@ -246,6 +246,17 @@ This app proxies requests to SSG-WSG production APIs with cert-first + OAuth fal
 | `/api/tools/generate-cert` | POST | — | Generate self-signed certificate |
 | `/api/tools/generate-keypair` | POST | — | Generate RSA key pair |
 | `/api/tools/generate-encryption-key` | POST | — | Generate AES encryption key |
+
+## References
+
+- [API Discovery — Products](https://developer.ssg-wsg.gov.sg/webapp/api-discovery)
+- [Get Started Guides](https://developer.ssg-wsg.gov.sg/webapp/guides)
+- [Courses API Reference](https://developer.ssg-wsg.gov.sg/webapp/docs/product/6kYpfJEWVb7NyYVVHvUmHi/group/2reSbYZjfhi3WWeLp4BlQ4)
+- [Programmes for Individual — Grant Calculator API](https://developer.ssg-wsg.gov.sg/webapp/docs/product/7KU1xrpxljJZnsIkJP6QNF/group/IUAJ3XXeGEZuk9yGpoUX3)
+- [Programmes for Individual — Assessments API](https://developer.ssg-wsg.gov.sg/webapp/docs/product/7KU1xrpxljJZnsIkJP6QNF/group/3540ZmPQma3rcanoBfNYff)
+- [Skills API — Skills Passport](https://developer.ssg-wsg.gov.sg/webapp/docs/product/4ZCqa7uABJeR6vtKUjsxyx/group/6NqcljmEXinhh5SP9drNXL)
+- [Guide: App Settings (Credentials & Certificates)](https://developer.ssg-wsg.gov.sg/webapp/guides/MOwcZA3asB0nmFaq8KJ71)
+- [Guide: Subscription Settings (Digital Signature, Encryption Key, Callbacks)](https://developer.ssg-wsg.gov.sg/webapp/guides/1kR6AzKYXtvPEXfXCZJHgu)
 
 ## Contributing
 

@@ -160,6 +160,19 @@ function CollapsibleCourse({ course, defaultOpen }: { course: Course; defaultOpe
   );
 }
 
+function CollapsibleSection({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="course-result" style={{ marginTop: 8 }}>
+      <button className="collapsible-header" onClick={() => setOpen(!open)}>
+        <h3 style={{ margin: 0 }}>{title}</h3>
+        <span className={`collapsible-arrow ${open ? 'open' : ''}`}>&#9660;</span>
+      </button>
+      {open && children}
+    </div>
+  );
+}
+
 function Sidebar({ activePage, onNavigate }: { activePage: Page; onNavigate: (page: Page) => void }) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['Courses']));
 
@@ -3481,23 +3494,23 @@ function App() {
           }}>
             <div className="form-group">
               <label htmlFor="certCN">Common Name (CN)</label>
-              <input id="certCN" name="commonName" type="text" defaultValue="api.ssg-wsg.sg" disabled={generateCertApi.loading} />
+              <input id="certCN" name="commonName" type="text" autoComplete="off" defaultValue="api.ssg-wsg.sg" disabled={generateCertApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="certO">Organization (O)</label>
-              <input id="certO" name="organization" type="text" defaultValue="Tertiary Infotech Academy Pte Ltd" disabled={generateCertApi.loading} />
+              <input id="certO" name="organization" type="text" autoComplete="off" defaultValue="Tertiary Infotech Academy Pte Ltd" disabled={generateCertApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="certC">Country (C)</label>
-              <input id="certC" name="country" type="text" defaultValue="SG" disabled={generateCertApi.loading} />
+              <input id="certC" name="country" type="text" autoComplete="off" defaultValue="SG" disabled={generateCertApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="certDays">Validity (days)</label>
-              <input id="certDays" name="days" type="text" defaultValue="3650" disabled={generateCertApi.loading} />
+              <input id="certDays" name="days" type="text" autoComplete="off" defaultValue="3650" disabled={generateCertApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="certKeySize">Key Size (bits)</label>
-              <input id="certKeySize" name="keySize" type="text" defaultValue="4096" disabled={generateCertApi.loading} />
+              <input id="certKeySize" name="keySize" type="text" autoComplete="off" defaultValue="4096" disabled={generateCertApi.loading} />
             </div>
             <div style={{ marginTop: 12 }}>
               <button type="submit" disabled={generateCertApi.loading}>
@@ -3563,7 +3576,7 @@ function App() {
           }}>
             <div className="form-group">
               <label htmlFor="kpKeySize">Key Size (bits)</label>
-              <input id="kpKeySize" name="keySize" type="text" defaultValue="2048" disabled={generateKeypairApi.loading} />
+              <input id="kpKeySize" name="keySize" type="text" autoComplete="off" defaultValue="2048" disabled={generateKeypairApi.loading} />
             </div>
             <div style={{ marginTop: 12 }}>
               <button type="submit" disabled={generateKeypairApi.loading}>
@@ -3635,7 +3648,7 @@ function App() {
           }}>
             <div className="form-group">
               <label htmlFor="ekBytes">Key Size (bytes)</label>
-              <input id="ekBytes" name="bytes" type="text" defaultValue="32" disabled={encryptionKeyApi.loading} />
+              <input id="ekBytes" name="bytes" type="text" autoComplete="off" defaultValue="32" disabled={encryptionKeyApi.loading} />
             </div>
             <div style={{ marginTop: 12 }}>
               <button type="submit" disabled={encryptionKeyApi.loading}>
@@ -3666,6 +3679,11 @@ function App() {
     }
 
     if (activePage === 'api-issues') {
+      const errorTh = <><th>API</th><th>Auth Method</th><th>HTTP Method</th><th>Endpoint</th><th>Version</th><th>Status</th><th>Error / Reason</th></>;
+      const workingTh = <><th>API</th><th>Auth Method</th><th>HTTP Method</th><th>Endpoint</th><th>Version</th><th>Status</th></>;
+      const err = (code: number | string) => ({ color: typeof code === 'number' ? '#d32f2f' : '#666', fontWeight: 600 } as const);
+      const ok = { color: '#2e7d32', fontWeight: 600 } as const;
+
       return (
         <>
           <h2 className="page-title">Known API Issues</h2>
@@ -3673,83 +3691,105 @@ function App() {
             Issues encountered when calling SSG production APIs. Use this as a reference when troubleshooting API errors.
           </p>
 
-          <div className="course-result" style={{ marginTop: 16 }}>
-            <h3>APIs with Errors</h3>
-            <table className="sessions-table">
-              <thead>
-                <tr>
-                  <th>API</th>
-                  <th>Auth Method</th>
-                  <th>HTTP Method</th>
-                  <th>Endpoint</th>
-                  <th>Version</th>
-                  <th>Status</th>
-                  <th>Error / Reason</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td>Course Lookup</td><td>Certificate</td><td>GET</td><td>api.ssg-wsg.sg/courses/directory/&#123;refNo&#125;</td><td>v1.2</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>403</td><td>Access disallowed — OAuth fallback works</td></tr>
-                <tr><td>Popular Courses</td><td>Certificate</td><td>GET</td><td>api.ssg-wsg.sg/courses/directory/popular</td><td>v1.1</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>403</td><td>API version has expired</td></tr>
-                <tr><td>Popular Courses</td><td>OAuth</td><td>GET</td><td>public-api.ssg-wsg.sg/courses/directory/popular</td><td>v1.1</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>403</td><td>API version has expired</td></tr>
-                <tr><td>Course Quality</td><td>Certificate</td><td>GET</td><td>api.ssg-wsg.sg/courses/directory/&#123;refNo&#125;/quality</td><td>v2.0</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>403</td><td>Access disallowed — OAuth fallback returns 200</td></tr>
-                <tr><td>Course Outcome</td><td>Certificate</td><td>GET</td><td>api.ssg-wsg.sg/courses/directory/&#123;refNo&#125;/outcome</td><td>v2.0</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>403</td><td>Access disallowed — OAuth fallback returns 200</td></tr>
-                <tr><td>Course Sessions</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/courses/runs/&#123;runId&#125;/sessions</td><td>v1.5</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>403</td><td>Access to this API has been disallowed</td></tr>
-                <tr><td>Session Attendance</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/courses/runs/&#123;runId&#125;/sessions/attendance</td><td>v1.5</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>403</td><td>Access to this API has been disallowed</td></tr>
-                <tr><td>Upload Attendance</td><td>Certificate + AES</td><td>POST</td><td>api.ssg-wsg.sg/courses/runs/&#123;runId&#125;/sessions/attendance</td><td>v1.5</td><td style={{ color: '#666' }}>Varies</td><td>No OAuth fallback — cert + AES only</td></tr>
-                <tr><td>Course Run by ID</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/courses/courseRuns/id/&#123;runId&#125;</td><td>v1.0</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>403</td><td>Access to this API has been disallowed</td></tr>
-                <tr><td>Retrieve Trainer Details</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/trainingProviders/&#123;uen&#125;/trainers</td><td>v2.0</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>500</td><td>Non-JSON response (possibly encrypted)</td></tr>
-                <tr><td>Update/Delete Trainer</td><td>Certificate</td><td>POST</td><td>api.ssg-wsg.sg/trainingProviders/&#123;uen&#125;/trainers/&#123;trainerId&#125;</td><td>v2.0</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>400</td><td>Unable to perform decryption due invalid request</td></tr>
-                <tr><td>Update/Delete Trainer</td><td>OAuth</td><td>POST</td><td>public-api.ssg-wsg.sg/trainingProviders/&#123;uen&#125;/trainers/&#123;trainerId&#125;</td><td>v2.0</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>403</td><td>Access to this API has been disallowed</td></tr>
-                <tr><td>Grant Baseline</td><td>Certificate + OAuth</td><td>POST</td><td>api.ssg-wsg.sg/grants/calculator/baseline</td><td>v3.0</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>403</td><td>This API version does not seem to exist</td></tr>
-                <tr><td>Grant Personalised</td><td>Certificate + OAuth</td><td>POST</td><td>api.ssg-wsg.sg/grants/calculator/personalised</td><td>v3.0</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>403</td><td>This API version does not seem to exist</td></tr>
-                <tr><td>Grant Search</td><td>Certificate + OAuth</td><td>POST</td><td>api.ssg-wsg.sg/grants/search</td><td>v1.0</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
-                <tr><td>Grant Codes</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/grants/codes/fundingComponent</td><td>v1</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
-                <tr><td>SF View Claim</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/skillsFutureCredits/claims/&#123;claimId&#125;</td><td>v2</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>403</td><td>Access to this API has been disallowed</td></tr>
-                <tr><td>SF Cancel Claim</td><td>Certificate</td><td>POST</td><td>api.ssg-wsg.sg/skillsFutureCredits/claims/&#123;claimId&#125;/cancel</td><td>v2</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>400</td><td>Unable to perform decryption due invalid request</td></tr>
-                <tr><td>SF Encrypt Request</td><td>Certificate</td><td>POST</td><td>api.ssg-wsg.sg/skillsFutureCredits/claims/encryptRequests</td><td>v2</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>400</td><td>Unable to perform decryption due invalid request</td></tr>
-                <tr><td>SF Decrypt Request</td><td>Certificate</td><td>POST</td><td>api.ssg-wsg.sg/skillsFutureCredits/claims/decryptRequests</td><td>v2</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>400</td><td>Unable to perform decryption due invalid request</td></tr>
-                <tr><td>Enrolment Search</td><td>Certificate + OAuth</td><td>POST</td><td>api.ssg-wsg.sg/enrolments/search</td><td>v3.0</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
-                <tr><td>Enrolment Codes</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/enrolments/codes/sponsorshipType</td><td>v3.0</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
-                <tr><td>Assessment Search</td><td>Certificate + OAuth</td><td>POST</td><td>api.ssg-wsg.sg/assessments/search</td><td>v1</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
-                <tr><td>Assessment Codes</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/assessments/codes/idType</td><td>v1</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
-                <tr><td>Skills Passport Qualifications</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/skillsPassport/codes/qualifications</td><td>v1</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>404</td><td>Not Found (API returns 404 inside 200 response)</td></tr>
-                <tr><td>Skill Extraction (SEA)</td><td>Certificate + OAuth</td><td>POST</td><td>api.ssg-wsg.sg/skillExtract</td><td>v1</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
-                <tr><td>Skill Search (SEA)</td><td>Certificate + OAuth</td><td>POST</td><td>api.ssg-wsg.sg/skillSearch</td><td>v1</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
-                <tr><td>Skills Framework Jobs</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/sfw/skillsFramework/jobs</td><td>v1.0</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
-                <tr><td>Skills Framework Skills</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/sfw/skillsFramework/skills</td><td>v1.0</td><td style={{ color: '#d32f2f', fontWeight: 600 }}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
-              </tbody>
-            </table>
-          </div>
+          <h3 style={{ marginTop: 24, marginBottom: 8 }}>APIs with Errors</h3>
 
-          <div className="course-result" style={{ marginTop: 16 }}>
-            <h3>Working APIs</h3>
-            <table className="sessions-table">
-              <thead>
-                <tr>
-                  <th>API</th>
-                  <th>Auth Method</th>
-                  <th>HTTP Method</th>
-                  <th>Endpoint</th>
-                  <th>Version</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td>Course Search (TPG Registry)</td><td>Certificate</td><td>POST</td><td>api.ssg-wsg.sg/tpg/courses/registry/search</td><td>v8.0</td><td style={{ color: '#2e7d32', fontWeight: 600 }}>200</td></tr>
-                <tr><td>Course Details (TPG Registry)</td><td>Certificate</td><td>GET</td><td>api.ssg-wsg.sg/tpg/courses/registry/details/&#123;refNo&#125;</td><td>v8.0</td><td style={{ color: '#2e7d32', fontWeight: 600 }}>200</td></tr>
-                <tr><td>Courses by TP UEN</td><td>Certificate</td><td>POST</td><td>api.ssg-wsg.sg/tpg/courses/registry/search (via UEN filter)</td><td>v8.0</td><td style={{ color: '#2e7d32', fontWeight: 600 }}>200</td></tr>
-                <tr><td>Course Lookup by Ref No</td><td>OAuth (fallback)</td><td>GET</td><td>public-api.ssg-wsg.sg/courses/directory/&#123;refNo&#125;</td><td>v1.2</td><td style={{ color: '#2e7d32', fontWeight: 600 }}>200</td></tr>
-                <tr><td>Course Quality</td><td>OAuth (fallback)</td><td>GET</td><td>public-api.ssg-wsg.sg/courses/directory/&#123;refNo&#125;/quality</td><td>v2.0</td><td style={{ color: '#2e7d32', fontWeight: 600 }}>200</td></tr>
-                <tr><td>Course Outcome</td><td>OAuth (fallback)</td><td>GET</td><td>public-api.ssg-wsg.sg/courses/directory/&#123;refNo&#125;/outcome</td><td>v2.0</td><td style={{ color: '#2e7d32', fontWeight: 600 }}>200</td></tr>
-                <tr><td>Course Runs by Ref No</td><td>OAuth (fallback)</td><td>GET</td><td>public-api.ssg-wsg.sg/courses/courseRuns/reference</td><td>v1.0</td><td style={{ color: '#2e7d32', fontWeight: 600 }}>200</td></tr>
-                <tr><td>Grant Details</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/grants/details/&#123;grantRefNo&#125;</td><td>v1</td><td style={{ color: '#2e7d32', fontWeight: 600 }}>200</td></tr>
-                <tr><td>Enrolment View</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/enrolments/details/&#123;refNo&#125;</td><td>v3.0</td><td style={{ color: '#2e7d32', fontWeight: 600 }}>200</td></tr>
-                <tr><td>Assessment View</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/assessments/details/&#123;refNo&#125;</td><td>v1</td><td style={{ color: '#2e7d32', fontWeight: 600 }}>200</td></tr>
-              </tbody>
-            </table>
-          </div>
+          <CollapsibleSection title="Courses — Directory (5)">
+            <table className="sessions-table"><thead><tr>{errorTh}</tr></thead><tbody>
+              <tr><td>Course Lookup</td><td>Certificate</td><td>GET</td><td>api.ssg-wsg.sg/courses/directory/&#123;refNo&#125;</td><td>v1.2</td><td style={err(403)}>403</td><td>Access disallowed — OAuth fallback works</td></tr>
+              <tr><td>Popular Courses</td><td>Certificate</td><td>GET</td><td>api.ssg-wsg.sg/courses/directory/popular</td><td>v1.1</td><td style={err(403)}>403</td><td>API version has expired</td></tr>
+              <tr><td>Popular Courses</td><td>OAuth</td><td>GET</td><td>public-api.ssg-wsg.sg/courses/directory/popular</td><td>v1.1</td><td style={err(403)}>403</td><td>API version has expired</td></tr>
+              <tr><td>Course Quality</td><td>Certificate</td><td>GET</td><td>api.ssg-wsg.sg/courses/directory/&#123;refNo&#125;/quality</td><td>v2.0</td><td style={err(403)}>403</td><td>Access disallowed — OAuth fallback returns 200</td></tr>
+              <tr><td>Course Outcome</td><td>Certificate</td><td>GET</td><td>api.ssg-wsg.sg/courses/directory/&#123;refNo&#125;/outcome</td><td>v2.0</td><td style={err(403)}>403</td><td>Access disallowed — OAuth fallback returns 200</td></tr>
+            </tbody></table>
+          </CollapsibleSection>
 
-          <div className="course-result" style={{ marginTop: 16 }}>
+          <CollapsibleSection title="Courses — Runs & Sessions (4)">
+            <table className="sessions-table"><thead><tr>{errorTh}</tr></thead><tbody>
+              <tr><td>Course Sessions</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/courses/runs/&#123;runId&#125;/sessions</td><td>v1.5</td><td style={err(403)}>403</td><td>Access to this API has been disallowed</td></tr>
+              <tr><td>Session Attendance</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/courses/runs/&#123;runId&#125;/sessions/attendance</td><td>v1.5</td><td style={err(403)}>403</td><td>Access to this API has been disallowed</td></tr>
+              <tr><td>Upload Attendance</td><td>Certificate + AES</td><td>POST</td><td>api.ssg-wsg.sg/courses/runs/&#123;runId&#125;/sessions/attendance</td><td>v1.5</td><td style={err('Varies')}>Varies</td><td>No OAuth fallback — cert + AES only</td></tr>
+              <tr><td>Course Run by ID</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/courses/courseRuns/id/&#123;runId&#125;</td><td>v1.0</td><td style={err(403)}>403</td><td>Access to this API has been disallowed</td></tr>
+            </tbody></table>
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Training Providers (3)">
+            <table className="sessions-table"><thead><tr>{errorTh}</tr></thead><tbody>
+              <tr><td>Retrieve Trainer Details</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/trainingProviders/&#123;uen&#125;/trainers</td><td>v2.0</td><td style={err(500)}>500</td><td>Non-JSON response (possibly encrypted)</td></tr>
+              <tr><td>Update/Delete Trainer</td><td>Certificate</td><td>POST</td><td>api.ssg-wsg.sg/trainingProviders/&#123;uen&#125;/trainers/&#123;trainerId&#125;</td><td>v2.0</td><td style={err(400)}>400</td><td>Unable to perform decryption due invalid request</td></tr>
+              <tr><td>Update/Delete Trainer</td><td>OAuth</td><td>POST</td><td>public-api.ssg-wsg.sg/trainingProviders/&#123;uen&#125;/trainers/&#123;trainerId&#125;</td><td>v2.0</td><td style={err(403)}>403</td><td>Access to this API has been disallowed</td></tr>
+            </tbody></table>
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Grant Calculator (4)">
+            <table className="sessions-table"><thead><tr>{errorTh}</tr></thead><tbody>
+              <tr><td>Grant Baseline</td><td>Certificate + OAuth</td><td>POST</td><td>api.ssg-wsg.sg/grants/calculator/baseline</td><td>v3.0</td><td style={err(403)}>403</td><td>This API version does not seem to exist</td></tr>
+              <tr><td>Grant Personalised</td><td>Certificate + OAuth</td><td>POST</td><td>api.ssg-wsg.sg/grants/calculator/personalised</td><td>v3.0</td><td style={err(403)}>403</td><td>This API version does not seem to exist</td></tr>
+              <tr><td>Grant Search</td><td>Certificate + OAuth</td><td>POST</td><td>api.ssg-wsg.sg/grants/search</td><td>v1.0</td><td style={err(500)}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
+              <tr><td>Grant Codes</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/grants/codes/fundingComponent</td><td>v1</td><td style={err(500)}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
+            </tbody></table>
+          </CollapsibleSection>
+
+          <CollapsibleSection title="SkillsFuture Credit Pay (4)">
+            <table className="sessions-table"><thead><tr>{errorTh}</tr></thead><tbody>
+              <tr><td>SF View Claim</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/skillsFutureCredits/claims/&#123;claimId&#125;</td><td>v2</td><td style={err(403)}>403</td><td>Access to this API has been disallowed</td></tr>
+              <tr><td>SF Cancel Claim</td><td>Certificate</td><td>POST</td><td>api.ssg-wsg.sg/skillsFutureCredits/claims/&#123;claimId&#125;/cancel</td><td>v2</td><td style={err(400)}>400</td><td>Unable to perform decryption due invalid request</td></tr>
+              <tr><td>SF Encrypt Request</td><td>Certificate</td><td>POST</td><td>api.ssg-wsg.sg/skillsFutureCredits/claims/encryptRequests</td><td>v2</td><td style={err(400)}>400</td><td>Unable to perform decryption due invalid request</td></tr>
+              <tr><td>SF Decrypt Request</td><td>Certificate</td><td>POST</td><td>api.ssg-wsg.sg/skillsFutureCredits/claims/decryptRequests</td><td>v2</td><td style={err(400)}>400</td><td>Unable to perform decryption due invalid request</td></tr>
+            </tbody></table>
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Enrolments (2)">
+            <table className="sessions-table"><thead><tr>{errorTh}</tr></thead><tbody>
+              <tr><td>Enrolment Search</td><td>Certificate + OAuth</td><td>POST</td><td>api.ssg-wsg.sg/enrolments/search</td><td>v3.0</td><td style={err(500)}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
+              <tr><td>Enrolment Codes</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/enrolments/codes/sponsorshipType</td><td>v3.0</td><td style={err(500)}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
+            </tbody></table>
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Assessments (2)">
+            <table className="sessions-table"><thead><tr>{errorTh}</tr></thead><tbody>
+              <tr><td>Assessment Search</td><td>Certificate + OAuth</td><td>POST</td><td>api.ssg-wsg.sg/assessments/search</td><td>v1</td><td style={err(500)}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
+              <tr><td>Assessment Codes</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/assessments/codes/idType</td><td>v1</td><td style={err(500)}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
+            </tbody></table>
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Skills Passport (1)">
+            <table className="sessions-table"><thead><tr>{errorTh}</tr></thead><tbody>
+              <tr><td>Skills Passport Qualifications</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/skillsPassport/codes/qualifications</td><td>v1</td><td style={err(404)}>404</td><td>Not Found (API returns 404 inside 200 response)</td></tr>
+            </tbody></table>
+          </CollapsibleSection>
+
+          <CollapsibleSection title="SEA (Skills Extraction & Analysis) (2)">
+            <table className="sessions-table"><thead><tr>{errorTh}</tr></thead><tbody>
+              <tr><td>Skill Extraction</td><td>Certificate + OAuth</td><td>POST</td><td>api.ssg-wsg.sg/skillExtract</td><td>v1</td><td style={err(500)}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
+              <tr><td>Skill Search</td><td>Certificate + OAuth</td><td>POST</td><td>api.ssg-wsg.sg/skillSearch</td><td>v1</td><td style={err(500)}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
+            </tbody></table>
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Skills Framework (2)">
+            <table className="sessions-table"><thead><tr>{errorTh}</tr></thead><tbody>
+              <tr><td>Skills Framework Jobs</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/sfw/skillsFramework/jobs</td><td>v1.0</td><td style={err(500)}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
+              <tr><td>Skills Framework Skills</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/sfw/skillsFramework/skills</td><td>v1.0</td><td style={err(500)}>500</td><td>Non-JSON response from OAuth fallback</td></tr>
+            </tbody></table>
+          </CollapsibleSection>
+
+          <h3 style={{ marginTop: 24, marginBottom: 8 }}>Working APIs</h3>
+
+          <CollapsibleSection title="Working APIs (10)">
+            <table className="sessions-table"><thead><tr>{workingTh}</tr></thead><tbody>
+              <tr><td>Course Search (TPG Registry)</td><td>Certificate</td><td>POST</td><td>api.ssg-wsg.sg/tpg/courses/registry/search</td><td>v8.0</td><td style={ok}>200</td></tr>
+              <tr><td>Course Details (TPG Registry)</td><td>Certificate</td><td>GET</td><td>api.ssg-wsg.sg/tpg/courses/registry/details/&#123;refNo&#125;</td><td>v8.0</td><td style={ok}>200</td></tr>
+              <tr><td>Courses by TP UEN</td><td>Certificate</td><td>POST</td><td>api.ssg-wsg.sg/tpg/courses/registry/search (via UEN filter)</td><td>v8.0</td><td style={ok}>200</td></tr>
+              <tr><td>Course Lookup by Ref No</td><td>OAuth (fallback)</td><td>GET</td><td>public-api.ssg-wsg.sg/courses/directory/&#123;refNo&#125;</td><td>v1.2</td><td style={ok}>200</td></tr>
+              <tr><td>Course Quality</td><td>OAuth (fallback)</td><td>GET</td><td>public-api.ssg-wsg.sg/courses/directory/&#123;refNo&#125;/quality</td><td>v2.0</td><td style={ok}>200</td></tr>
+              <tr><td>Course Outcome</td><td>OAuth (fallback)</td><td>GET</td><td>public-api.ssg-wsg.sg/courses/directory/&#123;refNo&#125;/outcome</td><td>v2.0</td><td style={ok}>200</td></tr>
+              <tr><td>Course Runs by Ref No</td><td>OAuth (fallback)</td><td>GET</td><td>public-api.ssg-wsg.sg/courses/courseRuns/reference</td><td>v1.0</td><td style={ok}>200</td></tr>
+              <tr><td>Grant Details</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/grants/details/&#123;grantRefNo&#125;</td><td>v1</td><td style={ok}>200</td></tr>
+              <tr><td>Enrolment View</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/enrolments/details/&#123;refNo&#125;</td><td>v3.0</td><td style={ok}>200</td></tr>
+              <tr><td>Assessment View</td><td>Certificate + OAuth</td><td>GET</td><td>api.ssg-wsg.sg/assessments/details/&#123;refNo&#125;</td><td>v1</td><td style={ok}>200</td></tr>
+            </tbody></table>
+          </CollapsibleSection>
+
+          <div className="course-result" style={{ marginTop: 24 }}>
             <h3>Common Error Codes</h3>
             <table className="sessions-table">
               <thead>
@@ -3766,6 +3806,20 @@ function App() {
                 <tr><td style={{ fontWeight: 600 }}>500</td><td>Internal Server Error</td><td>SSG returns non-JSON (encrypted) response; OAuth fallback may also return encrypted data</td></tr>
               </tbody>
             </table>
+          </div>
+
+          <h3 style={{ marginTop: 24, marginBottom: 8 }}>References</h3>
+          <div className="course-result" style={{ padding: 16 }}>
+            <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 2 }}>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/api-discovery" target="_blank" rel="noopener noreferrer">API Discovery — Products</a></li>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/guides" target="_blank" rel="noopener noreferrer">Get Started Guides</a></li>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/docs/product/6kYpfJEWVb7NyYVVHvUmHi/group/2reSbYZjfhi3WWeLp4BlQ4" target="_blank" rel="noopener noreferrer">Courses API Reference</a></li>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/docs/product/7KU1xrpxljJZnsIkJP6QNF/group/IUAJ3XXeGEZuk9yGpoUX3" target="_blank" rel="noopener noreferrer">Programmes for Individual — Grant Calculator API</a></li>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/docs/product/7KU1xrpxljJZnsIkJP6QNF/group/3540ZmPQma3rcanoBfNYff" target="_blank" rel="noopener noreferrer">Programmes for Individual — Assessments API</a></li>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/docs/product/4ZCqa7uABJeR6vtKUjsxyx/group/6NqcljmEXinhh5SP9drNXL" target="_blank" rel="noopener noreferrer">Skills API — Skills Passport</a></li>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/guides/MOwcZA3asB0nmFaq8KJ71" target="_blank" rel="noopener noreferrer">Guide: App Settings (Credentials &amp; Certificates)</a></li>
+              <li><a href="https://developer.ssg-wsg.gov.sg/webapp/guides/1kR6AzKYXtvPEXfXCZJHgu" target="_blank" rel="noopener noreferrer">Guide: Subscription Settings (Digital Signature, Encryption Key, Callbacks)</a></li>
+            </ul>
           </div>
         </>
       );

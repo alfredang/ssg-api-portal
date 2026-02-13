@@ -25,21 +25,10 @@
 
 The following issues have been encountered when calling SSG production APIs. This section serves as a reference for developers troubleshooting API errors.
 
-### Retrieve Trainer Details
+<details>
+<summary><strong>Courses — Directory</strong></summary>
 
-| Method | URL | API Version | Status | Error Message |
-|--------|-----|-------------|--------|---------------|
-| Certificate (mTLS) | `GET api.ssg-wsg.sg/trainingProviders/{uen}/trainers` | v2.0 | **403** | `Access to this API has been disallowed` |
-| OAuth | `GET public-api.ssg-wsg.sg/trainingProviders/{uen}/trainers` | v2.0 | **403** | `Access to this API has been disallowed` |
-
-### Update/Delete Trainer
-
-| Method | URL | API Version | Status | Error Message |
-|--------|-----|-------------|--------|---------------|
-| Certificate (mTLS) | `POST api.ssg-wsg.sg/trainingProviders/{uen}/trainers/{trainerId}` | v2.0 | **400** | `Unable to perform decryption due invalid request` |
-| OAuth | `POST public-api.ssg-wsg.sg/trainingProviders/{uen}/trainers/{trainerId}` | v2.0 | **403** | `Access to this API has been disallowed` |
-
-### Retrieve Popular Courses
+#### Retrieve Popular Courses
 
 | Method | URL | API Version | Status | Error Message |
 |--------|-----|-------------|--------|---------------|
@@ -47,79 +36,96 @@ The following issues have been encountered when calling SSG production APIs. Thi
 | Certificate (mTLS) | `GET api.ssg-wsg.sg/courses/directory/popular` | v2.0 | **403** | `Access to this API has been disallowed` |
 | OAuth | `GET public-api.ssg-wsg.sg/courses/directory/popular` | v1.1 | **403** | `Api Version has expired` |
 
-### Retrieve Course Quality
-
-| Method | URL | API Version | Status | Error Message |
-|--------|-----|-------------|--------|---------------|
-| Certificate (mTLS) | `GET api.ssg-wsg.sg/courses/directory/{refNo}/quality` | v2.0 | **403** | `Access to this API has been disallowed` |
-| OAuth (fallback) | `GET public-api.ssg-wsg.sg/courses/directory/{refNo}/quality` | v2.0 | Falls back — response varies |
-
-### Retrieve Course Outcome
-
-| Method | URL | API Version | Status | Error Message |
-|--------|-----|-------------|--------|---------------|
-| Certificate (mTLS) | `GET api.ssg-wsg.sg/courses/directory/{refNo}/outcome` | v2.0 | **403** | `Access to this API has been disallowed` |
-| OAuth (fallback) | `GET public-api.ssg-wsg.sg/courses/directory/{refNo}/outcome` | v2.0 | Falls back — response varies |
-
-### Retrieve Course Sessions
-
-| Method | URL | API Version | Status | Error Message |
-|--------|-----|-------------|--------|---------------|
-| Certificate (mTLS) | `GET api.ssg-wsg.sg/courses/runs/{runId}/sessions` | v1.5 | **403** | `Access to this API has been disallowed` |
-| OAuth (fallback) | `GET public-api.ssg-wsg.sg/courses/runs/{runId}/sessions` | v1.5 | Falls back — response varies |
-
-### Retrieve Session Attendance
-
-| Method | URL | API Version | Status | Error Message |
-|--------|-----|-------------|--------|---------------|
-| Certificate (mTLS) | `GET api.ssg-wsg.sg/courses/runs/{runId}/sessions/attendance` | v1.5 | **403** | `Access to this API has been disallowed` |
-| OAuth (fallback) | `GET public-api.ssg-wsg.sg/courses/runs/{runId}/sessions/attendance` | v1.5 | Falls back — response varies |
-
-### Upload Session Attendance
-
-| Method | URL | API Version | Status | Error Message |
-|--------|-----|-------------|--------|---------------|
-| Certificate (mTLS) + AES | `POST api.ssg-wsg.sg/courses/runs/{runId}/sessions/attendance` | v1.5 | Varies | No OAuth fallback — cert + AES only |
-
-### Course Lookup by Ref No
+#### Course Lookup by Ref No
 
 | Method | URL | API Version | Status | Error Message |
 |--------|-----|-------------|--------|---------------|
 | Certificate (mTLS) | `GET api.ssg-wsg.sg/courses/directory/{refNo}` | v1.2 | **403** | `Access to this API has been disallowed` |
 | OAuth (fallback) | `GET public-api.ssg-wsg.sg/courses/directory/{refNo}` | v1.2 | **200** | Works via OAuth |
 
-### Course Search (TPG Registry)
-
-| Method | URL | API Version | Status | Error Message |
-|--------|-----|-------------|--------|---------------|
-| Certificate (mTLS) | `POST api.ssg-wsg.sg/tpg/courses/registry/search` | v8.0 | **200** | Works via certificate |
-
-### Course Details (TPG Registry)
-
-| Method | URL | API Version | Status | Error Message |
-|--------|-----|-------------|--------|---------------|
-| Certificate (mTLS) | `GET api.ssg-wsg.sg/tpg/courses/registry/details/{refNo}` | v8.0 | **200** | Works via certificate |
-
-### Retrieve Course Quality (Updated 2026-02-13)
+#### Retrieve Course Quality (Updated 2026-02-13)
 
 | Method | URL | API Version | Status | Error Message |
 |--------|-----|-------------|--------|---------------|
 | Certificate (mTLS) | `GET api.ssg-wsg.sg/courses/directory/{refNo}/quality` | v2.0 | **403** | Access disallowed |
 | OAuth (fallback) | `GET public-api.ssg-wsg.sg/courses/directory/{refNo}/quality` | v2.0 | **200** | Works via OAuth fallback |
 
-### Retrieve Course Outcome (Updated 2026-02-13)
+#### Retrieve Course Outcome (Updated 2026-02-13)
 
 | Method | URL | API Version | Status | Error Message |
 |--------|-----|-------------|--------|---------------|
 | Certificate (mTLS) | `GET api.ssg-wsg.sg/courses/directory/{refNo}/outcome` | v2.0 | **403** | Access disallowed |
 | OAuth (fallback) | `GET public-api.ssg-wsg.sg/courses/directory/{refNo}/outcome` | v2.0 | **200** | Works via OAuth fallback |
 
-### Retrieve Course Runs by Reference Number
+</details>
+
+<details>
+<summary><strong>Courses — Runs & Sessions</strong></summary>
+
+#### Retrieve Course Runs by Reference Number
 
 | Method | URL | API Version | Status | Error Message |
 |--------|-----|-------------|--------|---------------|
 | Certificate (mTLS) | `GET api.ssg-wsg.sg/courses/courseRuns/reference` | v1.0 | **403** | Access to this API has been disallowed |
 | OAuth (fallback) | `GET public-api.ssg-wsg.sg/courses/courseRuns/reference` | v1.0 | **403** | Access to this API has been disallowed |
+
+#### Retrieve Course Sessions
+
+| Method | URL | API Version | Status | Error Message |
+|--------|-----|-------------|--------|---------------|
+| Certificate (mTLS) | `GET api.ssg-wsg.sg/courses/runs/{runId}/sessions` | v1.5 | **403** | `Access to this API has been disallowed` |
+| OAuth (fallback) | `GET public-api.ssg-wsg.sg/courses/runs/{runId}/sessions` | v1.5 | Falls back — response varies |
+
+#### Retrieve Session Attendance
+
+| Method | URL | API Version | Status | Error Message |
+|--------|-----|-------------|--------|---------------|
+| Certificate (mTLS) | `GET api.ssg-wsg.sg/courses/runs/{runId}/sessions/attendance` | v1.5 | **403** | `Access to this API has been disallowed` |
+| OAuth (fallback) | `GET public-api.ssg-wsg.sg/courses/runs/{runId}/sessions/attendance` | v1.5 | Falls back — response varies |
+
+#### Upload Session Attendance
+
+| Method | URL | API Version | Status | Error Message |
+|--------|-----|-------------|--------|---------------|
+| Certificate (mTLS) + AES | `POST api.ssg-wsg.sg/courses/runs/{runId}/sessions/attendance` | v1.5 | Varies | No OAuth fallback — cert + AES only |
+
+</details>
+
+<details>
+<summary><strong>Courses — TPG Registry</strong></summary>
+
+#### Course Search (TPG Registry)
+
+| Method | URL | API Version | Status | Error Message |
+|--------|-----|-------------|--------|---------------|
+| Certificate (mTLS) | `POST api.ssg-wsg.sg/tpg/courses/registry/search` | v8.0 | **200** | Works via certificate |
+
+#### Course Details (TPG Registry)
+
+| Method | URL | API Version | Status | Error Message |
+|--------|-----|-------------|--------|---------------|
+| Certificate (mTLS) | `GET api.ssg-wsg.sg/tpg/courses/registry/details/{refNo}` | v8.0 | **200** | Works via certificate |
+
+</details>
+
+<details>
+<summary><strong>Training Providers</strong></summary>
+
+#### Retrieve Trainer Details
+
+| Method | URL | API Version | Status | Error Message |
+|--------|-----|-------------|--------|---------------|
+| Certificate (mTLS) | `GET api.ssg-wsg.sg/trainingProviders/{uen}/trainers` | v2.0 | **403** | `Access to this API has been disallowed` |
+| OAuth | `GET public-api.ssg-wsg.sg/trainingProviders/{uen}/trainers` | v2.0 | **403** | `Access to this API has been disallowed` |
+
+#### Update/Delete Trainer
+
+| Method | URL | API Version | Status | Error Message |
+|--------|-----|-------------|--------|---------------|
+| Certificate (mTLS) | `POST api.ssg-wsg.sg/trainingProviders/{uen}/trainers/{trainerId}` | v2.0 | **400** | `Unable to perform decryption due invalid request` |
+| OAuth | `POST public-api.ssg-wsg.sg/trainingProviders/{uen}/trainers/{trainerId}` | v2.0 | **403** | `Access to this API has been disallowed` |
+
+</details>
 
 ### Common Error Codes
 
