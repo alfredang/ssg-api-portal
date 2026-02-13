@@ -231,6 +231,49 @@ router.get('/training-providers/:uen/trainers', async (req, res) => {
   }
 });
 
+// GET /api/training-providers/:uen/courses — uses TPG Course Search (mTLS)
+router.get('/training-providers/:uen/courses', async (req, res) => {
+  try {
+    const { uen } = req.params;
+    const { pageSize, page, keyword, includeExpiredCourses } = req.query;
+
+    if (!uen) {
+      return res.status(400).json({ error: 'UEN is required' });
+    }
+
+    const ps = parseInt(pageSize) || 20;
+    const pg = parseInt(page) || 0;
+
+    // Use TPG course search endpoint which works via mTLS cert
+    const searchBody = {
+      uen,
+      keyword: keyword || '',
+      page: pg,
+      pageSize: ps,
+      details: 'FULL',
+      sortBy: { field: 'updatedDate', order: 'desc' },
+      course: {
+        meta: {
+          updatedDate: {
+            from: '2019-01-01',
+            to: new Date().toISOString().slice(0, 10),
+          },
+        },
+      },
+    };
+
+    console.log('TP Courses search (cert) for UEN:', uen);
+    const data = await fetchCourseSearchPage(searchBody, uen);
+    res.json(data);
+  } catch (err) {
+    console.error('TP Courses error:', err.message);
+    res.status(err.status || 500).json({
+      error: err.message,
+      details: err.body || null,
+    });
+  }
+});
+
 // POST /api/training-providers/:uen/trainers/:trainerId — mTLS Certificate with OAuth fallback
 // Used for both update and delete (determined by trainer.action field)
 router.post('/training-providers/:uen/trainers/:trainerId', async (req, res) => {

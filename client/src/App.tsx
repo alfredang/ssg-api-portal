@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useApi } from './hooks/useApi';
-import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications, postSkillExtract, postSkillSearch, getSkillsFrameworkJobs, getSkillsFrameworkSkills, generateCertificate, generateKeypair, generateEncryptionKey } from './api/courseApi';
+import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications, postSkillExtract, postSkillSearch, getSkillsFrameworkJobs, getSkillsFrameworkSkills, generateCertificate, generateKeypair, generateEncryptionKey, getTrainingProviderCourses } from './api/courseApi';
 import SearchForm from './components/SearchForm';
 import CourseSearchForm from './components/CourseSearchForm';
 import CourseOverview from './components/CourseOverview';
@@ -14,7 +14,7 @@ import CourseSessionsCard from './components/CourseSessionsCard';
 import type { Course, CourseResponse, CourseSearchResponse, CourseQualityResponse, CourseOutcomeResponse, SessionAttendanceResponse, CourseSessionsResponse, UploadAttendanceRequest, UploadAttendanceResponse, TrainersResponse, UpdateTrainerRequest, UpdateTrainerResponse, PopularCoursesResponse, PublishCourseRunRequest, PublishCourseRunResponse, EditCourseRunRequest, EditCourseRunResponse, CourseRunByIdResponse, CourseRunsByRefResponse, GrantBaselineResponse, GrantPersonalisedResponse, GrantSearchResponse, GrantDetailsResponse, GrantCodeLookupResponse, SfClaimDetailsResponse, SfCancelClaimResponse, EnrolmentResponse } from './types/course';
 import './App.css';
 
-type Page = 'course-lookup' | 'course-search' | 'popular-courses'
+type Page = 'course-lookup' | 'course-search' | 'popular-courses' | 'tp-courses'
   | 'course-quality' | 'course-outcome'
   | 'course-sessions' | 'session-attendance' | 'upload-attendance' | 'trainer-details' | 'update-trainer' | 'publish-course-run' | 'edit-course-run' | 'course-run-by-id' | 'course-runs-by-ref' | 'training-provider'
   | 'grant-baseline' | 'grant-personalised' | 'grant-search' | 'grant-view' | 'grant-codes'
@@ -40,6 +40,7 @@ const NAV_ITEMS: NavCategory[] = [
       { id: 'course-lookup', label: 'Lookup by Ref No' },
       { id: 'course-search', label: 'Course Search' },
       { id: 'popular-courses', label: 'Popular Courses' },
+      { id: 'tp-courses', label: 'Courses by TP UEN' },
     ],
   },
   {
@@ -251,6 +252,7 @@ function App() {
   const trainersApi = useApi<TrainersResponse>();
   const updateTrainerApi = useApi<UpdateTrainerResponse>();
   const popularCoursesApi = useApi<PopularCoursesResponse>();
+  const tpCoursesApi = useApi<Record<string, unknown>>();
   const publishCourseRunApi = useApi<PublishCourseRunResponse>();
   const editCourseRunApi = useApi<EditCourseRunResponse>();
   const courseRunByIdApi = useApi<CourseRunByIdResponse>();
@@ -321,6 +323,10 @@ function App() {
 
   const handlePopularCourses = async (params: { pageSize?: number; page?: number; taggingCode?: string }) => {
     await popularCoursesApi.execute(() => getPopularCourses(params));
+  };
+
+  const handleTpCourses = async (params: { uen: string; pageSize?: number; page?: number; keyword?: string; includeExpiredCourses?: boolean }) => {
+    await tpCoursesApi.execute(() => getTrainingProviderCourses(params));
   };
 
   const handlePublishCourseRun = async (body: PublishCourseRunRequest, includeExpiredCourses: boolean) => {
@@ -498,6 +504,7 @@ function App() {
     trainersApi.reset();
     updateTrainerApi.reset();
     popularCoursesApi.reset();
+    tpCoursesApi.reset();
     publishCourseRunApi.reset();
     editCourseRunApi.reset();
     courseRunByIdApi.reset();
@@ -617,6 +624,7 @@ function App() {
           <h2 className="page-title">Popular Courses</h2>
           <form
             className="search-form"
+            autoComplete="off"
             onSubmit={(e) => {
               e.preventDefault();
               const form = e.target as HTMLFormElement;
@@ -685,12 +693,76 @@ function App() {
       );
     }
 
+    if (activePage === 'tp-courses') {
+      return (
+        <>
+          <h2 className="page-title">Courses by Training Provider UEN</h2>
+          <p style={{ color: '#666', fontSize: 14, margin: '0 0 16px' }}>
+            GET to production API (api.ssg-wsg.sg) with mTLS certificate, OAuth fallback. API version v1.1.
+          </p>
+          <form
+            className="search-form"
+            autoComplete="off"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const form = e.target as HTMLFormElement;
+              const uen = (form.elements.namedItem('tpcUen') as HTMLInputElement).value.trim();
+              if (!uen) return;
+              const keyword = (form.elements.namedItem('tpcKeyword') as HTMLInputElement).value.trim();
+              const ps = parseInt((form.elements.namedItem('tpcPageSize') as HTMLInputElement).value.trim(), 10) || 20;
+              const pg = parseInt((form.elements.namedItem('tpcPage') as HTMLInputElement).value.trim(), 10) || 0;
+              const inclExpired = (form.elements.namedItem('tpcIncludeExpired') as HTMLInputElement).checked;
+              handleTpCourses({ uen, keyword: keyword || undefined, pageSize: ps, page: pg, includeExpiredCourses: inclExpired });
+            }}
+          >
+            <div className="search-input-group">
+              <label htmlFor="tpcUen">Training Provider UEN (required)</label>
+              <input id="tpcUen" name="tpcUen" type="text" defaultValue="201200696W" placeholder="e.g. 201200696W" disabled={tpCoursesApi.loading} />
+            </div>
+            <div className="search-input-group">
+              <label htmlFor="tpcKeyword">Keyword (optional)</label>
+              <input id="tpcKeyword" name="tpcKeyword" type="text" defaultValue="" placeholder="e.g. testing" disabled={tpCoursesApi.loading} />
+            </div>
+            <div className="search-input-group">
+              <label htmlFor="tpcPageSize">Page Size</label>
+              <input id="tpcPageSize" name="tpcPageSize" type="number" defaultValue="20" min="1" max="100" disabled={tpCoursesApi.loading} />
+            </div>
+            <div className="search-input-group">
+              <label htmlFor="tpcPage">Page (0-indexed)</label>
+              <input id="tpcPage" name="tpcPage" type="number" defaultValue="0" min="0" disabled={tpCoursesApi.loading} />
+            </div>
+            <div className="search-input-group" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input id="tpcIncludeExpired" name="tpcIncludeExpired" type="checkbox" defaultChecked disabled={tpCoursesApi.loading} />
+              <label htmlFor="tpcIncludeExpired" style={{ margin: 0 }}>Include Expired Courses</label>
+            </div>
+            <div className="search-options">
+              <span />
+              <button type="submit" disabled={tpCoursesApi.loading || false}>
+                {tpCoursesApi.loading ? 'Loading...' : 'Retrieve Courses'}
+              </button>
+            </div>
+          </form>
+
+          {tpCoursesApi.error && <div className="error-alert">{tpCoursesApi.error}</div>}
+          {tpCoursesApi.loading && <div className="loading">Loading courses...</div>}
+          {tpCoursesApi.data && (
+            <div className="course-result" style={{ marginTop: 16 }}>
+              <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13, background: '#f5f5f5', padding: 16, borderRadius: 8, maxHeight: 600, overflow: 'auto' }}>
+                {JSON.stringify(tpCoursesApi.data, null, 2)}
+              </pre>
+            </div>
+          )}
+        </>
+      );
+    }
+
     if (activePage === 'course-quality') {
       return (
         <>
           <h2 className="page-title">Course Quality Feedback</h2>
           <form
             className="search-form"
+            autoComplete="off"
             onSubmit={(e) => {
               e.preventDefault();
               const form = e.target as HTMLFormElement;
@@ -704,8 +776,8 @@ function App() {
                 id="qualityRefNo"
                 name="qualityRefNo"
                 type="text"
-                defaultValue="TGS-2019503161"
-                placeholder="e.g. TGS-2019503161"
+                defaultValue="TGS-2020505444"
+                placeholder="e.g. TGS-2020505444"
                 disabled={qualityApi.loading}
               />
             </div>
@@ -732,6 +804,7 @@ function App() {
           <h2 className="page-title">Course Outcome Feedback</h2>
           <form
             className="search-form"
+            autoComplete="off"
             onSubmit={(e) => {
               e.preventDefault();
               const form = e.target as HTMLFormElement;
@@ -745,8 +818,8 @@ function App() {
                 id="outcomeRefNo"
                 name="outcomeRefNo"
                 type="text"
-                defaultValue="TGS-2019503161"
-                placeholder="e.g. TGS-2019503161"
+                defaultValue="TGS-2020505444"
+                placeholder="e.g. TGS-2020505444"
                 disabled={outcomeApi.loading}
               />
             </div>
@@ -773,6 +846,7 @@ function App() {
           <h2 className="page-title">Course Sessions</h2>
           <form
             className="search-form"
+            autoComplete="off"
             onSubmit={(e) => {
               e.preventDefault();
               const form = e.target as HTMLFormElement;
@@ -797,8 +871,8 @@ function App() {
                 id="sessRunId"
                 name="sessRunId"
                 type="text"
-                defaultValue="12345"
-                placeholder="e.g. 12345"
+                defaultValue="1234567"
+                placeholder="e.g. 1234567"
                 disabled={sessionsApi.loading}
               />
             </div>
@@ -808,8 +882,8 @@ function App() {
                 id="sessUen"
                 name="sessUen"
                 type="text"
-                defaultValue="201200669W"
-                placeholder="e.g. 201200669W"
+                defaultValue="201200696W"
+                placeholder="e.g. 201200696W"
                 disabled={sessionsApi.loading}
               />
             </div>
@@ -819,8 +893,8 @@ function App() {
                 id="sessCourseRef"
                 name="sessCourseRef"
                 type="text"
-                defaultValue="TGS-2019503161"
-                placeholder="e.g. TGS-2019503161"
+                defaultValue="TGS-2020505444"
+                placeholder="e.g. TGS-2020505444"
                 disabled={sessionsApi.loading}
               />
             </div>
@@ -857,6 +931,7 @@ function App() {
           <h2 className="page-title">Course Session Attendance</h2>
           <form
             className="search-form"
+            autoComplete="off"
             onSubmit={(e) => {
               e.preventDefault();
               const form = e.target as HTMLFormElement;
@@ -880,8 +955,8 @@ function App() {
                 id="attRunId"
                 name="attRunId"
                 type="text"
-                defaultValue="41618"
-                placeholder="e.g. 41618"
+                defaultValue="4161800"
+                placeholder="e.g. 4161800"
                 disabled={attendanceApi.loading}
               />
             </div>
@@ -891,8 +966,8 @@ function App() {
                 id="attUen"
                 name="attUen"
                 type="text"
-                defaultValue="201200669W"
-                placeholder="e.g. 201200669W"
+                defaultValue="201200696W"
+                placeholder="e.g. 201200696W"
                 disabled={attendanceApi.loading}
               />
             </div>
@@ -902,8 +977,8 @@ function App() {
                 id="attCourseRef"
                 name="attCourseRef"
                 type="text"
-                defaultValue="TGS-2019503161"
-                placeholder="e.g. TGS-2019503161"
+                defaultValue="TGS-2020505444"
+                placeholder="e.g. TGS-2020505444"
                 disabled={attendanceApi.loading}
               />
             </div>
@@ -913,7 +988,7 @@ function App() {
                 id="attSessionId"
                 name="attSessionId"
                 type="text"
-                placeholder="e.g. TEST 166-41618-S1"
+                placeholder="e.g. TEST 166-4161800-S1"
                 disabled={attendanceApi.loading}
               />
             </div>
@@ -940,6 +1015,7 @@ function App() {
           <h2 className="page-title">Retrieve Trainer Details</h2>
           <form
             className="search-form"
+            autoComplete="off"
             onSubmit={(e) => {
               e.preventDefault();
               const form = e.target as HTMLFormElement;
@@ -958,7 +1034,7 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="trainerKeyword">Keyword (optional)</label>
-              <input id="trainerKeyword" name="trainerKeyword" type="text" defaultValue="ABC" placeholder="e.g. ABC" disabled={trainersApi.loading} />
+              <input id="trainerKeyword" name="trainerKeyword" type="text" defaultValue="" placeholder="e.g. WSQ, IT, Digital" disabled={trainersApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="trainerPageSize">Page Size</label>
@@ -1026,6 +1102,7 @@ function App() {
           </p>
           <form
             className="search-form"
+            autoComplete="off"
             onSubmit={(e) => {
               e.preventDefault();
               const form = e.target as HTMLFormElement;
@@ -1084,11 +1161,11 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="utName">Trainer Name (required)</label>
-              <input id="utName" name="utName" type="text" defaultValue="Test Trainer ABC" disabled={updateTrainerApi.loading} />
+              <input id="utName" name="utName" type="text" defaultValue="Ahmad Rahman" disabled={updateTrainerApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="utEmail">Email</label>
-              <input id="utEmail" name="utEmail" type="email" defaultValue="newtraineremail@test.com" disabled={updateTrainerApi.loading} />
+              <input id="utEmail" name="utEmail" type="email" defaultValue="ahmad.rahman@tertiary.edu.sg" disabled={updateTrainerApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="utIdTypeCode">ID Type</label>
@@ -1101,7 +1178,7 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="utIdNumber">ID Number</label>
-              <input id="utIdNumber" name="utIdNumber" type="text" defaultValue="S0000000Z" disabled={updateTrainerApi.loading} />
+              <input id="utIdNumber" name="utIdNumber" type="text" defaultValue="S9876543A" disabled={updateTrainerApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="utRoleId">Role</label>
@@ -1123,11 +1200,11 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="utExperience">Experience</label>
-              <input id="utExperience" name="utExperience" type="text" defaultValue="My experience ABC" disabled={updateTrainerApi.loading} />
+              <input id="utExperience" name="utExperience" type="text" defaultValue="10 years in IT training and curriculum development" disabled={updateTrainerApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="utLinkedIn">LinkedIn URL</label>
-              <input id="utLinkedIn" name="utLinkedIn" type="text" defaultValue="www.test.com.sg" disabled={updateTrainerApi.loading} />
+              <input id="utLinkedIn" name="utLinkedIn" type="text" defaultValue="https://www.linkedin.com/in/ahmad-rahman" disabled={updateTrainerApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="utDomain">Domain / Area of Practice</label>
@@ -1139,7 +1216,7 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="utQualDesc">Qualification Description</label>
-              <input id="utQualDesc" name="utQualDesc" type="text" defaultValue="My qualification ABC" disabled={updateTrainerApi.loading} />
+              <input id="utQualDesc" name="utQualDesc" type="text" defaultValue="Master of Science in Information Technology" disabled={updateTrainerApi.loading} />
             </div>
             <div className="search-options">
               <span />
@@ -1172,6 +1249,7 @@ function App() {
           </p>
           <form
             className="search-form"
+            autoComplete="off"
             onSubmit={(e) => {
               e.preventDefault();
               const form = e.target as HTMLFormElement;
@@ -1290,11 +1368,11 @@ function App() {
             <h3 style={{ gridColumn: '1 / -1', margin: '8px 0 0' }}>Course</h3>
             <div className="search-input-group">
               <label htmlFor="pcrCourseRefNo">Course Reference Number (required)</label>
-              <input id="pcrCourseRefNo" name="pcrCourseRefNo" type="text" defaultValue="XX-10000000K-01-TEST 166" disabled={publishCourseRunApi.loading} />
+              <input id="pcrCourseRefNo" name="pcrCourseRefNo" type="text" defaultValue="XX-201200696W-01-TEST 166" disabled={publishCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrUen">Training Provider UEN (required)</label>
-              <input id="pcrUen" name="pcrUen" type="text" defaultValue="10000000K" disabled={publishCourseRunApi.loading} />
+              <input id="pcrUen" name="pcrUen" type="text" defaultValue="201200696W" disabled={publishCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrIncludeExpired">
@@ -1328,7 +1406,7 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrSchedTypeDesc">Schedule Info Type Description</label>
-              <input id="pcrSchedTypeDesc" name="pcrSchedTypeDesc" type="text" defaultValue="Description" disabled={publishCourseRunApi.loading} />
+              <input id="pcrSchedTypeDesc" name="pcrSchedTypeDesc" type="text" defaultValue="Weekday Afternoon" disabled={publishCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrSchedInfo">Schedule Info</label>
@@ -1342,7 +1420,7 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrVenueStreet">Street</label>
-              <input id="pcrVenueStreet" name="pcrVenueStreet" type="text" defaultValue="Street ABC" disabled={publishCourseRunApi.loading} />
+              <input id="pcrVenueStreet" name="pcrVenueStreet" type="text" defaultValue="Bukit Batok Street 22" disabled={publishCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrVenueFloor">Floor</label>
@@ -1354,11 +1432,11 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrVenueBuilding">Building</label>
-              <input id="pcrVenueBuilding" name="pcrVenueBuilding" type="text" defaultValue="Building ABC" disabled={publishCourseRunApi.loading} />
+              <input id="pcrVenueBuilding" name="pcrVenueBuilding" type="text" defaultValue="Tertiary Infotech Academy" disabled={publishCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrVenuePostal">Postal Code</label>
-              <input id="pcrVenuePostal" name="pcrVenuePostal" type="text" defaultValue="123455" disabled={publishCourseRunApi.loading} />
+              <input id="pcrVenuePostal" name="pcrVenuePostal" type="text" defaultValue="659581" disabled={publishCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrVenueRoom">Room</label>
@@ -1400,7 +1478,7 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrAdminEmail">Course Admin Email</label>
-              <input id="pcrAdminEmail" name="pcrAdminEmail" type="email" defaultValue="test@email.com" disabled={publishCourseRunApi.loading} />
+              <input id="pcrAdminEmail" name="pcrAdminEmail" type="email" defaultValue="admin@tertiary.edu.sg" disabled={publishCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrCourseAppUrl">Course Application URL</label>
@@ -1450,11 +1528,11 @@ function App() {
             <h3 style={{ gridColumn: '1 / -1', margin: '16px 0 0' }}>Trainer (optional)</h3>
             <div className="search-input-group">
               <label htmlFor="pcrTrainerName">Trainer Name</label>
-              <input id="pcrTrainerName" name="pcrTrainerName" type="text" defaultValue="string" disabled={publishCourseRunApi.loading} />
+              <input id="pcrTrainerName" name="pcrTrainerName" type="text" defaultValue="Ahmad Rahman" disabled={publishCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrTrainerEmail">Trainer Email</label>
-              <input id="pcrTrainerEmail" name="pcrTrainerEmail" type="email" defaultValue="abc@test.com" disabled={publishCourseRunApi.loading} />
+              <input id="pcrTrainerEmail" name="pcrTrainerEmail" type="email" defaultValue="trainer@tertiary.edu.sg" disabled={publishCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrTrainerIdNumber">Trainer ID Number</label>
@@ -1501,6 +1579,7 @@ function App() {
           </p>
           <form
             className="search-form"
+            autoComplete="off"
             onSubmit={(e) => {
               e.preventDefault();
               const form = e.target as HTMLFormElement;
@@ -1624,15 +1703,15 @@ function App() {
             <h3 style={{ gridColumn: '1 / -1', margin: '8px 0 0' }}>Course Run</h3>
             <div className="search-input-group">
               <label htmlFor="ecrRunId">Course Run ID (required)</label>
-              <input id="ecrRunId" name="ecrRunId" type="text" defaultValue="1001" disabled={editCourseRunApi.loading} />
+              <input id="ecrRunId" name="ecrRunId" type="text" defaultValue="1001000" disabled={editCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrCourseRefNo">Course Reference Number (required)</label>
-              <input id="ecrCourseRefNo" name="ecrCourseRefNo" type="text" defaultValue="XX-10000000K-01-TEST 166" disabled={editCourseRunApi.loading} />
+              <input id="ecrCourseRefNo" name="ecrCourseRefNo" type="text" defaultValue="XX-201200696W-01-TEST 166" disabled={editCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrUen">Training Provider UEN (required)</label>
-              <input id="ecrUen" name="ecrUen" type="text" defaultValue="10000000K" disabled={editCourseRunApi.loading} />
+              <input id="ecrUen" name="ecrUen" type="text" defaultValue="201200696W" disabled={editCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrRunAction">Run Action</label>
@@ -1673,7 +1752,7 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrSchedTypeDesc">Schedule Info Type Description</label>
-              <input id="ecrSchedTypeDesc" name="ecrSchedTypeDesc" type="text" defaultValue="Description" disabled={editCourseRunApi.loading} />
+              <input id="ecrSchedTypeDesc" name="ecrSchedTypeDesc" type="text" defaultValue="Weekday Afternoon" disabled={editCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrSchedInfo">Schedule Info</label>
@@ -1687,7 +1766,7 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrVenueStreet">Street</label>
-              <input id="ecrVenueStreet" name="ecrVenueStreet" type="text" defaultValue="Street ABC" disabled={editCourseRunApi.loading} />
+              <input id="ecrVenueStreet" name="ecrVenueStreet" type="text" defaultValue="Bukit Batok Street 22" disabled={editCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrVenueFloor">Floor</label>
@@ -1699,11 +1778,11 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrVenueBuilding">Building</label>
-              <input id="ecrVenueBuilding" name="ecrVenueBuilding" type="text" defaultValue="Building ABC" disabled={editCourseRunApi.loading} />
+              <input id="ecrVenueBuilding" name="ecrVenueBuilding" type="text" defaultValue="Tertiary Infotech Academy" disabled={editCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrVenuePostal">Postal Code</label>
-              <input id="ecrVenuePostal" name="ecrVenuePostal" type="text" defaultValue="123455" disabled={editCourseRunApi.loading} />
+              <input id="ecrVenuePostal" name="ecrVenuePostal" type="text" defaultValue="659581" disabled={editCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrVenueRoom">Room</label>
@@ -1745,7 +1824,7 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrAdminEmail">Course Admin Email</label>
-              <input id="ecrAdminEmail" name="ecrAdminEmail" type="email" defaultValue="test@email.com" disabled={editCourseRunApi.loading} />
+              <input id="ecrAdminEmail" name="ecrAdminEmail" type="email" defaultValue="admin@tertiary.edu.sg" disabled={editCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrCourseAppUrl">Course Application URL</label>
@@ -1806,11 +1885,11 @@ function App() {
             <h3 style={{ gridColumn: '1 / -1', margin: '16px 0 0' }}>Trainer (optional)</h3>
             <div className="search-input-group">
               <label htmlFor="ecrTrainerName">Trainer Name</label>
-              <input id="ecrTrainerName" name="ecrTrainerName" type="text" defaultValue="string" disabled={editCourseRunApi.loading} />
+              <input id="ecrTrainerName" name="ecrTrainerName" type="text" defaultValue="Ahmad Rahman" disabled={editCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrTrainerEmail">Trainer Email</label>
-              <input id="ecrTrainerEmail" name="ecrTrainerEmail" type="email" defaultValue="abc@test.com" disabled={editCourseRunApi.loading} />
+              <input id="ecrTrainerEmail" name="ecrTrainerEmail" type="email" defaultValue="trainer@tertiary.edu.sg" disabled={editCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrTrainerIdNumber">Trainer ID Number</label>
@@ -1854,6 +1933,7 @@ function App() {
           <h2 className="page-title">Retrieve Course Run by ID</h2>
           <form
             className="search-form"
+            autoComplete="off"
             onSubmit={(e) => {
               e.preventDefault();
               const form = e.target as HTMLFormElement;
@@ -1864,7 +1944,7 @@ function App() {
           >
             <div className="search-input-group">
               <label htmlFor="crbRunId">Course Run ID (required)</label>
-              <input id="crbRunId" name="crbRunId" type="text" defaultValue="12345" placeholder="e.g. 12345" disabled={courseRunByIdApi.loading} />
+              <input id="crbRunId" name="crbRunId" type="text" defaultValue="1234567" placeholder="e.g. 1234567" disabled={courseRunByIdApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="crbIncludeExpired">
@@ -1900,6 +1980,7 @@ function App() {
           <h2 className="page-title">Course Runs by Reference Number</h2>
           <form
             className="search-form"
+            autoComplete="off"
             onSubmit={(e) => {
               e.preventDefault();
               const form = e.target as HTMLFormElement;
@@ -1925,7 +2006,7 @@ function App() {
           >
             <div className="search-input-group">
               <label htmlFor="crrCourseRef">Course Reference Number (required)</label>
-              <input id="crrCourseRef" name="crrCourseRef" type="text" defaultValue="XX-S1234567D-01-TEST 166" placeholder="e.g. XX-S1234567D-01-TEST 166" disabled={courseRunsByRefApi.loading} />
+              <input id="crrCourseRef" name="crrCourseRef" type="text" defaultValue="TGS-2020505444" placeholder="e.g. TGS-2020505444" disabled={courseRunsByRefApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="crrUen">UEN (optional)</label>
@@ -1986,6 +2067,7 @@ function App() {
           </p>
           <form
             className="search-form"
+            autoComplete="off"
             onSubmit={(e) => {
               e.preventDefault();
               const form = e.target as HTMLFormElement;
@@ -2035,23 +2117,23 @@ function App() {
           >
             <div className="search-input-group">
               <label htmlFor="uplRunId">Course Run ID (required)</label>
-              <input id="uplRunId" name="uplRunId" type="text" defaultValue="41618" disabled={uploadAttendanceApi.loading} />
+              <input id="uplRunId" name="uplRunId" type="text" defaultValue="4161800" disabled={uploadAttendanceApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="uplUen">UEN (required)</label>
-              <input id="uplUen" name="uplUen" type="text" defaultValue="TxxxxxxxxN" placeholder="e.g. TxxxxxxxxN" disabled={uploadAttendanceApi.loading} />
+              <input id="uplUen" name="uplUen" type="text" defaultValue="201200696W" placeholder="e.g. 201200696W" disabled={uploadAttendanceApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="uplSessionId">Session ID (required)</label>
-              <input id="uplSessionId" name="uplSessionId" type="text" defaultValue="TEST 166-41618-S1" disabled={uploadAttendanceApi.loading} />
+              <input id="uplSessionId" name="uplSessionId" type="text" defaultValue="TEST 166-4161800-S1" disabled={uploadAttendanceApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="uplRefNo">Course Reference Number (required)</label>
-              <input id="uplRefNo" name="uplRefNo" type="text" defaultValue="XX-TxxxxxxxxN-01-TEST 166" disabled={uploadAttendanceApi.loading} />
+              <input id="uplRefNo" name="uplRefNo" type="text" defaultValue="XX-201200696W-01-TEST 166" disabled={uploadAttendanceApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="uplCorppassId">Corppass ID (required)</label>
-              <input id="uplCorppassId" name="uplCorppassId" type="text" defaultValue="SxxxxxxxT" disabled={uploadAttendanceApi.loading} />
+              <input id="uplCorppassId" name="uplCorppassId" type="text" defaultValue="S9876543A" disabled={uploadAttendanceApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="uplStatusCode">Attendance Status Code</label>
@@ -2064,15 +2146,15 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="uplTraineeId">Trainee ID (required)</label>
-              <input id="uplTraineeId" name="uplTraineeId" type="text" defaultValue="S1234567H" disabled={uploadAttendanceApi.loading} />
+              <input id="uplTraineeId" name="uplTraineeId" type="text" defaultValue="S0118316H" disabled={uploadAttendanceApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="uplTraineeName">Trainee Name (required)</label>
-              <input id="uplTraineeName" name="uplTraineeName" type="text" defaultValue="Tom" disabled={uploadAttendanceApi.loading} />
+              <input id="uplTraineeName" name="uplTraineeName" type="text" defaultValue="Jon Chua" disabled={uploadAttendanceApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="uplTraineeEmail">Trainee Email</label>
-              <input id="uplTraineeEmail" name="uplTraineeEmail" type="email" defaultValue="abc@test.com" disabled={uploadAttendanceApi.loading} />
+              <input id="uplTraineeEmail" name="uplTraineeEmail" type="email" defaultValue="trainer@tertiary.edu.sg" disabled={uploadAttendanceApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="uplIdType">ID Type Code</label>
@@ -2089,7 +2171,7 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="uplMobile">Mobile Number</label>
-              <input id="uplMobile" name="uplMobile" type="text" defaultValue="85858585" disabled={uploadAttendanceApi.loading} />
+              <input id="uplMobile" name="uplMobile" type="text" defaultValue="91234567" disabled={uploadAttendanceApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="uplHours">Number of Hours</label>
@@ -2133,7 +2215,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             Calculate baseline grant amounts for courses. POST to <code>/grantCalculators/individual</code> (v3.0).
           </p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             const courses = (fd.get('courses') as string).split('\n').filter(Boolean).map(line => {
@@ -2144,7 +2226,7 @@ function App() {
           }}>
             <div className="form-group">
               <label htmlFor="gbCourses">Courses (one per line: UEN, CourseRefNo)</label>
-              <textarea id="gbCourses" name="courses" rows={3} defaultValue="198201025C, TGS-0026008-ES" disabled={grantBaselineApi.loading} style={{ width: '100%', fontFamily: 'monospace', padding: 8 }} />
+              <textarea id="gbCourses" name="courses" rows={3} defaultValue="201200696W, TGS-2020505444" disabled={grantBaselineApi.loading} style={{ width: '100%', fontFamily: 'monospace', padding: 8 }} />
             </div>
             <div style={{ marginTop: 12 }}>
               <button type="submit" disabled={grantBaselineApi.loading}>
@@ -2173,7 +2255,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             Calculate personalised grant amounts based on trainee profile. POST to <code>/grantCalculators/individual/personalised</code> (v3.0).
           </p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleGrantPersonalised({
@@ -2203,11 +2285,11 @@ function App() {
             <h4 style={{ marginBottom: 8 }}>Course</h4>
             <div className="form-group">
               <label htmlFor="gpTpUen">Training Partner UEN</label>
-              <input id="gpTpUen" name="tpUen" type="text" defaultValue="198201025C" disabled={grantPersonalisedApi.loading} />
+              <input id="gpTpUen" name="tpUen" type="text" defaultValue="201200696W" disabled={grantPersonalisedApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gpCourseRef">Course Reference Number</label>
-              <input id="gpCourseRef" name="courseRef" type="text" defaultValue="TGS-0037759-TR" disabled={grantPersonalisedApi.loading} />
+              <input id="gpCourseRef" name="courseRef" type="text" defaultValue="TGS-2020505444" disabled={grantPersonalisedApi.loading} />
             </div>
             <h4 style={{ marginTop: 16, marginBottom: 8 }}>Applicant</h4>
             <div className="form-group">
@@ -2229,7 +2311,7 @@ function App() {
             <h4 style={{ marginTop: 16, marginBottom: 8 }}>Course Details</h4>
             <div className="form-group">
               <label htmlFor="gpCourseRefDetail">Course Reference Number</label>
-              <input id="gpCourseRefDetail" name="courseRefDetail" type="text" defaultValue="TGS-0026008-ES" disabled={grantPersonalisedApi.loading} />
+              <input id="gpCourseRefDetail" name="courseRefDetail" type="text" defaultValue="TGS-2020505444" disabled={grantPersonalisedApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gpStartDate">Course Start Date</label>
@@ -2250,7 +2332,7 @@ function App() {
             </div>
             <div className="form-group">
               <label htmlFor="gpSponsorUen">Sponsoring Employer UEN</label>
-              <input id="gpSponsorUen" name="sponsorUen" type="text" defaultValue="T09LL0001B" disabled={grantPersonalisedApi.loading} />
+              <input id="gpSponsorUen" name="sponsorUen" type="text" defaultValue="201200696W" disabled={grantPersonalisedApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gpModStartDate">Modularised SCTP Bundle Course Start Date (optional)</label>
@@ -2283,7 +2365,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             Search for grants. POST to <code>/tpg/grants/search</code> (v1.0). Requires UEN header.
           </p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             const uen = fd.get('uen') as string;
@@ -2318,11 +2400,11 @@ function App() {
             </div>
             <div className="form-group">
               <label htmlFor="gsCourseRef">Course Reference Number</label>
-              <input id="gsCourseRef" name="courseRef" type="text" defaultValue="TGS-0026008-ES" disabled={grantSearchApi.loading} />
+              <input id="gsCourseRef" name="courseRef" type="text" defaultValue="TGS-2020505444" disabled={grantSearchApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gsRunId">Course Run ID</label>
-              <input id="gsRunId" name="runId" type="text" defaultValue="10026" disabled={grantSearchApi.loading} />
+              <input id="gsRunId" name="runId" type="text" defaultValue="1002600" disabled={grantSearchApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gsTraineeId">Trainee ID</label>
@@ -2330,7 +2412,7 @@ function App() {
             </div>
             <div className="form-group">
               <label htmlFor="gsEmployerUen">Employer UEN</label>
-              <input id="gsEmployerUen" name="employerUen" type="text" defaultValue="G01234567S" disabled={grantSearchApi.loading} />
+              <input id="gsEmployerUen" name="employerUen" type="text" defaultValue="201200696W" disabled={grantSearchApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gsEnrolmentRef">Enrolment Reference</label>
@@ -2338,11 +2420,11 @@ function App() {
             </div>
             <div className="form-group">
               <label htmlFor="gsTpUen">Training Partner UEN</label>
-              <input id="gsTpUen" name="tpUen" type="text" defaultValue="T16GB0003C" disabled={grantSearchApi.loading} />
+              <input id="gsTpUen" name="tpUen" type="text" defaultValue="201200696W" disabled={grantSearchApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gsTpCode">Training Partner Code</label>
-              <input id="gsTpCode" name="tpCode" type="text" defaultValue="T16GB0003C-01" disabled={grantSearchApi.loading} />
+              <input id="gsTpCode" name="tpCode" type="text" defaultValue="201200696W-01" disabled={grantSearchApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gsDateFrom">Last Update Date From</label>
@@ -2387,7 +2469,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             View details for a specific grant. GET <code>/tpg/grants/details/&#123;grantRefNo&#125;</code> (v1.0).
           </p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleGrantView(fd.get('grantRefNo') as string);
@@ -2449,7 +2531,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             View SkillsFuture Credit claim details. GET <code>/skillsFutureCredits/claims/&#123;claimId&#125;</code> (v2.0).
           </p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleSfViewClaim(fd.get('claimId') as string, fd.get('nric') as string);
@@ -2489,7 +2571,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             Cancel a SkillsFuture Credit claim. POST <code>/skillsFutureCredits/claims/&#123;claimId&#125;</code> (v2.0).
           </p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleSfCancelClaim(fd.get('claimId') as string, fd.get('nric') as string, fd.get('cancelCode') as string);
@@ -2533,7 +2615,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             Upload supporting documents for a claim. POST <code>/skillsFutureCredits/claims/&#123;claimId&#125;/supportingdocuments</code> (v2.0).
           </p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleSfUploadDocs(fd.get('claimId') as string, {
@@ -2603,7 +2685,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             Encrypt a claim request. POST <code>/skillsFutureCredits/claims/encryptRequests</code> (v2.0).
           </p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleSfEncrypt({
@@ -2627,7 +2709,7 @@ function App() {
             <h4 style={{ marginBottom: 8 }}>Course</h4>
             <div className="form-group">
               <label htmlFor="sfeCourseld">Course ID</label>
-              <input id="sfeCourseld" name="courseId" type="text" defaultValue="TGS-2016504811" disabled={sfEncryptApi.loading} />
+              <input id="sfeCourseld" name="courseId" type="text" defaultValue="TGS-2020505444" disabled={sfEncryptApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="sfeFee">Fee</label>
@@ -2635,7 +2717,7 @@ function App() {
             </div>
             <div className="form-group">
               <label htmlFor="sfeRunId">Run ID</label>
-              <input id="sfeRunId" name="runId" type="text" defaultValue="C123" disabled={sfEncryptApi.loading} />
+              <input id="sfeRunId" name="runId" type="text" defaultValue="1002600" disabled={sfEncryptApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="sfeStartDate">Start Date</label>
@@ -2648,15 +2730,15 @@ function App() {
             </div>
             <div className="form-group">
               <label htmlFor="sfeEmail">Email</label>
-              <input id="sfeEmail" name="email" type="text" defaultValue="someone@example.com" disabled={sfEncryptApi.loading} />
+              <input id="sfeEmail" name="email" type="text" defaultValue="jon.chua@email.com" disabled={sfEncryptApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="sfeHome">Home Number</label>
-              <input id="sfeHome" name="homeNumber" type="text" defaultValue="87654321" disabled={sfEncryptApi.loading} />
+              <input id="sfeHome" name="homeNumber" type="text" defaultValue="61234567" disabled={sfEncryptApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="sfeMobile">Mobile Number</label>
-              <input id="sfeMobile" name="mobileNumber" type="text" defaultValue="98760000" disabled={sfEncryptApi.loading} />
+              <input id="sfeMobile" name="mobileNumber" type="text" defaultValue="98765432" disabled={sfEncryptApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="sfeAdditionalInfo">Additional Information</label>
@@ -2689,7 +2771,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             Decrypt a claim request status. POST <code>/skillsFutureCredits/claims/decryptRequests</code> (v2.0).
           </p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleSfDecrypt({
@@ -2727,7 +2809,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             Create a new enrolment. POST <code>/tpg/enrolments</code> (v3.0).
           </p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleEnrolCreate({
@@ -2750,27 +2832,27 @@ function App() {
             });
           }}>
             <h4 style={{ marginBottom: 8 }}>Course</h4>
-            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue="10026" disabled={enrolCreateApi.loading} /></div>
-            <div className="form-group"><label>Course Reference Number</label><input name="courseRef" type="text" defaultValue="TGS-0026008-ES" disabled={enrolCreateApi.loading} /></div>
+            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue="1002600" disabled={enrolCreateApi.loading} /></div>
+            <div className="form-group"><label>Course Reference Number</label><input name="courseRef" type="text" defaultValue="TGS-2020505444" disabled={enrolCreateApi.loading} /></div>
             <h4 style={{ marginTop: 16, marginBottom: 8 }}>Trainee</h4>
             <div className="form-group"><label>Trainee ID</label><input name="traineeId" type="text" defaultValue="S0118316H" disabled={enrolCreateApi.loading} /></div>
             <div className="form-group"><label>ID Type</label><input name="idType" type="text" defaultValue="NRIC" disabled={enrolCreateApi.loading} /></div>
             <div className="form-group"><label>Full Name</label><input name="fullName" type="text" defaultValue="Jon Chua" disabled={enrolCreateApi.loading} /></div>
             <div className="form-group"><label>Date of Birth</label><input name="dob" type="text" defaultValue="1950-10-16" disabled={enrolCreateApi.loading} /></div>
-            <div className="form-group"><label>Email</label><input name="email" type="text" defaultValue="abc@abc.com" disabled={enrolCreateApi.loading} /></div>
-            <div className="form-group"><label>Phone</label><input name="phone" type="text" defaultValue="88881234" disabled={enrolCreateApi.loading} /></div>
+            <div className="form-group"><label>Email</label><input name="email" type="text" defaultValue="jon.chua@email.com" disabled={enrolCreateApi.loading} /></div>
+            <div className="form-group"><label>Phone</label><input name="phone" type="text" defaultValue="91234567" disabled={enrolCreateApi.loading} /></div>
             <div className="form-group"><label>Enrolment Date</label><input name="enrolDate" type="text" defaultValue="2020-05-15" disabled={enrolCreateApi.loading} /></div>
             <div className="form-group"><label>Sponsorship Type</label><input name="sponsorship" type="text" defaultValue="EMPLOYER" disabled={enrolCreateApi.loading} /></div>
             <div className="form-group"><label>Discount Amount</label><input name="discount" type="number" defaultValue="50.25" disabled={enrolCreateApi.loading} /></div>
             <div className="form-group"><label>Fee Collection Status</label><input name="feeStatus" type="text" defaultValue="Full Payment" disabled={enrolCreateApi.loading} /></div>
             <h4 style={{ marginTop: 16, marginBottom: 8 }}>Employer</h4>
-            <div className="form-group"><label>Employer UEN</label><input name="employerUen" type="text" defaultValue="G01234567S" disabled={enrolCreateApi.loading} /></div>
+            <div className="form-group"><label>Employer UEN</label><input name="employerUen" type="text" defaultValue="201200696W" disabled={enrolCreateApi.loading} /></div>
             <div className="form-group"><label>Contact Name</label><input name="empContactName" type="text" defaultValue="Stephen Chua" disabled={enrolCreateApi.loading} /></div>
-            <div className="form-group"><label>Contact Email</label><input name="empEmail" type="text" defaultValue="abc@abc.com" disabled={enrolCreateApi.loading} /></div>
-            <div className="form-group"><label>Contact Phone</label><input name="empPhone" type="text" defaultValue="88881234" disabled={enrolCreateApi.loading} /></div>
+            <div className="form-group"><label>Contact Email</label><input name="empEmail" type="text" defaultValue="jon.chua@email.com" disabled={enrolCreateApi.loading} /></div>
+            <div className="form-group"><label>Contact Phone</label><input name="empPhone" type="text" defaultValue="91234567" disabled={enrolCreateApi.loading} /></div>
             <h4 style={{ marginTop: 16, marginBottom: 8 }}>Training Partner</h4>
-            <div className="form-group"><label>TP UEN</label><input name="tpUen" type="text" defaultValue="T16GB0003C" disabled={enrolCreateApi.loading} /></div>
-            <div className="form-group"><label>TP Code</label><input name="tpCode" type="text" defaultValue="T16GB0003C-01" disabled={enrolCreateApi.loading} /></div>
+            <div className="form-group"><label>TP UEN</label><input name="tpUen" type="text" defaultValue="201200696W" disabled={enrolCreateApi.loading} /></div>
+            <div className="form-group"><label>TP Code</label><input name="tpCode" type="text" defaultValue="201200696W-01" disabled={enrolCreateApi.loading} /></div>
             <div style={{ marginTop: 12 }}><button type="submit" disabled={enrolCreateApi.loading}>{enrolCreateApi.loading ? 'Creating...' : 'Create Enrolment'}</button></div>
           </form>
           {enrolCreateApi.error && <div className="error-alert">{enrolCreateApi.error}</div>}
@@ -2789,7 +2871,7 @@ function App() {
         <>
           <h2 className="page-title">Update/Cancel Enrolment</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/enrolments/details/&#123;enrolmentRefNo&#125;</code> (v3.0). Requires UEN header.</p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleEnrolUpdate(fd.get('refNo') as string, {
@@ -2804,18 +2886,18 @@ function App() {
             }, fd.get('uen') as string);
           }}>
             <div className="form-group"><label>Enrolment Reference Number</label><input name="refNo" type="text" defaultValue="ENR-1912-000123" disabled={enrolUpdateApi.loading} /></div>
-            <div className="form-group"><label>UEN (header)</label><input name="uen" type="text" defaultValue="A12GB1234C" disabled={enrolUpdateApi.loading} /></div>
+            <div className="form-group"><label>UEN (header)</label><input name="uen" type="text" defaultValue="201200696W" disabled={enrolUpdateApi.loading} /></div>
             <div className="form-group"><label>Action (Update/Cancel)</label><input name="action" type="text" defaultValue="Update" disabled={enrolUpdateApi.loading} /></div>
-            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue="10026" disabled={enrolUpdateApi.loading} /></div>
-            <div className="form-group"><label>Email</label><input name="email" type="text" defaultValue="abc@abc.com" disabled={enrolUpdateApi.loading} /></div>
-            <div className="form-group"><label>Phone</label><input name="phone" type="text" defaultValue="88881234" disabled={enrolUpdateApi.loading} /></div>
+            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue="1002600" disabled={enrolUpdateApi.loading} /></div>
+            <div className="form-group"><label>Email</label><input name="email" type="text" defaultValue="jon.chua@email.com" disabled={enrolUpdateApi.loading} /></div>
+            <div className="form-group"><label>Phone</label><input name="phone" type="text" defaultValue="91234567" disabled={enrolUpdateApi.loading} /></div>
             <div className="form-group"><label>Enrolment Date</label><input name="enrolDate" type="text" defaultValue="2020-05-15" disabled={enrolUpdateApi.loading} /></div>
             <div className="form-group"><label>Discount Amount</label><input name="discount" type="number" defaultValue="50.25" disabled={enrolUpdateApi.loading} /></div>
             <div className="form-group"><label>Fee Collection Status</label><input name="feeStatus" type="text" defaultValue="Full Payment" disabled={enrolUpdateApi.loading} /></div>
-            <div className="form-group"><label>Employer UEN</label><input name="employerUen" type="text" defaultValue="123456789G" disabled={enrolUpdateApi.loading} /></div>
+            <div className="form-group"><label>Employer UEN</label><input name="employerUen" type="text" defaultValue="201200696W" disabled={enrolUpdateApi.loading} /></div>
             <div className="form-group"><label>Employer Name</label><input name="empName" type="text" defaultValue="Stephen Chua" disabled={enrolUpdateApi.loading} /></div>
-            <div className="form-group"><label>Employer Email</label><input name="empEmail" type="text" defaultValue="abc@abc.com" disabled={enrolUpdateApi.loading} /></div>
-            <div className="form-group"><label>Employer Phone</label><input name="empPhone" type="text" defaultValue="88881234" disabled={enrolUpdateApi.loading} /></div>
+            <div className="form-group"><label>Employer Email</label><input name="empEmail" type="text" defaultValue="jon.chua@email.com" disabled={enrolUpdateApi.loading} /></div>
+            <div className="form-group"><label>Employer Phone</label><input name="empPhone" type="text" defaultValue="91234567" disabled={enrolUpdateApi.loading} /></div>
             <div style={{ marginTop: 12 }}><button type="submit" disabled={enrolUpdateApi.loading}>{enrolUpdateApi.loading ? 'Updating...' : 'Update/Cancel Enrolment'}</button></div>
           </form>
           {enrolUpdateApi.error && <div className="error-alert">{enrolUpdateApi.error}</div>}
@@ -2834,7 +2916,7 @@ function App() {
         <>
           <h2 className="page-title">Search Enrolments</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/enrolments/search</code> (v3.0).</p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleEnrolSearch({
@@ -2849,17 +2931,17 @@ function App() {
               parameters: { page: Number(fd.get('page')) || 0, pageSize: Number(fd.get('pageSize')) || 20 },
             });
           }}>
-            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue="10026" disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Course Reference Number</label><input name="courseRef" type="text" defaultValue="TGS-0026008-ES" disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue="1002600" disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Course Reference Number</label><input name="courseRef" type="text" defaultValue="TGS-2020505444" disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>Trainee ID</label><input name="traineeId" type="text" defaultValue="S0118316H" disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>ID Type</label><input name="idType" type="text" defaultValue="NRIC" disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>Status</label><input name="status" type="text" defaultValue="Confirmed" disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Employer UEN</label><input name="employerUen" type="text" defaultValue="G01234567S" disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Employer UEN</label><input name="employerUen" type="text" defaultValue="201200696W" disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>Sponsorship Type</label><input name="sponsorship" type="text" defaultValue="EMPLOYER" disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>Fee Collection Status</label><input name="feeStatus" type="text" defaultValue="Full Payment" disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>Enrolment Date</label><input name="enrolDate" type="text" defaultValue="2020-05-15" disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Training Partner UEN</label><input name="tpUen" type="text" defaultValue="T16GB0003C" disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Training Partner Code</label><input name="tpCode" type="text" defaultValue="T16GB0003C-01" disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Training Partner UEN</label><input name="tpUen" type="text" defaultValue="201200696W" disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Training Partner Code</label><input name="tpCode" type="text" defaultValue="201200696W-01" disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>Date From</label><input name="dateFrom" type="text" defaultValue="2020-01-01" disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>Date To</label><input name="dateTo" type="text" defaultValue="2020-02-01" disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>Page</label><input name="page" type="number" defaultValue="0" disabled={enrolSearchApi.loading} /></div>
@@ -2882,7 +2964,7 @@ function App() {
         <>
           <h2 className="page-title">View Enrolment</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/tpg/enrolments/details/&#123;enrolmentRefNo&#125;</code> (v3.0).</p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleEnrolView(fd.get('refNo') as string);
@@ -2906,7 +2988,7 @@ function App() {
         <>
           <h2 className="page-title">Update Enrolment Fee Collection</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/enrolments/feeCollections/&#123;enrolmentRefNo&#125;</code> (v3.0).</p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleEnrolFee(fd.get('refNo') as string, {
@@ -2952,7 +3034,7 @@ function App() {
         <>
           <h2 className="page-title">Create Assessment</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/assessments</code> (v1).</p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleAssessCreate({
@@ -2969,8 +3051,8 @@ function App() {
               },
             });
           }}>
-            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue="10226" disabled={assessCreateApi.loading} /></div>
-            <div className="form-group"><label>Course Reference Number</label><input name="courseRef" type="text" defaultValue="TGS-0026008-ES" disabled={assessCreateApi.loading} /></div>
+            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue="1022600" disabled={assessCreateApi.loading} /></div>
+            <div className="form-group"><label>Course Reference Number</label><input name="courseRef" type="text" defaultValue="TGS-2020505444" disabled={assessCreateApi.loading} /></div>
             <div className="form-group"><label>Trainee ID</label><input name="traineeId" type="text" defaultValue="S0118316H" disabled={assessCreateApi.loading} /></div>
             <div className="form-group"><label>ID Type</label><input name="idType" type="text" defaultValue="NRIC" disabled={assessCreateApi.loading} /></div>
             <div className="form-group"><label>Full Name</label><input name="fullName" type="text" defaultValue="Jon Chua" disabled={assessCreateApi.loading} /></div>
@@ -2979,9 +3061,9 @@ function App() {
             <div className="form-group"><label>Result</label><input name="result" type="text" defaultValue="Pass" disabled={assessCreateApi.loading} /></div>
             <div className="form-group"><label>Skill Code</label><input name="skillCode" type="text" defaultValue="TGS-MKG-234222" disabled={assessCreateApi.loading} /></div>
             <div className="form-group"><label>Assessment Date</label><input name="assessDate" type="text" defaultValue="2020-05-15" disabled={assessCreateApi.loading} /></div>
-            <div className="form-group"><label>Training Partner UEN</label><input name="tpUen" type="text" defaultValue="T16GB0003C" disabled={assessCreateApi.loading} /></div>
-            <div className="form-group"><label>Training Partner Code</label><input name="tpCode" type="text" defaultValue="T16GB0003C-01" disabled={assessCreateApi.loading} /></div>
-            <div className="form-group"><label>Conferring Institute Code</label><input name="confCode" type="text" defaultValue="T16GB0003C-01" disabled={assessCreateApi.loading} /></div>
+            <div className="form-group"><label>Training Partner UEN</label><input name="tpUen" type="text" defaultValue="201200696W" disabled={assessCreateApi.loading} /></div>
+            <div className="form-group"><label>Training Partner Code</label><input name="tpCode" type="text" defaultValue="201200696W-01" disabled={assessCreateApi.loading} /></div>
+            <div className="form-group"><label>Conferring Institute Code</label><input name="confCode" type="text" defaultValue="201200696W-01" disabled={assessCreateApi.loading} /></div>
             <div style={{ marginTop: 12 }}><button type="submit" disabled={assessCreateApi.loading}>{assessCreateApi.loading ? 'Creating...' : 'Create Assessment'}</button></div>
           </form>
           {assessCreateApi.error && <div className="error-alert">{assessCreateApi.error}</div>}
@@ -3000,7 +3082,7 @@ function App() {
         <>
           <h2 className="page-title">Update/Void Assessment</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/assessments/details/&#123;assessmentRefNo&#125;</code> (v1).</p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleAssessUpdate(fd.get('refNo') as string, {
@@ -3041,7 +3123,7 @@ function App() {
         <>
           <h2 className="page-title">Search Assessments</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/assessments/search</code> (v1).</p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleAssessSearch({
@@ -3057,13 +3139,13 @@ function App() {
               },
             });
           }}>
-            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue="10026" disabled={assessSearchApi.loading} /></div>
-            <div className="form-group"><label>Course Reference Number</label><input name="courseRef" type="text" defaultValue="TGS-0026008-ES" disabled={assessSearchApi.loading} /></div>
+            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue="1002600" disabled={assessSearchApi.loading} /></div>
+            <div className="form-group"><label>Course Reference Number</label><input name="courseRef" type="text" defaultValue="TGS-2020505444" disabled={assessSearchApi.loading} /></div>
             <div className="form-group"><label>Trainee ID</label><input name="traineeId" type="text" defaultValue="S0118316H" disabled={assessSearchApi.loading} /></div>
             <div className="form-group"><label>Enrolment Reference</label><input name="enrolRef" type="text" defaultValue="ENR-2001-123414" disabled={assessSearchApi.loading} /></div>
             <div className="form-group"><label>Skill Code</label><input name="skillCode" type="text" defaultValue="TGS-MKG-234222" disabled={assessSearchApi.loading} /></div>
-            <div className="form-group"><label>Training Partner UEN</label><input name="tpUen" type="text" defaultValue="T16GB0003C" disabled={assessSearchApi.loading} /></div>
-            <div className="form-group"><label>Training Partner Code</label><input name="tpCode" type="text" defaultValue="T16GB0003C-01" disabled={assessSearchApi.loading} /></div>
+            <div className="form-group"><label>Training Partner UEN</label><input name="tpUen" type="text" defaultValue="201200696W" disabled={assessSearchApi.loading} /></div>
+            <div className="form-group"><label>Training Partner Code</label><input name="tpCode" type="text" defaultValue="201200696W-01" disabled={assessSearchApi.loading} /></div>
             <div className="form-group"><label>Date From</label><input name="dateFrom" type="text" defaultValue="2020-01-01" disabled={assessSearchApi.loading} /></div>
             <div className="form-group"><label>Date To</label><input name="dateTo" type="text" defaultValue="2020-01-01" disabled={assessSearchApi.loading} /></div>
             <div className="form-group"><label>Page</label><input name="page" type="number" defaultValue="0" disabled={assessSearchApi.loading} /></div>
@@ -3086,7 +3168,7 @@ function App() {
         <>
           <h2 className="page-title">View Assessment</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/tpg/assessments/details/&#123;assessmentRefNo&#125;</code> (v1).</p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleAssessView(fd.get('refNo') as string);
@@ -3131,7 +3213,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             Retrieve qualification codes from Skills Passport. GET <code>/skillsPassport/codes/qualifications</code> (v1).
           </p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             const level = (fd.get('level') as string) || undefined;
@@ -3168,7 +3250,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             Extract skills from text descriptions. POST <code>/skillExtract</code>.
           </p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleSeaSkillExtract({
@@ -3211,7 +3293,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             Search for skills from text descriptions. POST <code>/skillSearch</code>.
           </p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleSeaSkillSearch({
@@ -3221,7 +3303,7 @@ function App() {
           }}>
             <div className="form-group">
               <label htmlFor="ssTextData">Text Data</label>
-              <textarea id="ssTextData" name="textData" rows={5} defaultValue="string" disabled={seaSkillSearchApi.loading} />
+              <textarea id="ssTextData" name="textData" rows={5} defaultValue="Develop and implement digital marketing strategies for e-commerce platforms" disabled={seaSkillSearchApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="ssModelVersion">Model Version</label>
@@ -3254,7 +3336,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             Retrieve job role details from Skills Framework. GET <code>/sfw/skillsFramework/jobs</code> (v1.0).
           </p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             const params: Record<string, string> = {};
@@ -3322,7 +3404,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             Retrieve skills details from Skills Framework. GET <code>/sfw/skillsFramework/skills</code> (v1.0).
           </p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             const params: Record<string, string> = {};
@@ -3386,7 +3468,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             Generate a self-signed X.509 certificate using OpenSSL. Output files are in <code>.pem</code> format.
           </p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleGenerateCert({
@@ -3399,11 +3481,11 @@ function App() {
           }}>
             <div className="form-group">
               <label htmlFor="certCN">Common Name (CN)</label>
-              <input id="certCN" name="commonName" type="text" defaultValue="localhost" disabled={generateCertApi.loading} />
+              <input id="certCN" name="commonName" type="text" defaultValue="api.ssg-wsg.sg" disabled={generateCertApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="certO">Organization (O)</label>
-              <input id="certO" name="organization" type="text" defaultValue="My Organization" disabled={generateCertApi.loading} />
+              <input id="certO" name="organization" type="text" defaultValue="Tertiary Infotech Academy Pte Ltd" disabled={generateCertApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="certC">Country (C)</label>
@@ -3474,7 +3556,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             Generate an RSA key pair using OpenSSL. Outputs private key (<code>key.pem</code>) and public key (<code>public.pem</code>) in .pem format, plus a stripped public key (no headers/newlines).
           </p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleGenerateKeypair(fd.get('keySize') as string);
@@ -3546,7 +3628,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             Generate a random base64-encoded encryption key using OpenSSL. Command: <code>openssl rand -base64 {'<bytes>'}</code>
           </p>
-          <form className="course-result" onSubmit={(e) => {
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleEncryptionKey(fd.get('bytes') as string);

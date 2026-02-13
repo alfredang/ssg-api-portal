@@ -264,6 +264,27 @@ body {
   cursor: not-allowed;
 }
 
+/* Compact form grid layout */
+form.course-result,
+.search-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 1rem;
+}
+
+form.course-result > h3,
+form.course-result > h4,
+.search-form > .search-options,
+.search-form > .search-row,
+.search-form > h3,
+.search-form > h4 {
+  grid-column: 1 / -1;
+}
+
+form.course-result > div:not(.form-group) {
+  grid-column: 1 / -1;
+}
+
 /* Form Groups (used in grant calculator, enrolments, assessments, etc.) */
 .form-group {
   margin-bottom: 1rem;

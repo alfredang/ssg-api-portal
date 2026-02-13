@@ -41,7 +41,7 @@ export default function CourseSearchForm({ onSearch, loading }: CourseSearchForm
   };
 
   return (
-    <form onSubmit={handleSubmit} className="search-form">
+    <form onSubmit={handleSubmit} className="search-form" autoComplete="off">
       <div className="search-input-group">
         <label htmlFor="uen">UEN (required)</label>
         <input

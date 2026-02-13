@@ -30,6 +30,7 @@ SSG API Portal is a React web app for exploring the SSG-WSG (SkillsFuture Singap
 |---------|-------------|
 | **Course Lookup** | Search by course reference number |
 | **Course Search** | Search by UEN, keyword, and date range with filtering |
+| **Courses by TP UEN** | Retrieve all courses for a training provider by UEN |
 | **Course Details** | View course overview, objectives, cost, and duration |
 | **Course Feedback** | Retrieve course quality and outcome ratings |
 | **Training Providers** | Course sessions, attendance, publish/edit course runs, trainer management |
@@ -37,6 +38,10 @@ SSG API Portal is a React web app for exploring the SSG-WSG (SkillsFuture Singap
 | **SkillsFuture Credit Pay** | View/cancel claims, upload docs, encrypt/decrypt requests |
 | **Enrolments** | Create, update, search, view enrolments and fee collections |
 | **Assessments** | Create, update/void, search, view assessments |
+| **Skills Passport** | Retrieve qualification codes |
+| **SEA** | Skill extraction and skill search APIs |
+| **Skills Framework** | Job role details and skills details lookup |
+| **Tools** | Generate certificates, RSA keypairs, and encryption keys |
 | **Known API Issues** | Live dashboard showing API status (403, 200) from curl tests |
 | **Dual Auth** | OAuth 2.0 for public APIs + mTLS certificates for registry APIs |
 
@@ -47,7 +52,7 @@ SSG API Portal is a React web app for exploring the SSG-WSG (SkillsFuture Singap
 | **Frontend** | React 19, TypeScript 5.9, Vite 7 |
 | **Backend** | Express 5, Node.js 22 |
 | **Authentication** | OAuth 2.0 (client credentials) + mTLS (client certificates) |
-| **APIs** | SSG-WSG Course, Grant, SF Credit, Enrolment, Assessment APIs |
+| **APIs** | SSG-WSG Course, Grant, SF Credit, Enrolment, Assessment, Skills Passport, SEA, Skills Framework APIs |
 | **Deployment** | Vercel (serverless functions + static hosting) |
 | **HTTP Client** | Axios (frontend), native `https` (backend mTLS) |
 
@@ -202,11 +207,18 @@ This app proxies requests to SSG-WSG production APIs with cert-first + OAuth fal
 | `/api/courses/:refNo` | GET | v1.2 | Lookup course by reference number |
 | `/api/courses/details/:refNo` | GET | v8.0 | Get detailed course information |
 | `/api/courses/search` | POST | v8.0 | Search courses by UEN, keyword, date range |
+| `/api/training-providers/:uen/courses` | GET | v8.0 | Courses by training provider UEN |
 | `/api/courses/:refNo/quality` | GET | v2.0 | Course quality ratings |
 | `/api/courses/:refNo/outcome` | GET | v2.0 | Course outcome ratings |
 | `/api/courses/runs/:runId/sessions` | GET | v1.5 | Course sessions |
 | `/api/courses/runs/:runId/sessions/attendance` | GET | v1.5 | Session attendance |
+| `/api/courses/runs/:runId/sessions/attendance/upload` | POST | v1.5 | Upload session attendance |
+| `/api/courses/courseRuns/publish` | POST | v1.0 | Publish course run |
+| `/api/courses/courseRuns/edit/:runId` | POST | v1.0 | Update/delete course run |
+| `/api/courses/courseRuns/id/:runId` | GET | v1.0 | Course run by ID |
 | `/api/courses/courseRuns/reference` | GET | v1.0 | Course runs by reference |
+| `/api/training-providers/:uen/trainers` | GET | v2.0 | Trainer details |
+| `/api/training-providers/:uen/trainers/:id` | POST | v2.0 | Update/delete trainer |
 | `/api/grants/baseline` | POST | v3.0 | Grant calculator — baseline |
 | `/api/grants/personalised` | POST | v3.0 | Grant calculator — personalised |
 | `/api/grants/search` | POST | v1.0 | Search grants |
@@ -221,9 +233,19 @@ This app proxies requests to SSG-WSG production APIs with cert-first + OAuth fal
 | `/api/enrolments/details/:refNo` | GET/POST | v3.0 | View/Update enrolment |
 | `/api/enrolments/search` | POST | v3.0 | Search enrolments |
 | `/api/enrolments/feeCollections/:refNo` | POST | v3.0 | Update fee collection |
+| `/api/enrolments/codes/sponsorshipType` | GET | v3.0 | Enrolment code lookup |
 | `/api/assessments` | POST | v1 | Create assessment |
 | `/api/assessments/details/:refNo` | GET/POST | v1 | View/Update assessment |
 | `/api/assessments/search` | POST | v1 | Search assessments |
+| `/api/assessments/codes/idType` | GET | v1 | Assessment code lookup |
+| `/api/skills-passport/qualifications` | GET | v1 | Qualification codes |
+| `/api/skill-extract` | POST | v1 | Skill extraction (SEA) |
+| `/api/skill-search` | POST | v1 | Skill search (SEA) |
+| `/api/skills-framework/jobs` | GET | v1.0 | Job role details |
+| `/api/skills-framework/skills` | GET | v1.0 | Skills details |
+| `/api/tools/generate-cert` | POST | — | Generate self-signed certificate |
+| `/api/tools/generate-keypair` | POST | — | Generate RSA key pair |
+| `/api/tools/generate-encryption-key` | POST | — | Generate AES encryption key |
 
 ## Contributing
 

@@ -221,6 +221,27 @@ export async function searchCourses(params: CourseSearchParams) {
   return response.data;
 }
 
+export async function getTrainingProviderCourses(params: {
+  uen: string;
+  pageSize?: number;
+  page?: number;
+  keyword?: string;
+  includeExpiredCourses?: boolean;
+}) {
+  const queryParams: Record<string, string> = {
+    pageSize: String(params.pageSize ?? 20),
+    page: String(params.page ?? 0),
+  };
+  if (params.keyword) queryParams.keyword = params.keyword;
+  if (params.includeExpiredCourses !== undefined) queryParams.includeExpiredCourses = String(params.includeExpiredCourses);
+
+  const response = await apiClient.get<Record<string, unknown>>(
+    `/training-providers/${encodeURIComponent(params.uen)}/courses`,
+    { params: queryParams }
+  );
+  return response.data;
+}
+
 // Grant Calculator APIs
 
 export async function getGrantBaseline(body: GrantBaselineRequest) {

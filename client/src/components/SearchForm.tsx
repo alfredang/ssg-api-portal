@@ -6,7 +6,7 @@ interface SearchFormProps {
 }
 
 export default function SearchForm({ onSearch, loading }: SearchFormProps) {
-  const [refNo, setRefNo] = useState('');
+  const [refNo, setRefNo] = useState('TGS-2020505444');
   const [uen, setUen] = useState('201200696W');
   const [courseRunStartDate, setCourseRunStartDate] = useState('');
 
@@ -21,7 +21,7 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="search-form">
+    <form onSubmit={handleSubmit} className="search-form" autoComplete="off">
       <div className="search-input-group">
         <label htmlFor="refNo">Course Reference Number (required)</label>
         <input
@@ -29,7 +29,7 @@ export default function SearchForm({ onSearch, loading }: SearchFormProps) {
           type="text"
           value={refNo}
           onChange={(e) => setRefNo(e.target.value)}
-          placeholder="e.g. TGS-2020503207"
+          placeholder="e.g. TGS-2020505444"
           disabled={loading}
         />
       </div>
