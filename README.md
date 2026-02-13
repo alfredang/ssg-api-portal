@@ -42,6 +42,7 @@ SSG API Portal is a React web app for exploring the SSG-WSG (SkillsFuture Singap
 | **SEA** | Skill extraction and skill search APIs |
 | **Skills Framework** | Job role details and skills details lookup |
 | **Tools** | Generate certificates, RSA keypairs, and encryption keys |
+| **Default Values** | Centrally configure common fields (UEN, Course Ref, NRIC, etc.) that auto-populate all forms |
 | **Known API Issues** | Collapsible dashboard grouped by category with error counts and references |
 | **Dual Auth** | OAuth 2.0 for public APIs + mTLS certificates for registry APIs |
 
@@ -113,6 +114,7 @@ ssg-api-portal/
 │       │   └── useApi.ts    # Generic API hook
 │       └── types/
 │           └── course.ts    # TypeScript interfaces
+├── default-values.csv        # Default form values (UEN, Course Ref, etc.)
 ├── vercel.json               # Vercel deployment config
 ├── package.json              # Root dependencies
 └── .env.example              # Environment variable template
