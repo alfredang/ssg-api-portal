@@ -622,7 +622,7 @@ tbody tr:hover {
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  background: #fff;
+  background: linear-gradient(135deg, #4f7cf7, #6b93fb);
   border: none;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -632,23 +632,23 @@ tbody tr:hover {
 }
 
 .collapsible-header:hover {
-  background: #f9fafb;
+  background: linear-gradient(135deg, #4270e8, #5d85f5);
 }
 
 .collapsible-title h3 {
   font-size: 1rem;
-  color: #1a1a2e;
+  color: #fff;
   margin-bottom: 0.15rem;
 }
 
 .collapsible-ref {
   font-size: 0.8rem;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .collapsible-arrow {
   font-size: 0.7rem;
-  color: #9ca3af;
+  color: rgba(255, 255, 255, 0.7);
   transition: transform 0.2s;
   flex-shrink: 0;
 }
@@ -663,6 +663,96 @@ tbody tr:hover {
 
 .course-result {
   margin-top: 1rem;
+}
+
+/* Collapsible JSON output */
+.json-collapsible {
+  margin-top: 12px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.json-collapsible summary {
+  padding: 10px 16px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #374151;
+  cursor: pointer;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.json-collapsible summary::-webkit-details-marker {
+  display: none;
+}
+
+.json-collapsible summary::before {
+  content: '\25B6';
+  font-size: 0.6rem;
+  transition: transform 0.2s;
+  color: #9ca3af;
+}
+
+.json-collapsible[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.json-collapsible[open] summary {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.json-collapsible pre {
+  margin: 0;
+  border-radius: 0;
+}
+
+/* Grant fee summary table */
+.grant-fee-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin-top: 8px;
+}
+
+.grant-fee-table th {
+  text-align: left;
+  padding: 10px 12px;
+  background: #f0f4ff;
+  font-weight: 600;
+  color: #1e40af;
+  border-bottom: 2px solid #dbeafe;
+}
+
+.grant-fee-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+}
+
+.grant-fee-table .fee-amount {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-weight: 600;
+  text-align: right;
+}
+
+.grant-fee-table .fee-before {
+  color: #374151;
+}
+
+.grant-fee-table .fee-grant {
+  color: #059669;
+}
+
+.grant-fee-table .fee-after {
+  color: #1e40af;
+  font-size: 1rem;
 }
 
 .results-filter {

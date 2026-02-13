@@ -113,7 +113,9 @@ async function ssgApiGet(endpoint, queryParams = {}, { apiVersion = 'v1.2', base
     },
   });
 
-  const data = await response.json();
+  const text = await response.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = text; }
 
   if (!response.ok) {
     const error = new Error(`SSG API error: ${response.status}`);
@@ -179,7 +181,9 @@ async function ssgApiPost(endpoint, jsonBody, { apiVersion = 'v1.2' } = {}) {
     body: JSON.stringify(jsonBody),
   });
 
-  const data = await response.json();
+  const text = await response.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = text; }
 
   if (!response.ok) {
     const error = new Error(`SSG API error: ${response.status}`);
@@ -215,12 +219,15 @@ router.get('/training-providers/:uen/trainers', async (req, res) => {
 
     if (result.status >= 200 && result.status < 300) {
       console.log('Trainers: certificate auth succeeded');
-      return res.json(JSON.parse(result.body));
+      let parsed; try { parsed = JSON.parse(result.body); } catch { parsed = result.body; }
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     // Certificate failed — fall back to OAuth
     console.log('Trainers: certificate returned', result.status, '— falling back to OAuth');
     const data = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v2.0' });
+    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
     res.json(data);
   } catch (err) {
     console.error('Trainers error:', err.message);
@@ -299,12 +306,14 @@ router.post('/training-providers/:uen/trainers/:trainerId', async (req, res) => 
       console.log('Update/Delete trainer: certificate auth succeeded');
       let data;
       try { data = JSON.parse(result.body); } catch { data = result.body; }
-      return res.json(data);
+      if (typeof data !== 'string') { return res.json(data); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     // Certificate failed — fall back to OAuth
     console.log('Update/Delete trainer: certificate returned', result.status, '— falling back to OAuth');
     const data = await ssgApiPost(apiPath, body, { apiVersion: 'v2.0' });
+    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
     res.json(data);
   } catch (err) {
     console.error('Update/Delete trainer error:', err.message);
@@ -423,12 +432,15 @@ router.get('/courses/runs/:runId/sessions/attendance', async (req, res) => {
 
     if (result.status >= 200 && result.status < 300) {
       console.log('Session attendance: certificate auth succeeded');
-      return res.json(JSON.parse(result.body));
+      let parsed; try { parsed = JSON.parse(result.body); } catch { parsed = result.body; }
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     // Certificate failed — fall back to OAuth
     console.log('Session attendance: certificate returned', result.status, '— falling back to OAuth');
     const data = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.5' });
+    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
     res.json(data);
   } catch (err) {
     console.error('Session attendance error:', err.message);
@@ -464,12 +476,15 @@ router.get('/courses/runs/:runId/sessions', async (req, res) => {
 
     if (result.status >= 200 && result.status < 300) {
       console.log('Course sessions: certificate auth succeeded');
-      return res.json(JSON.parse(result.body));
+      let parsed; try { parsed = JSON.parse(result.body); } catch { parsed = result.body; }
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     // Certificate failed — fall back to OAuth
     console.log('Course sessions: certificate returned', result.status, '— falling back to OAuth');
     const data = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.5' });
+    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
     res.json(data);
   } catch (err) {
     console.error('Course sessions error:', err.message);
@@ -538,12 +553,14 @@ router.post('/courses/courseRuns/publish', async (req, res) => {
       console.log('Publish course run: certificate auth succeeded');
       let data;
       try { data = JSON.parse(result.body); } catch { data = result.body; }
-      return res.json(data);
+      if (typeof data !== 'string') { return res.json(data); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     // Certificate failed — fall back to OAuth
     console.log('Publish course run: certificate returned', result.status, '— falling back to OAuth');
     const data = await ssgApiPost(`${apiPath}?${new URLSearchParams(queryParams).toString()}`, body, { apiVersion: 'v1.2' });
+    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
     res.json(data);
   } catch (err) {
     console.error('Publish course run error:', err.message);
@@ -613,13 +630,15 @@ router.post('/courses/courseRuns/edit/:runId', async (req, res) => {
       console.log('Edit course run: certificate auth succeeded');
       let data;
       try { data = JSON.parse(result.body); } catch { data = result.body; }
-      return res.json(data);
+      if (typeof data !== 'string') { return res.json(data); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     // Certificate failed — fall back to OAuth
     console.log('Edit course run: certificate returned', result.status, '— falling back to OAuth');
     const oauthPath = `${apiPath}?${new URLSearchParams(queryParams).toString()}`;
     const data = await ssgApiPost(oauthPath, body, { apiVersion: 'v1.2' });
+    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
     res.json(data);
   } catch (err) {
     console.error('Edit course run error:', err.message);
@@ -658,12 +677,15 @@ router.get('/courses/courseRuns/reference', async (req, res) => {
 
     if (result.status >= 200 && result.status < 300) {
       console.log('Course runs by ref: certificate auth succeeded');
-      return res.json(JSON.parse(result.body));
+      let parsed; try { parsed = JSON.parse(result.body); } catch { parsed = result.body; }
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     // Certificate failed — fall back to OAuth
     console.log('Course runs by ref: certificate returned', result.status, '— falling back to OAuth');
     const data = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.0' });
+    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
     res.json(data);
   } catch (err) {
     console.error('Course runs by ref error:', err.message);
@@ -692,12 +714,15 @@ router.get('/courses/courseRuns/id/:runId', async (req, res) => {
 
     if (result.status >= 200 && result.status < 300) {
       console.log('Course run by ID: certificate auth succeeded');
-      return res.json(JSON.parse(result.body));
+      let parsed; try { parsed = JSON.parse(result.body); } catch { parsed = result.body; }
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     // Certificate failed — fall back to OAuth
     console.log('Course run by ID: certificate returned', result.status, '— falling back to OAuth');
     const data = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.0' });
+    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
     res.json(data);
   } catch (err) {
     console.error('Course run by ID error:', err.message);
@@ -727,12 +752,15 @@ router.get('/courses/popular', async (req, res) => {
 
     if (result.status >= 200 && result.status < 300) {
       console.log('Popular courses: certificate auth succeeded');
-      return res.json(JSON.parse(result.body));
+      let parsed; try { parsed = JSON.parse(result.body); } catch { parsed = result.body; }
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     // Certificate failed — fall back to OAuth
     console.log('Popular courses: certificate returned', result.status, '— falling back to OAuth');
     const data = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.1' });
+    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
     res.json(data);
   } catch (err) {
     console.error('Popular courses error:', err.message);
@@ -756,12 +784,15 @@ router.get('/courses/:refNo/quality', async (req, res) => {
 
     if (result.status >= 200 && result.status < 300) {
       console.log('Course quality: certificate auth succeeded');
-      return res.json(JSON.parse(result.body));
+      let parsed; try { parsed = JSON.parse(result.body); } catch { parsed = result.body; }
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     // Certificate failed — fall back to OAuth
     console.log('Course quality: certificate returned', result.status, '— falling back to OAuth');
     const data = await ssgApiGet(apiPath, {}, { apiVersion: 'v2.0' });
+    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
     res.json(data);
   } catch (err) {
     console.error('Course quality error:', err.message);
@@ -785,12 +816,15 @@ router.get('/courses/:refNo/outcome', async (req, res) => {
 
     if (result.status >= 200 && result.status < 300) {
       console.log('Course outcome: certificate auth succeeded');
-      return res.json(JSON.parse(result.body));
+      let parsed; try { parsed = JSON.parse(result.body); } catch { parsed = result.body; }
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     // Certificate failed — fall back to OAuth
     console.log('Course outcome: certificate returned', result.status, '— falling back to OAuth');
     const data = await ssgApiGet(apiPath, {}, { apiVersion: 'v2.0' });
+    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
     res.json(data);
   } catch (err) {
     console.error('Course outcome error:', err.message);
@@ -816,12 +850,15 @@ router.get('/courses/:refNo', async (req, res) => {
 
     if (result.status >= 200 && result.status < 300) {
       console.log('Course lookup: certificate auth succeeded');
-      return res.json(JSON.parse(result.body));
+      let parsed; try { parsed = JSON.parse(result.body); } catch { parsed = result.body; }
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     // Certificate failed — fall back to OAuth
     console.log('Course lookup: certificate returned', result.status, '— falling back to OAuth');
     const data = await ssgApiGet(apiPath, queryParams);
+    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
     res.json(data);
   } catch (err) {
     console.error('Course lookup error:', err.message);
@@ -1041,13 +1078,15 @@ router.post('/grants/baseline', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`Grant Calculator Baseline: certificate returned ${certResult.status} — falling back to OAuth`);
 
     // Fall back to OAuth
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v3.0' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Grant Calculator Baseline error:', err.message);
@@ -1070,13 +1109,15 @@ router.post('/grants/personalised', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`Grant Calculator Personalised: certificate returned ${certResult.status} — falling back to OAuth`);
 
     // Fall back to OAuth
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v3.0' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Grant Calculator Personalised error:', err.message);
@@ -1103,7 +1144,8 @@ router.post('/grants/search', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`Search Grants: certificate returned ${certResult.status} — falling back to OAuth`);
@@ -1125,12 +1167,17 @@ router.post('/grants/search', async (req, res) => {
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = text; }
     if (!response.ok) {
       return res.status(response.status).json({
         error: `SSG API error: ${response.status}`,
         details: data,
       });
+    }
+    if (typeof data === 'string') {
+      return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) });
     }
     return res.json(data);
   } catch (err) {
@@ -1154,13 +1201,17 @@ router.get('/grants/details/:grantRefNo', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') {
+        return res.json(parsed);
+      }
+      console.log('View Grant: cert returned non-JSON — falling back to OAuth');
+    } else {
+      console.log(`View Grant: certificate returned ${certResult.status} — falling back to OAuth`);
     }
-
-    console.log(`View Grant: certificate returned ${certResult.status} — falling back to OAuth`);
 
     // Fall back to OAuth
     const oauthResult = await ssgApiGet(apiPath, {}, { apiVersion: 'v1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('View Grant error:', err.message);
@@ -1182,13 +1233,15 @@ router.get('/grants/codes/fundingComponent', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`Grants Code Lookup: certificate returned ${certResult.status} — falling back to OAuth`);
 
     // Fall back to OAuth
     const oauthResult = await ssgApiGet(apiPath, {}, { apiVersion: 'v1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Grants Code Lookup error:', err.message);
@@ -1216,13 +1269,15 @@ router.get('/sf-credits/claims/:claimId', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`SF Credit View Claim: certificate returned ${certResult.status} — falling back to OAuth`);
 
     // Fall back to OAuth
     const oauthResult = await ssgApiGet(apiPath, { nric }, { apiVersion: 'v2' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('SF Credit View Claim error:', err.message);
@@ -1246,13 +1301,15 @@ router.post('/sf-credits/claims/:claimId/cancel', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`SF Credit Cancel Claim: certificate returned ${certResult.status} — falling back to OAuth`);
 
     // Fall back to OAuth
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v2' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('SF Credit Cancel Claim error:', err.message);
@@ -1276,13 +1333,15 @@ router.post('/sf-credits/claims/:claimId/supportingdocuments', async (req, res) 
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`SF Credit Upload Docs: certificate returned ${certResult.status} — falling back to OAuth`);
 
     // Fall back to OAuth
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v2' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('SF Credit Upload Docs error:', err.message);
@@ -1305,13 +1364,15 @@ router.post('/sf-credits/claims/encryptRequests', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`SF Credit Encrypt Request: certificate returned ${certResult.status} — falling back to OAuth`);
 
     // Fall back to OAuth
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v2' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('SF Credit Encrypt Request error:', err.message);
@@ -1334,13 +1395,15 @@ router.post('/sf-credits/claims/decryptRequests', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`SF Credit Decrypt Request: certificate returned ${certResult.status} — falling back to OAuth`);
 
     // Fall back to OAuth
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v2' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('SF Credit Decrypt Request error:', err.message);
@@ -1367,13 +1430,15 @@ router.post('/enrolments', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`Create Enrolment: certificate returned ${certResult.status} — falling back to OAuth`);
 
     // Fall back to OAuth
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v3.0' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Create Enrolment error:', err.message);
@@ -1401,7 +1466,8 @@ router.post('/enrolments/details/:enrolmentRefNo', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`Update/Cancel Enrolment: certificate returned ${certResult.status} — falling back to OAuth`);
@@ -1423,13 +1489,16 @@ router.post('/enrolments/details/:enrolmentRefNo', async (req, res) => {
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = text; }
     if (!response.ok) {
       return res.status(response.status).json({
         error: `SSG API error: ${response.status}`,
         details: data,
       });
     }
+    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
     return res.json(data);
   } catch (err) {
     console.error('Update/Cancel Enrolment error:', err.message);
@@ -1452,13 +1521,15 @@ router.post('/enrolments/search', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`Search Enrolments: certificate returned ${certResult.status} — falling back to OAuth`);
 
     // Fall back to OAuth
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v3.0' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Search Enrolments error:', err.message);
@@ -1481,13 +1552,15 @@ router.get('/enrolments/details/:enrolmentRefNo', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`View Enrolment: certificate returned ${certResult.status} — falling back to OAuth`);
 
     // Fall back to OAuth
     const oauthResult = await ssgApiGet(apiPath, {}, { apiVersion: 'v3.0' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('View Enrolment error:', err.message);
@@ -1511,13 +1584,15 @@ router.post('/enrolments/feeCollections/:enrolmentRefNo', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`Fee Collection: certificate returned ${certResult.status} — falling back to OAuth`);
 
     // Fall back to OAuth
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v3.0' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Fee Collection error:', err.message);
@@ -1538,12 +1613,14 @@ router.get('/enrolments/codes/sponsorshipType', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`Enrolment Code Lookup: certificate returned ${certResult.status} — falling back to OAuth`);
 
     const oauthResult = await ssgApiGet(apiPath, {}, { apiVersion: 'v1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Enrolment Code Lookup error:', err.message);
@@ -1569,12 +1646,14 @@ router.post('/assessments', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`Create Assessment: certificate returned ${certResult.status} — falling back to OAuth`);
 
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Create Assessment error:', err.message);
@@ -1596,12 +1675,14 @@ router.post('/assessments/details/:assessmentRefNo', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`Update/Void Assessment: certificate returned ${certResult.status} — falling back to OAuth`);
 
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Update/Void Assessment error:', err.message);
@@ -1622,12 +1703,14 @@ router.post('/assessments/search', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`Search Assessments: certificate returned ${certResult.status} — falling back to OAuth`);
 
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Search Assessments error:', err.message);
@@ -1648,12 +1731,14 @@ router.get('/assessments/details/:assessmentRefNo', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`View Assessment: certificate returned ${certResult.status} — falling back to OAuth`);
 
     const oauthResult = await ssgApiGet(apiPath, {}, { apiVersion: 'v1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('View Assessment error:', err.message);
@@ -1673,12 +1758,14 @@ router.get('/assessments/codes/idType', async (req, res) => {
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     console.log(`Assessment Code Lookup: certificate returned ${certResult.status} — falling back to OAuth`);
 
     const oauthResult = await ssgApiGet(apiPath, {}, { apiVersion: 'v1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Assessment Code Lookup error:', err.message);
@@ -1710,12 +1797,14 @@ router.get('/skills-passport/qualifications', async (req, res) => {
       console.log('Skills Passport Qualifications: certificate auth succeeded');
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     // Certificate failed — fall back to OAuth
     console.log('Skills Passport Qualifications: certificate returned', certResult.status, '— falling back to OAuth');
     const oauthResult = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Skills Passport Qualifications error:', err.message);
@@ -1746,12 +1835,14 @@ router.post('/skill-extract', async (req, res) => {
       console.log('Skill Extraction: certificate auth succeeded');
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     // Certificate failed — fall back to OAuth
     console.log('Skill Extraction: certificate returned', certResult.status, '— falling back to OAuth');
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Skill Extraction error:', err.message);
@@ -1766,37 +1857,30 @@ router.post('/skill-extract', async (req, res) => {
 // Skills Framework APIs
 // ─────────────────────────────────────────────────────────────────
 
-// GET /api/skills-framework/jobs — Get Job Role Details
+// GET /api/skills-framework/jobs — Retrieve Job Role Details
 // mTLS Certificate with OAuth fallback
 router.get('/skills-framework/jobs', async (req, res) => {
   try {
-    const { page, pageSize, sectorTitle, trackTitle, jobroleTitle, keytaskContent, skillTitle, sfwVersion } = req.query;
-    const apiPath = '/sfw/skillsFramework/jobs';
+    const { jobRoleId } = req.query;
+    const apiPath = '/skillsFramework/jobRoles/details';
     const queryParams = {};
-    if (page) queryParams.page = page;
-    if (pageSize) queryParams.pageSize = pageSize;
-    if (sectorTitle) queryParams.sectorTitle = sectorTitle;
-    if (trackTitle) queryParams.trackTitle = trackTitle;
-    if (jobroleTitle) queryParams.jobroleTitle = jobroleTitle;
-    if (keytaskContent) queryParams.keytaskContent = keytaskContent;
-    if (skillTitle) queryParams.skillTitle = skillTitle;
-    if (sfwVersion) queryParams.sfwVersion = sfwVersion;
+    if (jobRoleId) queryParams.jobRoleId = jobRoleId;
 
-    // Try certificate first
-    console.log('Skills Framework Jobs request (cert):', apiPath);
-    const certResult = await certApiGet(apiPath, queryParams, { apiVersion: 'v1.0' });
-    console.log('Skills Framework Jobs cert response status:', certResult.status);
+    console.log('Skills Framework Job Role Details request (cert):', apiPath);
+    const certResult = await certApiGet(apiPath, queryParams, { apiVersion: 'v1' });
+    console.log('Skills Framework Job Role Details cert response status:', certResult.status);
 
     if (certResult.status >= 200 && certResult.status < 300) {
-      console.log('Skills Framework Jobs: certificate auth succeeded');
+      console.log('Skills Framework Job Role Details: certificate auth succeeded');
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
-    // Certificate failed — fall back to OAuth
-    console.log('Skills Framework Jobs: certificate returned', certResult.status, '— falling back to OAuth');
-    const oauthResult = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.0' });
+    console.log('Skills Framework Job Role Details: certificate returned', certResult.status, '— falling back to OAuth');
+    const oauthResult = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Skills Framework Jobs error:', err.message);
@@ -1831,15 +1915,382 @@ router.get('/skills-framework/skills', async (req, res) => {
       console.log('Skills Framework Skills: certificate auth succeeded');
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
+      if (typeof parsed === 'string') {
+        return res.status(500).json({ error: 'Non-JSON response from certificate API', details: parsed.substring(0, 200) });
+      }
       return res.json(parsed);
     }
 
     // Certificate failed — fall back to OAuth
     console.log('Skills Framework Skills: certificate returned', certResult.status, '— falling back to OAuth');
     const oauthResult = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.0' });
+    if (typeof oauthResult === 'string') {
+      return res.status(500).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) });
+    }
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Skills Framework Skills error:', err.message);
+    res.status(err.status || 500).json({
+      error: err.message,
+      details: err.body || null,
+    });
+  }
+});
+
+// GET /api/skills-framework/gsc-codes — Retrieve Generic Skills Competency (GSC) Code
+// mTLS Certificate with OAuth fallback
+router.get('/skills-framework/gsc-codes', async (req, res) => {
+  try {
+    const { keyword } = req.query;
+    const apiPath = '/skillsFramework/codes/skillsAndCompetencies/generic/autocomplete';
+    const queryParams = {};
+    if (keyword) queryParams.keyword = keyword;
+
+    console.log('Skills Framework GSC Codes request (cert):', apiPath);
+    const certResult = await certApiGet(apiPath, queryParams, { apiVersion: 'v1.1' });
+    console.log('Skills Framework GSC Codes cert response status:', certResult.status);
+
+    if (certResult.status >= 200 && certResult.status < 300) {
+      console.log('Skills Framework GSC Codes: certificate auth succeeded');
+      let parsed;
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+    }
+
+    console.log('Skills Framework GSC Codes: certificate returned', certResult.status, '— falling back to OAuth');
+    const oauthResult = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
+    return res.json(oauthResult);
+  } catch (err) {
+    console.error('Skills Framework GSC Codes error:', err.message);
+    res.status(err.status || 500).json({
+      error: err.message,
+      details: err.body || null,
+    });
+  }
+});
+
+// GET /api/skills-framework/ccs-details — Retrieve Critical Core Skills (CCS) Details
+// mTLS Certificate with OAuth fallback
+router.get('/skills-framework/ccs-details', async (req, res) => {
+  try {
+    const { pageSize, page, retrieveType, lastUpdateDate, gscLevelCode } = req.query;
+    const apiPath = '/skillsFramework/codes/skillsAndCompetencies/generic/details';
+    const queryParams = {};
+    if (pageSize) queryParams.pageSize = pageSize;
+    if (page) queryParams.page = page;
+    if (retrieveType) queryParams.retrieveType = retrieveType;
+    if (lastUpdateDate) queryParams.lastUpdateDate = lastUpdateDate;
+    if (gscLevelCode) queryParams.gscLevelCode = gscLevelCode;
+
+    console.log('Skills Framework CCS Details request (cert):', apiPath);
+    const certResult = await certApiGet(apiPath, queryParams, { apiVersion: 'v1.1' });
+    console.log('Skills Framework CCS Details cert response status:', certResult.status);
+
+    if (certResult.status >= 200 && certResult.status < 300) {
+      console.log('Skills Framework CCS Details: certificate auth succeeded');
+      let parsed;
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+    }
+
+    console.log('Skills Framework CCS Details: certificate returned', certResult.status, '— falling back to OAuth');
+    const oauthResult = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
+    return res.json(oauthResult);
+  } catch (err) {
+    console.error('Skills Framework CCS Details error:', err.message);
+    res.status(err.status || 500).json({
+      error: err.message,
+      details: err.body || null,
+    });
+  }
+});
+
+// GET /api/skills-framework/tsc-codes — Retrieve Technical Skills Competency (TSC) Code
+// mTLS Certificate with OAuth fallback
+router.get('/skills-framework/tsc-codes', async (req, res) => {
+  try {
+    const { keyword } = req.query;
+    const apiPath = '/skillsFramework/codes/skillsAndCompetencies/technical/autocomplete';
+    const queryParams = {};
+    if (keyword) queryParams.keyword = keyword;
+
+    console.log('Skills Framework TSC Codes request (cert):', apiPath);
+    const certResult = await certApiGet(apiPath, queryParams, { apiVersion: 'v1.1' });
+    console.log('Skills Framework TSC Codes cert response status:', certResult.status);
+
+    if (certResult.status >= 200 && certResult.status < 300) {
+      console.log('Skills Framework TSC Codes: certificate auth succeeded');
+      let parsed;
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+    }
+
+    console.log('Skills Framework TSC Codes: certificate returned', certResult.status, '— falling back to OAuth');
+    const oauthResult = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
+    return res.json(oauthResult);
+  } catch (err) {
+    console.error('Skills Framework TSC Codes error:', err.message);
+    res.status(err.status || 500).json({
+      error: err.message,
+      details: err.body || null,
+    });
+  }
+});
+
+// GET /api/skills-framework/tsc-codes-details — Retrieve TSC Code with Details
+// mTLS Certificate with OAuth fallback
+router.get('/skills-framework/tsc-codes-details', async (req, res) => {
+  try {
+    const { keyword } = req.query;
+    const apiPath = '/skillsFramework/codes/skillsAndCompetencies/technical/autocomplete/details';
+    const queryParams = {};
+    if (keyword) queryParams.keyword = keyword;
+
+    console.log('Skills Framework TSC Codes Details request (cert):', apiPath);
+    const certResult = await certApiGet(apiPath, queryParams, { apiVersion: 'v1.1' });
+    console.log('Skills Framework TSC Codes Details cert response status:', certResult.status);
+
+    if (certResult.status >= 200 && certResult.status < 300) {
+      console.log('Skills Framework TSC Codes Details: certificate auth succeeded');
+      let parsed;
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+    }
+
+    console.log('Skills Framework TSC Codes Details: certificate returned', certResult.status, '— falling back to OAuth');
+    const oauthResult = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
+    return res.json(oauthResult);
+  } catch (err) {
+    console.error('Skills Framework TSC Codes Details error:', err.message);
+    res.status(err.status || 500).json({
+      error: err.message,
+      details: err.body || null,
+    });
+  }
+});
+
+// GET /api/skills-framework/job-roles — Retrieve Job Roles
+// mTLS Certificate with OAuth fallback
+router.get('/skills-framework/job-roles', async (req, res) => {
+  try {
+    const { pageSize, page, keyword, sector, qualification, fieldOfStudy, track, maxSalary, minSalary, sortby, sortDirection, type } = req.query;
+    const apiPath = '/skillsFramework/jobRoles';
+    const queryParams = {};
+    if (pageSize) queryParams.pageSize = pageSize;
+    if (page) queryParams.page = page;
+    if (keyword) queryParams.keyword = keyword;
+    if (sector) queryParams.sector = sector;
+    if (qualification) queryParams.qualification = qualification;
+    if (fieldOfStudy) queryParams.fieldOfStudy = fieldOfStudy;
+    if (track) queryParams.track = track;
+    if (maxSalary) queryParams.maxSalary = maxSalary;
+    if (minSalary) queryParams.minSalary = minSalary;
+    if (sortby) queryParams.sortby = sortby;
+    if (sortDirection) queryParams.sortDirection = sortDirection;
+    if (type) queryParams.type = type;
+
+    console.log('Skills Framework Job Roles request (cert):', apiPath);
+    const certResult = await certApiGet(apiPath, queryParams, { apiVersion: 'v1' });
+    console.log('Skills Framework Job Roles cert response status:', certResult.status);
+
+    if (certResult.status >= 200 && certResult.status < 300) {
+      console.log('Skills Framework Job Roles: certificate auth succeeded');
+      let parsed;
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+    }
+
+    console.log('Skills Framework Job Roles: certificate returned', certResult.status, '— falling back to OAuth');
+    const oauthResult = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
+    return res.json(oauthResult);
+  } catch (err) {
+    console.error('Skills Framework Job Roles error:', err.message);
+    res.status(err.status || 500).json({
+      error: err.message,
+      details: err.body || null,
+    });
+  }
+});
+
+// GET /api/skills-framework/tsc-details — Retrieve Technical Skills Competency (TSC) Details
+// mTLS Certificate with OAuth fallback
+router.get('/skills-framework/tsc-details', async (req, res) => {
+  try {
+    const { pageSize, page, retrieveType, lastUpdateDate, tscLevelCode } = req.query;
+    const apiPath = '/skillsFramework/codes/skillsAndCompetencies/technical/details';
+    const queryParams = {};
+    if (pageSize) queryParams.pageSize = pageSize;
+    if (page) queryParams.page = page;
+    if (retrieveType) queryParams.retrieveType = retrieveType;
+    if (lastUpdateDate) queryParams.lastUpdateDate = lastUpdateDate;
+    if (tscLevelCode) queryParams.tscLevelCode = tscLevelCode;
+
+    console.log('Skills Framework TSC Details request (cert):', apiPath);
+    const certResult = await certApiGet(apiPath, queryParams, { apiVersion: 'v1.1' });
+    console.log('Skills Framework TSC Details cert response status:', certResult.status);
+
+    if (certResult.status >= 200 && certResult.status < 300) {
+      console.log('Skills Framework TSC Details: certificate auth succeeded');
+      let parsed;
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+    }
+
+    console.log('Skills Framework TSC Details: certificate returned', certResult.status, '— falling back to OAuth');
+    const oauthResult = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
+    return res.json(oauthResult);
+  } catch (err) {
+    console.error('Skills Framework TSC Details error:', err.message);
+    res.status(err.status || 500).json({
+      error: err.message,
+      details: err.body || null,
+    });
+  }
+});
+
+// GET /api/skills-framework/job-role-profile — Retrieve Job Role Profile
+// mTLS Certificate with OAuth fallback
+router.get('/skills-framework/job-role-profile', async (req, res) => {
+  try {
+    const { jobRoleId } = req.query;
+    const apiPath = '/skillsFramework/jobRoles/profile';
+    const queryParams = {};
+    if (jobRoleId) queryParams.jobRoleId = jobRoleId;
+
+    console.log('Skills Framework Job Role Profile request (cert):', apiPath);
+    const certResult = await certApiGet(apiPath, queryParams, { apiVersion: 'v1' });
+    console.log('Skills Framework Job Role Profile cert response status:', certResult.status);
+
+    if (certResult.status >= 200 && certResult.status < 300) {
+      console.log('Skills Framework Job Role Profile: certificate auth succeeded');
+      let parsed;
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+    }
+
+    console.log('Skills Framework Job Role Profile: certificate returned', certResult.status, '— falling back to OAuth');
+    const oauthResult = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
+    return res.json(oauthResult);
+  } catch (err) {
+    console.error('Skills Framework Job Role Profile error:', err.message);
+    res.status(err.status || 500).json({
+      error: err.message,
+      details: err.body || null,
+    });
+  }
+});
+
+// GET /api/skills-framework/occupations — Retrieve List of Occupations
+// mTLS Certificate with OAuth fallback
+router.get('/skills-framework/occupations', async (req, res) => {
+  try {
+    const { sectorId } = req.query;
+    const apiPath = '/skillsFramework/occupations';
+    const queryParams = {};
+    if (sectorId) queryParams.sectorId = sectorId;
+
+    console.log('Skills Framework Occupations request (cert):', apiPath);
+    const certResult = await certApiGet(apiPath, queryParams, { apiVersion: 'v1' });
+    console.log('Skills Framework Occupations cert response status:', certResult.status);
+
+    if (certResult.status >= 200 && certResult.status < 300) {
+      console.log('Skills Framework Occupations: certificate auth succeeded');
+      let parsed;
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+    }
+
+    console.log('Skills Framework Occupations: certificate returned', certResult.status, '— falling back to OAuth');
+    const oauthResult = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
+    return res.json(oauthResult);
+  } catch (err) {
+    console.error('Skills Framework Occupations error:', err.message);
+    res.status(err.status || 500).json({
+      error: err.message,
+      details: err.body || null,
+    });
+  }
+});
+
+// GET /api/skills-framework/occupations/:occupationId/jobRoles — Retrieve Job Role Codes by Occupation ID
+// mTLS Certificate with OAuth fallback
+router.get('/skills-framework/occupations/:occupationId/jobRoles', async (req, res) => {
+  try {
+    const { occupationId } = req.params;
+    const apiPath = `/skillsFramework/${encodeURIComponent(occupationId)}/jobRoles`;
+
+    console.log('Skills Framework Job Role Codes request (cert):', apiPath);
+    const certResult = await certApiGet(apiPath, {}, { apiVersion: 'v1' });
+    console.log('Skills Framework Job Role Codes cert response status:', certResult.status);
+
+    if (certResult.status >= 200 && certResult.status < 300) {
+      console.log('Skills Framework Job Role Codes: certificate auth succeeded');
+      let parsed;
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+    }
+
+    console.log('Skills Framework Job Role Codes: certificate returned', certResult.status, '— falling back to OAuth');
+    const oauthResult = await ssgApiGet(apiPath, {}, { apiVersion: 'v1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
+    return res.json(oauthResult);
+  } catch (err) {
+    console.error('Skills Framework Job Role Codes error:', err.message);
+    res.status(err.status || 500).json({
+      error: err.message,
+      details: err.body || null,
+    });
+  }
+});
+
+// GET /api/skills-framework/sector-profile/:sectorId — Retrieve Sector Profile
+// mTLS Certificate with OAuth fallback
+router.get('/skills-framework/sector-profile/:sectorId', async (req, res) => {
+  try {
+    const { sectorId } = req.params;
+    const apiPath = `/skillsFramework/sectors/${sectorId}`;
+
+    console.log('Skills Framework Sector Profile request (cert):', apiPath);
+    const certResult = await certApiGet(apiPath, {}, { apiVersion: 'v1' });
+    console.log('Skills Framework Sector Profile cert response status:', certResult.status);
+
+    if (certResult.status >= 200 && certResult.status < 300) {
+      console.log('Skills Framework Sector Profile: certificate auth succeeded');
+      let parsed;
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
+      if (typeof parsed === 'string') {
+        return res.status(500).json({ error: 'Non-JSON response from certificate API', details: parsed.substring(0, 200) });
+      }
+      return res.json(parsed);
+    }
+
+    console.log('Skills Framework Sector Profile: certificate returned', certResult.status, '— falling back to OAuth');
+    const oauthResult = await ssgApiGet(apiPath, {}, { apiVersion: 'v1' });
+    if (typeof oauthResult === 'string') {
+      return res.status(500).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) });
+    }
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
+    return res.json(oauthResult);
+  } catch (err) {
+    console.error('Skills Framework Sector Profile error:', err.message);
     res.status(err.status || 500).json({
       error: err.message,
       details: err.body || null,
@@ -1863,12 +2314,14 @@ router.post('/skill-search', async (req, res) => {
       console.log('Skill Search: certificate auth succeeded');
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      return res.json(parsed);
+      if (typeof parsed !== 'string') { return res.json(parsed); }
+      console.log('Cert returned non-JSON (200) — falling back to OAuth');
     }
 
     // Certificate failed — fall back to OAuth
     console.log('Skill Search: certificate returned', certResult.status, '— falling back to OAuth');
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v1' });
+    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Skill Search error:', err.message);

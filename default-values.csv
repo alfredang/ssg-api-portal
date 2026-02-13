@@ -1,0 +1,15 @@
+key,label,category,value
+uen,UEN,General,201200696W
+courseRefNo,Course Reference Number,General,TGS-2020505444
+nric,NRIC / ID Number,General,S9876543A
+traineeId,Trainee ID,General,S0118316H
+runId,Run ID,Courses,1234567
+pageSize,Page Size,Pagination,20
+page,Page,Pagination,0
+trainerName,Trainer Name,Training Providers,Ahmad Rahman
+trainerEmail,Trainer Email,Training Providers,trainer@tertiary.edu.sg
+trainerIdNumber,Trainer ID Number,Training Providers,S3158356Z
+adminEmail,Admin Email,General,admin@tertiary.edu.sg
+modelVersion,Model Version,SEA,1.1-240712
+enrolRef,Enrolment Reference,Enrolments,ENR-2001-123414
+courseRunRefNo,Course Run Ref No,Courses,XX-201200696W-01-TEST 166

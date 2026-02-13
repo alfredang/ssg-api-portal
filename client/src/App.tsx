@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useApi } from './hooks/useApi';
-import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications, postSkillExtract, postSkillSearch, getSkillsFrameworkJobs, getSkillsFrameworkSkills, generateCertificate, generateKeypair, generateEncryptionKey, getTrainingProviderCourses } from './api/courseApi';
+import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications, postSkillExtract, postSkillSearch, getSkillsFrameworkJobs, getSkillsFrameworkSkills, getSkillsFrameworkGscCodes, getSkillsFrameworkTscCodes, getSkillsFrameworkTscCodesDetails, getSkillsFrameworkCcsDetails, getSkillsFrameworkTscDetails, getSkillsFrameworkJobRoles, getSkillsFrameworkJobRoleProfile, getSkillsFrameworkOccupations, getSkillsFrameworkJobRoleCodes, getSkillsFrameworkSectorProfile, generateCertificate, generateKeypair, generateEncryptionKey, getTrainingProviderCourses } from './api/courseApi';
 import SearchForm from './components/SearchForm';
 import CourseSearchForm from './components/CourseSearchForm';
 import CourseOverview from './components/CourseOverview';
@@ -23,8 +23,9 @@ type Page = 'course-lookup' | 'course-search' | 'popular-courses' | 'tp-courses'
   | 'assess-create' | 'assess-update' | 'assess-search' | 'assess-view' | 'assess-codes'
   | 'sp-qualifications'
   | 'sea-skill-extract' | 'sea-skill-search'
-  | 'sfw-job-roles' | 'sfw-skills'
+  | 'sfw-job-roles' | 'sfw-skills' | 'sfw-gsc-codes' | 'sfw-ccs-details' | 'sfw-tsc-codes' | 'sfw-tsc-codes-details' | 'sfw-tsc-details' | 'sfw-job-roles-search' | 'sfw-job-role-profile' | 'sfw-occupations' | 'sfw-job-role-codes' | 'sfw-sector-profile'
   | 'tools-generate-cert' | 'tools-generate-keypair' | 'tools-encryption-key'
+  | 'default-values'
   | 'api-issues';
 
 interface NavCategory {
@@ -123,6 +124,15 @@ const NAV_ITEMS: NavCategory[] = [
     children: [
       { id: 'sfw-job-roles', label: 'Get Job Role Details' },
       { id: 'sfw-skills', label: 'Get Skills Details' },
+      { id: 'sfw-gsc-codes', label: 'GSC Code Lookup' },
+      { id: 'sfw-ccs-details', label: 'CCS Details' },
+      { id: 'sfw-tsc-codes', label: 'TSC Code Lookup' },
+      { id: 'sfw-tsc-codes-details', label: 'TSC Code Details' },
+      { id: 'sfw-tsc-details', label: 'TSC Full Details' },
+      { id: 'sfw-job-roles-search', label: 'Search Job Roles' },
+      { id: 'sfw-job-role-profile', label: 'Job Role Profile' },
+      { id: 'sfw-occupations', label: 'List Occupations' },
+      { id: 'sfw-job-role-codes', label: 'Job Role Codes' },
     ],
   },
   {
@@ -133,7 +143,9 @@ const NAV_ITEMS: NavCategory[] = [
       { id: 'tools-encryption-key', label: 'Generate Encryption Key' },
     ],
   },
+  { label: 'Default Values', id: 'default-values' },
   { label: 'Known API Issues', id: 'api-issues' },
+  { label: 'SSG API References', id: 'api-references' },
 ];
 
 function CollapsibleCourse({ course, defaultOpen }: { course: Course; defaultOpen?: boolean }) {
@@ -252,8 +264,45 @@ function PlaceholderPage({ title }: { title: string }) {
   );
 }
 
+interface DefaultEntry { key: string; label: string; category: string; value: string }
+
+const INITIAL_DEFAULTS: DefaultEntry[] = [
+  { key: 'uen', label: 'UEN', category: 'General', value: '201200696W' },
+  { key: 'courseRefNo', label: 'Course Reference Number', category: 'General', value: 'TGS-2020505444' },
+  { key: 'nric', label: 'NRIC / ID Number', category: 'General', value: 'S9876543A' },
+  { key: 'traineeId', label: 'Trainee ID', category: 'General', value: 'S0118316H' },
+  { key: 'adminEmail', label: 'Admin Email', category: 'General', value: 'admin@tertiary.edu.sg' },
+  { key: 'runId', label: 'Run ID', category: 'Courses', value: '1234567' },
+  { key: 'courseRunRefNo', label: 'Course Run Ref No', category: 'Courses', value: 'XX-201200696W-01-TEST 166' },
+  { key: 'pageSize', label: 'Page Size', category: 'Pagination', value: '20' },
+  { key: 'page', label: 'Page', category: 'Pagination', value: '0' },
+  { key: 'trainerName', label: 'Trainer Name', category: 'Training Providers', value: 'Ahmad Rahman' },
+  { key: 'trainerEmail', label: 'Trainer Email', category: 'Training Providers', value: 'trainer@tertiary.edu.sg' },
+  { key: 'trainerIdNumber', label: 'Trainer ID Number', category: 'Training Providers', value: 'S3158356Z' },
+  { key: 'modelVersion', label: 'Model Version', category: 'SEA', value: '1.1-240712' },
+  { key: 'enrolRef', label: 'Enrolment Reference', category: 'Enrolments', value: 'ENR-2001-123414' },
+];
+
+function loadDefaults(): Record<string, string> {
+  const map: Record<string, string> = {};
+  INITIAL_DEFAULTS.forEach(e => { map[e.key] = e.value; });
+  try {
+    const saved = localStorage.getItem('ssg-api-defaults');
+    if (saved) Object.assign(map, JSON.parse(saved));
+  } catch { /* ignore */ }
+  return map;
+}
+
 function App() {
   const [activePage, setActivePage] = useState<Page>('course-lookup');
+  const [defaults, setDefaultsState] = useState<Record<string, string>>(loadDefaults);
+  const [draftDefaults, setDraftDefaults] = useState<Record<string, string>>(loadDefaults);
+  const [defaultsSaved, setDefaultsSaved] = useState(false);
+  const d = (key: string) => defaults[key] ?? '';
+  const setDefaults = (next: Record<string, string>) => {
+    setDefaultsState(next);
+    localStorage.setItem('ssg-api-defaults', JSON.stringify(next));
+  };
   const [keyword, setKeyword] = useState('');
   const lookupApi = useApi<CourseResponse>();
   const searchApi = useApi<CourseSearchResponse>();
@@ -296,6 +345,15 @@ function App() {
   const seaSkillSearchApi = useApi<Record<string, unknown>>();
   const sfwJobRolesApi = useApi<Record<string, unknown>>();
   const sfwSkillsApi = useApi<Record<string, unknown>>();
+  const sfwGscCodesApi = useApi<Record<string, unknown>>();
+  const sfwCcsDetailsApi = useApi<Record<string, unknown>>();
+  const sfwTscCodesApi = useApi<Record<string, unknown>>();
+  const sfwTscCodesDetailsApi = useApi<Record<string, unknown>>();
+  const sfwTscDetailsApi = useApi<Record<string, unknown>>();
+  const sfwJobRolesSearchApi = useApi<Record<string, unknown>>();
+  const sfwJobRoleProfileApi = useApi<Record<string, unknown>>();
+  const sfwOccupationsApi = useApi<Record<string, unknown>>();
+  const sfwJobRoleCodesApi = useApi<Record<string, unknown>>();
   const generateCertApi = useApi<{ cert: string; key: string; command: string }>();
   const generateKeypairApi = useApi<{ privateKey: string; publicKeyPem: string; publicKeyStripped: string; commands: string[] }>();
   const encryptionKeyApi = useApi<{ key: string; command: string }>();
@@ -470,6 +528,42 @@ function App() {
     await sfwSkillsApi.execute(() => getSkillsFrameworkSkills(params));
   };
 
+  const handleSfwGscCodes = async (params: Record<string, string>) => {
+    await sfwGscCodesApi.execute(() => getSkillsFrameworkGscCodes(params));
+  };
+
+  const handleSfwCcsDetails = async (params: Record<string, string>) => {
+    await sfwCcsDetailsApi.execute(() => getSkillsFrameworkCcsDetails(params));
+  };
+
+  const handleSfwTscCodes = async (params: Record<string, string>) => {
+    await sfwTscCodesApi.execute(() => getSkillsFrameworkTscCodes(params));
+  };
+
+  const handleSfwTscCodesDetails = async (params: Record<string, string>) => {
+    await sfwTscCodesDetailsApi.execute(() => getSkillsFrameworkTscCodesDetails(params));
+  };
+
+  const handleSfwTscDetails = async (params: Record<string, string>) => {
+    await sfwTscDetailsApi.execute(() => getSkillsFrameworkTscDetails(params));
+  };
+
+  const handleSfwJobRolesSearch = async (params: Record<string, string>) => {
+    await sfwJobRolesSearchApi.execute(() => getSkillsFrameworkJobRoles(params));
+  };
+
+  const handleSfwJobRoleProfile = async (params: Record<string, string>) => {
+    await sfwJobRoleProfileApi.execute(() => getSkillsFrameworkJobRoleProfile(params));
+  };
+
+  const handleSfwOccupations = async (params: Record<string, string>) => {
+    await sfwOccupationsApi.execute(() => getSkillsFrameworkOccupations(params));
+  };
+
+  const handleSfwJobRoleCodes = async (occupationId: string) => {
+    await sfwJobRoleCodesApi.execute(() => getSkillsFrameworkJobRoleCodes(occupationId));
+  };
+
   const handleGenerateCert = async (body: { commonName: string; organization: string; country: string; days: string; keySize: string }) => {
     await generateCertApi.execute(() => generateCertificate(body));
   };
@@ -572,7 +666,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Course Lookup by Ref No</h2>
-          <SearchForm onSearch={handleLookup} loading={loading} />
+          <SearchForm onSearch={handleLookup} loading={loading} defaults={defaults} />
 
           {error && <div className="error-alert">{error}</div>}
           {loading && <div className="loading">Loading course details...</div>}
@@ -597,7 +691,7 @@ function App() {
       return (
         <>
           <h2 className="page-title">Course Search</h2>
-          <CourseSearchForm onSearch={handleSearch} loading={loading} />
+          <CourseSearchForm onSearch={handleSearch} loading={loading} defaults={defaults} />
 
           {error && <div className="error-alert">{error}</div>}
           {loading && <div className="loading">Loading course details...</div>}
@@ -730,7 +824,7 @@ function App() {
           >
             <div className="search-input-group">
               <label htmlFor="tpcUen">Training Provider UEN (required)</label>
-              <input id="tpcUen" name="tpcUen" type="text" defaultValue="201200696W" placeholder="e.g. 201200696W" disabled={tpCoursesApi.loading} />
+              <input id="tpcUen" name="tpcUen" type="text" defaultValue={d('uen')} placeholder="e.g. 201200696W" disabled={tpCoursesApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="tpcKeyword">Keyword (optional)</label>
@@ -760,9 +854,12 @@ function App() {
           {tpCoursesApi.loading && <div className="loading">Loading courses...</div>}
           {tpCoursesApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13, background: '#f5f5f5', padding: 16, borderRadius: 8, maxHeight: 600, overflow: 'auto' }}>
-                {JSON.stringify(tpCoursesApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13, background: '#f5f5f5', padding: 16, maxHeight: 600, overflow: 'auto' }}>
+                  {JSON.stringify(tpCoursesApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -789,7 +886,7 @@ function App() {
                 id="qualityRefNo"
                 name="qualityRefNo"
                 type="text"
-                defaultValue="TGS-2020505444"
+                defaultValue={d('courseRefNo')}
                 placeholder="e.g. TGS-2020505444"
                 disabled={qualityApi.loading}
               />
@@ -831,7 +928,7 @@ function App() {
                 id="outcomeRefNo"
                 name="outcomeRefNo"
                 type="text"
-                defaultValue="TGS-2020505444"
+                defaultValue={d('courseRefNo')}
                 placeholder="e.g. TGS-2020505444"
                 disabled={outcomeApi.loading}
               />
@@ -884,7 +981,7 @@ function App() {
                 id="sessRunId"
                 name="sessRunId"
                 type="text"
-                defaultValue="1234567"
+                defaultValue={d('runId')}
                 placeholder="e.g. 1234567"
                 disabled={sessionsApi.loading}
               />
@@ -895,7 +992,7 @@ function App() {
                 id="sessUen"
                 name="sessUen"
                 type="text"
-                defaultValue="201200696W"
+                defaultValue={d('uen')}
                 placeholder="e.g. 201200696W"
                 disabled={sessionsApi.loading}
               />
@@ -906,7 +1003,7 @@ function App() {
                 id="sessCourseRef"
                 name="sessCourseRef"
                 type="text"
-                defaultValue="TGS-2020505444"
+                defaultValue={d('courseRefNo')}
                 placeholder="e.g. TGS-2020505444"
                 disabled={sessionsApi.loading}
               />
@@ -968,7 +1065,7 @@ function App() {
                 id="attRunId"
                 name="attRunId"
                 type="text"
-                defaultValue="4161800"
+                defaultValue={d('runId')}
                 placeholder="e.g. 4161800"
                 disabled={attendanceApi.loading}
               />
@@ -979,7 +1076,7 @@ function App() {
                 id="attUen"
                 name="attUen"
                 type="text"
-                defaultValue="201200696W"
+                defaultValue={d('uen')}
                 placeholder="e.g. 201200696W"
                 disabled={attendanceApi.loading}
               />
@@ -990,7 +1087,7 @@ function App() {
                 id="attCourseRef"
                 name="attCourseRef"
                 type="text"
-                defaultValue="TGS-2020505444"
+                defaultValue={d('courseRefNo')}
                 placeholder="e.g. TGS-2020505444"
                 disabled={attendanceApi.loading}
               />
@@ -1043,7 +1140,7 @@ function App() {
           >
             <div className="search-input-group">
               <label htmlFor="trainerUen">Training Provider UEN (required)</label>
-              <input id="trainerUen" name="trainerUen" type="text" defaultValue="201200696W" placeholder="e.g. 201200696W" disabled={trainersApi.loading} />
+              <input id="trainerUen" name="trainerUen" type="text" defaultValue={d('uen')} placeholder="e.g. 201200696W" disabled={trainersApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="trainerKeyword">Keyword (optional)</label>
@@ -1159,7 +1256,7 @@ function App() {
           >
             <div className="search-input-group">
               <label htmlFor="utUen">Training Provider UEN (required)</label>
-              <input id="utUen" name="utUen" type="text" defaultValue="201200696W" disabled={updateTrainerApi.loading} />
+              <input id="utUen" name="utUen" type="text" defaultValue={d('uen')} disabled={updateTrainerApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="utTrainerId">Trainer ID (required)</label>
@@ -1174,7 +1271,7 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="utName">Trainer Name (required)</label>
-              <input id="utName" name="utName" type="text" defaultValue="Ahmad Rahman" disabled={updateTrainerApi.loading} />
+              <input id="utName" name="utName" type="text" defaultValue={d('trainerName')} disabled={updateTrainerApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="utEmail">Email</label>
@@ -1191,7 +1288,7 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="utIdNumber">ID Number</label>
-              <input id="utIdNumber" name="utIdNumber" type="text" defaultValue="S9876543A" disabled={updateTrainerApi.loading} />
+              <input id="utIdNumber" name="utIdNumber" type="text" defaultValue={d('nric')} disabled={updateTrainerApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="utRoleId">Role</label>
@@ -1243,10 +1340,12 @@ function App() {
           {updateTrainerApi.loading && <div className="loading">Submitting trainer update...</div>}
           {updateTrainerApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13 }}>
-                {JSON.stringify(updateTrainerApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', fontSize: 13 }}>
+                  {JSON.stringify(updateTrainerApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -1381,11 +1480,11 @@ function App() {
             <h3 style={{ gridColumn: '1 / -1', margin: '8px 0 0' }}>Course</h3>
             <div className="search-input-group">
               <label htmlFor="pcrCourseRefNo">Course Reference Number (required)</label>
-              <input id="pcrCourseRefNo" name="pcrCourseRefNo" type="text" defaultValue="XX-201200696W-01-TEST 166" disabled={publishCourseRunApi.loading} />
+              <input id="pcrCourseRefNo" name="pcrCourseRefNo" type="text" defaultValue={d('courseRunRefNo')} disabled={publishCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrUen">Training Provider UEN (required)</label>
-              <input id="pcrUen" name="pcrUen" type="text" defaultValue="201200696W" disabled={publishCourseRunApi.loading} />
+              <input id="pcrUen" name="pcrUen" type="text" defaultValue={d('uen')} disabled={publishCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrIncludeExpired">
@@ -1491,7 +1590,7 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrAdminEmail">Course Admin Email</label>
-              <input id="pcrAdminEmail" name="pcrAdminEmail" type="email" defaultValue="admin@tertiary.edu.sg" disabled={publishCourseRunApi.loading} />
+              <input id="pcrAdminEmail" name="pcrAdminEmail" type="email" defaultValue={d('adminEmail')} disabled={publishCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrCourseAppUrl">Course Application URL</label>
@@ -1541,15 +1640,15 @@ function App() {
             <h3 style={{ gridColumn: '1 / -1', margin: '16px 0 0' }}>Trainer (optional)</h3>
             <div className="search-input-group">
               <label htmlFor="pcrTrainerName">Trainer Name</label>
-              <input id="pcrTrainerName" name="pcrTrainerName" type="text" defaultValue="Ahmad Rahman" disabled={publishCourseRunApi.loading} />
+              <input id="pcrTrainerName" name="pcrTrainerName" type="text" defaultValue={d('trainerName')} disabled={publishCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrTrainerEmail">Trainer Email</label>
-              <input id="pcrTrainerEmail" name="pcrTrainerEmail" type="email" defaultValue="trainer@tertiary.edu.sg" disabled={publishCourseRunApi.loading} />
+              <input id="pcrTrainerEmail" name="pcrTrainerEmail" type="email" defaultValue={d('trainerEmail')} disabled={publishCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrTrainerIdNumber">Trainer ID Number</label>
-              <input id="pcrTrainerIdNumber" name="pcrTrainerIdNumber" type="text" defaultValue="S3158356Z" disabled={publishCourseRunApi.loading} />
+              <input id="pcrTrainerIdNumber" name="pcrTrainerIdNumber" type="text" defaultValue={d('trainerIdNumber')} disabled={publishCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="pcrTrainerIdType">Trainer ID Type</label>
@@ -1573,10 +1672,12 @@ function App() {
           {publishCourseRunApi.loading && <div className="loading">Publishing course run...</div>}
           {publishCourseRunApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13 }}>
-                {JSON.stringify(publishCourseRunApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', fontSize: 13 }}>
+                  {JSON.stringify(publishCourseRunApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -1720,11 +1821,11 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrCourseRefNo">Course Reference Number (required)</label>
-              <input id="ecrCourseRefNo" name="ecrCourseRefNo" type="text" defaultValue="XX-201200696W-01-TEST 166" disabled={editCourseRunApi.loading} />
+              <input id="ecrCourseRefNo" name="ecrCourseRefNo" type="text" defaultValue={d('courseRunRefNo')} disabled={editCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrUen">Training Provider UEN (required)</label>
-              <input id="ecrUen" name="ecrUen" type="text" defaultValue="201200696W" disabled={editCourseRunApi.loading} />
+              <input id="ecrUen" name="ecrUen" type="text" defaultValue={d('uen')} disabled={editCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrRunAction">Run Action</label>
@@ -1837,7 +1938,7 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrAdminEmail">Course Admin Email</label>
-              <input id="ecrAdminEmail" name="ecrAdminEmail" type="email" defaultValue="admin@tertiary.edu.sg" disabled={editCourseRunApi.loading} />
+              <input id="ecrAdminEmail" name="ecrAdminEmail" type="email" defaultValue={d('adminEmail')} disabled={editCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrCourseAppUrl">Course Application URL</label>
@@ -1898,15 +1999,15 @@ function App() {
             <h3 style={{ gridColumn: '1 / -1', margin: '16px 0 0' }}>Trainer (optional)</h3>
             <div className="search-input-group">
               <label htmlFor="ecrTrainerName">Trainer Name</label>
-              <input id="ecrTrainerName" name="ecrTrainerName" type="text" defaultValue="Ahmad Rahman" disabled={editCourseRunApi.loading} />
+              <input id="ecrTrainerName" name="ecrTrainerName" type="text" defaultValue={d('trainerName')} disabled={editCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrTrainerEmail">Trainer Email</label>
-              <input id="ecrTrainerEmail" name="ecrTrainerEmail" type="email" defaultValue="trainer@tertiary.edu.sg" disabled={editCourseRunApi.loading} />
+              <input id="ecrTrainerEmail" name="ecrTrainerEmail" type="email" defaultValue={d('trainerEmail')} disabled={editCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrTrainerIdNumber">Trainer ID Number</label>
-              <input id="ecrTrainerIdNumber" name="ecrTrainerIdNumber" type="text" defaultValue="S3158356Z" disabled={editCourseRunApi.loading} />
+              <input id="ecrTrainerIdNumber" name="ecrTrainerIdNumber" type="text" defaultValue={d('trainerIdNumber')} disabled={editCourseRunApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="ecrTrainerIdType">Trainer ID Type</label>
@@ -1930,10 +2031,12 @@ function App() {
           {editCourseRunApi.loading && <div className="loading">Submitting course run update...</div>}
           {editCourseRunApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13 }}>
-                {JSON.stringify(editCourseRunApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', fontSize: 13 }}>
+                  {JSON.stringify(editCourseRunApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -1957,7 +2060,7 @@ function App() {
           >
             <div className="search-input-group">
               <label htmlFor="crbRunId">Course Run ID (required)</label>
-              <input id="crbRunId" name="crbRunId" type="text" defaultValue="1234567" placeholder="e.g. 1234567" disabled={courseRunByIdApi.loading} />
+              <input id="crbRunId" name="crbRunId" type="text" defaultValue={d('runId')} placeholder="e.g. 1234567" disabled={courseRunByIdApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="crbIncludeExpired">
@@ -1977,10 +2080,12 @@ function App() {
           {courseRunByIdApi.loading && <div className="loading">Loading course run...</div>}
           {courseRunByIdApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13 }}>
-                {JSON.stringify(courseRunByIdApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', fontSize: 13 }}>
+                  {JSON.stringify(courseRunByIdApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -2019,7 +2124,7 @@ function App() {
           >
             <div className="search-input-group">
               <label htmlFor="crrCourseRef">Course Reference Number (required)</label>
-              <input id="crrCourseRef" name="crrCourseRef" type="text" defaultValue="TGS-2020505444" placeholder="e.g. TGS-2020505444" disabled={courseRunsByRefApi.loading} />
+              <input id="crrCourseRef" name="crrCourseRef" type="text" defaultValue={d('courseRefNo')} placeholder="e.g. TGS-2020505444" disabled={courseRunsByRefApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="crrUen">UEN (optional)</label>
@@ -2062,9 +2167,12 @@ function App() {
               <div style={{ marginBottom: 12, color: '#666', fontSize: 14 }}>
                 Found {courseRunsByRefApi.data.meta?.total ?? 0} course run(s)
               </div>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13 }}>
-                {JSON.stringify(courseRunsByRefApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', fontSize: 13 }}>
+                  {JSON.stringify(courseRunsByRefApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -2130,11 +2238,11 @@ function App() {
           >
             <div className="search-input-group">
               <label htmlFor="uplRunId">Course Run ID (required)</label>
-              <input id="uplRunId" name="uplRunId" type="text" defaultValue="4161800" disabled={uploadAttendanceApi.loading} />
+              <input id="uplRunId" name="uplRunId" type="text" defaultValue={d('runId')} disabled={uploadAttendanceApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="uplUen">UEN (required)</label>
-              <input id="uplUen" name="uplUen" type="text" defaultValue="201200696W" placeholder="e.g. 201200696W" disabled={uploadAttendanceApi.loading} />
+              <input id="uplUen" name="uplUen" type="text" defaultValue={d('uen')} placeholder="e.g. 201200696W" disabled={uploadAttendanceApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="uplSessionId">Session ID (required)</label>
@@ -2142,11 +2250,11 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="uplRefNo">Course Reference Number (required)</label>
-              <input id="uplRefNo" name="uplRefNo" type="text" defaultValue="XX-201200696W-01-TEST 166" disabled={uploadAttendanceApi.loading} />
+              <input id="uplRefNo" name="uplRefNo" type="text" defaultValue={d('courseRunRefNo')} disabled={uploadAttendanceApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="uplCorppassId">Corppass ID (required)</label>
-              <input id="uplCorppassId" name="uplCorppassId" type="text" defaultValue="S9876543A" disabled={uploadAttendanceApi.loading} />
+              <input id="uplCorppassId" name="uplCorppassId" type="text" defaultValue={d('nric')} disabled={uploadAttendanceApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="uplStatusCode">Attendance Status Code</label>
@@ -2159,7 +2267,7 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="uplTraineeId">Trainee ID (required)</label>
-              <input id="uplTraineeId" name="uplTraineeId" type="text" defaultValue="S0118316H" disabled={uploadAttendanceApi.loading} />
+              <input id="uplTraineeId" name="uplTraineeId" type="text" defaultValue={d('traineeId')} disabled={uploadAttendanceApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="uplTraineeName">Trainee Name (required)</label>
@@ -2167,7 +2275,7 @@ function App() {
             </div>
             <div className="search-input-group">
               <label htmlFor="uplTraineeEmail">Trainee Email</label>
-              <input id="uplTraineeEmail" name="uplTraineeEmail" type="email" defaultValue="trainer@tertiary.edu.sg" disabled={uploadAttendanceApi.loading} />
+              <input id="uplTraineeEmail" name="uplTraineeEmail" type="email" defaultValue={d('trainerEmail')} disabled={uploadAttendanceApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="uplIdType">ID Type Code</label>
@@ -2211,10 +2319,12 @@ function App() {
           {uploadAttendanceApi.loading && <div className="loading">Uploading attendance...</div>}
           {uploadAttendanceApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Upload Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13 }}>
-                {JSON.stringify(uploadAttendanceApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', fontSize: 13 }}>
+                  {JSON.stringify(uploadAttendanceApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -2249,14 +2359,68 @@ function App() {
           </form>
           {grantBaselineApi.error && <div className="error-alert">{grantBaselineApi.error}</div>}
           {grantBaselineApi.loading && <div className="loading">Calculating grant...</div>}
-          {grantBaselineApi.data && (
-            <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Grant Calculator Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
-                {JSON.stringify(grantBaselineApi.data, null, 2)}
-              </pre>
-            </div>
-          )}
+          {grantBaselineApi.data && (() => {
+            const d = grantBaselineApi.data as Record<string, unknown>;
+            const courses = Array.isArray(d.courses) ? d.courses : [];
+            return (
+              <>
+                {courses.length > 0 && (
+                  <div className="course-result" style={{ marginTop: 16 }}>
+                    <h3>Grant Fee Summary</h3>
+                    <div className="table-wrapper">
+                      <table className="grant-fee-table">
+                        <thead>
+                          <tr>
+                            <th>Course</th>
+                            <th>Training Partner</th>
+                            <th style={{ textAlign: 'right' }}>Approved Fee</th>
+                            <th style={{ textAlign: 'right' }}>Grant Amount</th>
+                            <th style={{ textAlign: 'right' }}>Fee After Grant</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {courses.map((item: Record<string, unknown>, i: number) => {
+                            const course = (item.course || {}) as Record<string, unknown>;
+                            const tp = (course.trainingPartner || {}) as Record<string, unknown>;
+                            const funding = (item.funding || {}) as Record<string, unknown>;
+                            const approved = (funding.approvedCourseFee || {}) as Record<string, unknown>;
+                            const grants = (funding.eligibleGrants || {}) as Record<string, unknown>;
+                            const fee = Number(approved.amount) || 0;
+                            const currency = (approved.currencyType as string) || 'SGD';
+                            const grantAmt = Number(grants.totalFundingAmount) || 0;
+                            const afterGrant = fee - grantAmt;
+                            return (
+                              <tr key={i}>
+                                <td>
+                                  <div style={{ fontWeight: 600 }}>{course.title as string || '—'}</div>
+                                  <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{course.referenceNumber as string || ''}</div>
+                                </td>
+                                <td>
+                                  <div>{tp.name as string || '—'}</div>
+                                  <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{tp.uen as string || ''}</div>
+                                </td>
+                                <td className="fee-amount fee-before">{currency} {fee.toLocaleString('en-SG', { minimumFractionDigits: 2 })}</td>
+                                <td className="fee-amount fee-grant">- {currency} {grantAmt.toLocaleString('en-SG', { minimumFractionDigits: 2 })}</td>
+                                <td className="fee-amount fee-after">{currency} {afterGrant.toLocaleString('en-SG', { minimumFractionDigits: 2 })}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+                <div className="course-result" style={{ marginTop: 16 }}>
+                  <details className="json-collapsible">
+                    <summary>JSON Response</summary>
+                    <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                      {JSON.stringify(grantBaselineApi.data, null, 2)}
+                    </pre>
+                  </details>
+                </div>
+              </>
+            );
+          })()}
         </>
       );
     }
@@ -2298,11 +2462,11 @@ function App() {
             <h4 style={{ marginBottom: 8 }}>Course</h4>
             <div className="form-group">
               <label htmlFor="gpTpUen">Training Partner UEN</label>
-              <input id="gpTpUen" name="tpUen" type="text" defaultValue="201200696W" disabled={grantPersonalisedApi.loading} />
+              <input id="gpTpUen" name="tpUen" type="text" defaultValue={d('uen')} disabled={grantPersonalisedApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gpCourseRef">Course Reference Number</label>
-              <input id="gpCourseRef" name="courseRef" type="text" defaultValue="TGS-2020505444" disabled={grantPersonalisedApi.loading} />
+              <input id="gpCourseRef" name="courseRef" type="text" defaultValue={d('courseRefNo')} disabled={grantPersonalisedApi.loading} />
             </div>
             <h4 style={{ marginTop: 16, marginBottom: 8 }}>Applicant</h4>
             <div className="form-group">
@@ -2311,7 +2475,7 @@ function App() {
             </div>
             <div className="form-group">
               <label htmlFor="gpNric">NRIC</label>
-              <input id="gpNric" name="nric" type="text" defaultValue="S0118316H" disabled={grantPersonalisedApi.loading} />
+              <input id="gpNric" name="nric" type="text" defaultValue={d('traineeId')} disabled={grantPersonalisedApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gpNricType">NRIC Type</label>
@@ -2324,7 +2488,7 @@ function App() {
             <h4 style={{ marginTop: 16, marginBottom: 8 }}>Course Details</h4>
             <div className="form-group">
               <label htmlFor="gpCourseRefDetail">Course Reference Number</label>
-              <input id="gpCourseRefDetail" name="courseRefDetail" type="text" defaultValue="TGS-2020505444" disabled={grantPersonalisedApi.loading} />
+              <input id="gpCourseRefDetail" name="courseRefDetail" type="text" defaultValue={d('courseRefNo')} disabled={grantPersonalisedApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gpStartDate">Course Start Date</label>
@@ -2337,7 +2501,7 @@ function App() {
             </div>
             <div className="form-group">
               <label htmlFor="gpTraineeId">Trainee ID</label>
-              <input id="gpTraineeId" name="traineeId" type="text" defaultValue="S0118316H" disabled={grantPersonalisedApi.loading} />
+              <input id="gpTraineeId" name="traineeId" type="text" defaultValue={d('traineeId')} disabled={grantPersonalisedApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gpDob">Date of Birth</label>
@@ -2345,7 +2509,7 @@ function App() {
             </div>
             <div className="form-group">
               <label htmlFor="gpSponsorUen">Sponsoring Employer UEN</label>
-              <input id="gpSponsorUen" name="sponsorUen" type="text" defaultValue="201200696W" disabled={grantPersonalisedApi.loading} />
+              <input id="gpSponsorUen" name="sponsorUen" type="text" defaultValue={d('uen')} disabled={grantPersonalisedApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gpModStartDate">Modularised SCTP Bundle Course Start Date (optional)</label>
@@ -2361,10 +2525,12 @@ function App() {
           {grantPersonalisedApi.loading && <div className="loading">Calculating personalised grant...</div>}
           {grantPersonalisedApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Personalised Grant Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
-                {JSON.stringify(grantPersonalisedApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(grantPersonalisedApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -2409,23 +2575,23 @@ function App() {
           }}>
             <div className="form-group">
               <label htmlFor="gsUen">UEN (header)</label>
-              <input id="gsUen" name="uen" type="text" defaultValue="201200696W" disabled={grantSearchApi.loading} />
+              <input id="gsUen" name="uen" type="text" defaultValue={d('uen')} disabled={grantSearchApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gsCourseRef">Course Reference Number</label>
-              <input id="gsCourseRef" name="courseRef" type="text" defaultValue="TGS-2020505444" disabled={grantSearchApi.loading} />
+              <input id="gsCourseRef" name="courseRef" type="text" defaultValue={d('courseRefNo')} disabled={grantSearchApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gsRunId">Course Run ID</label>
-              <input id="gsRunId" name="runId" type="text" defaultValue="1002600" disabled={grantSearchApi.loading} />
+              <input id="gsRunId" name="runId" type="text" defaultValue={d('runId')} disabled={grantSearchApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gsTraineeId">Trainee ID</label>
-              <input id="gsTraineeId" name="traineeId" type="text" defaultValue="S0118316H" disabled={grantSearchApi.loading} />
+              <input id="gsTraineeId" name="traineeId" type="text" defaultValue={d('traineeId')} disabled={grantSearchApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gsEmployerUen">Employer UEN</label>
-              <input id="gsEmployerUen" name="employerUen" type="text" defaultValue="201200696W" disabled={grantSearchApi.loading} />
+              <input id="gsEmployerUen" name="employerUen" type="text" defaultValue={d('uen')} disabled={grantSearchApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gsEnrolmentRef">Enrolment Reference</label>
@@ -2433,7 +2599,7 @@ function App() {
             </div>
             <div className="form-group">
               <label htmlFor="gsTpUen">Training Partner UEN</label>
-              <input id="gsTpUen" name="tpUen" type="text" defaultValue="201200696W" disabled={grantSearchApi.loading} />
+              <input id="gsTpUen" name="tpUen" type="text" defaultValue={d('uen')} disabled={grantSearchApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="gsTpCode">Training Partner Code</label>
@@ -2465,10 +2631,12 @@ function App() {
           {grantSearchApi.loading && <div className="loading">Searching grants...</div>}
           {grantSearchApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Search Grants Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
-                {JSON.stringify(grantSearchApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(grantSearchApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -2501,10 +2669,12 @@ function App() {
           {grantDetailsApi.loading && <div className="loading">Loading grant details...</div>}
           {grantDetailsApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Grant Details Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
-                {JSON.stringify(grantDetailsApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(grantDetailsApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -2527,10 +2697,12 @@ function App() {
           {grantCodesApi.loading && <div className="loading">Loading codes...</div>}
           {grantCodesApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Funding Component Codes</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
-                {JSON.stringify(grantCodesApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(grantCodesApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -2567,10 +2739,12 @@ function App() {
           {sfClaimApi.loading && <div className="loading">Loading claim details...</div>}
           {sfClaimApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Claim Details Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
-                {JSON.stringify(sfClaimApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(sfClaimApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -2611,10 +2785,12 @@ function App() {
           {sfCancelApi.loading && <div className="loading">Cancelling claim...</div>}
           {sfCancelApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Cancel Claim Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
-                {JSON.stringify(sfCancelApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(sfCancelApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -2681,10 +2857,12 @@ function App() {
           {sfUploadDocsApi.loading && <div className="loading">Uploading documents...</div>}
           {sfUploadDocsApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Upload Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
-                {JSON.stringify(sfUploadDocsApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(sfUploadDocsApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -2722,7 +2900,7 @@ function App() {
             <h4 style={{ marginBottom: 8 }}>Course</h4>
             <div className="form-group">
               <label htmlFor="sfeCourseld">Course ID</label>
-              <input id="sfeCourseld" name="courseId" type="text" defaultValue="TGS-2020505444" disabled={sfEncryptApi.loading} />
+              <input id="sfeCourseld" name="courseId" type="text" defaultValue={d('courseRefNo')} disabled={sfEncryptApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="sfeFee">Fee</label>
@@ -2730,7 +2908,7 @@ function App() {
             </div>
             <div className="form-group">
               <label htmlFor="sfeRunId">Run ID</label>
-              <input id="sfeRunId" name="runId" type="text" defaultValue="1002600" disabled={sfEncryptApi.loading} />
+              <input id="sfeRunId" name="runId" type="text" defaultValue={d('runId')} disabled={sfEncryptApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="sfeStartDate">Start Date</label>
@@ -2767,10 +2945,12 @@ function App() {
           {sfEncryptApi.loading && <div className="loading">Encrypting request...</div>}
           {sfEncryptApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Encryption Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
-                {JSON.stringify(sfEncryptApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(sfEncryptApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -2805,10 +2985,12 @@ function App() {
           {sfDecryptApi.loading && <div className="loading">Decrypting request...</div>}
           {sfDecryptApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Decryption Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
-                {JSON.stringify(sfDecryptApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(sfDecryptApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -2845,10 +3027,10 @@ function App() {
             });
           }}>
             <h4 style={{ marginBottom: 8 }}>Course</h4>
-            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue="1002600" disabled={enrolCreateApi.loading} /></div>
-            <div className="form-group"><label>Course Reference Number</label><input name="courseRef" type="text" defaultValue="TGS-2020505444" disabled={enrolCreateApi.loading} /></div>
+            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue={d('runId')} disabled={enrolCreateApi.loading} /></div>
+            <div className="form-group"><label>Course Reference Number</label><input name="courseRef" type="text" defaultValue={d('courseRefNo')} disabled={enrolCreateApi.loading} /></div>
             <h4 style={{ marginTop: 16, marginBottom: 8 }}>Trainee</h4>
-            <div className="form-group"><label>Trainee ID</label><input name="traineeId" type="text" defaultValue="S0118316H" disabled={enrolCreateApi.loading} /></div>
+            <div className="form-group"><label>Trainee ID</label><input name="traineeId" type="text" defaultValue={d('traineeId')} disabled={enrolCreateApi.loading} /></div>
             <div className="form-group"><label>ID Type</label><input name="idType" type="text" defaultValue="NRIC" disabled={enrolCreateApi.loading} /></div>
             <div className="form-group"><label>Full Name</label><input name="fullName" type="text" defaultValue="Jon Chua" disabled={enrolCreateApi.loading} /></div>
             <div className="form-group"><label>Date of Birth</label><input name="dob" type="text" defaultValue="1950-10-16" disabled={enrolCreateApi.loading} /></div>
@@ -2859,20 +3041,22 @@ function App() {
             <div className="form-group"><label>Discount Amount</label><input name="discount" type="number" defaultValue="50.25" disabled={enrolCreateApi.loading} /></div>
             <div className="form-group"><label>Fee Collection Status</label><input name="feeStatus" type="text" defaultValue="Full Payment" disabled={enrolCreateApi.loading} /></div>
             <h4 style={{ marginTop: 16, marginBottom: 8 }}>Employer</h4>
-            <div className="form-group"><label>Employer UEN</label><input name="employerUen" type="text" defaultValue="201200696W" disabled={enrolCreateApi.loading} /></div>
+            <div className="form-group"><label>Employer UEN</label><input name="employerUen" type="text" defaultValue={d('uen')} disabled={enrolCreateApi.loading} /></div>
             <div className="form-group"><label>Contact Name</label><input name="empContactName" type="text" defaultValue="Stephen Chua" disabled={enrolCreateApi.loading} /></div>
             <div className="form-group"><label>Contact Email</label><input name="empEmail" type="text" defaultValue="jon.chua@email.com" disabled={enrolCreateApi.loading} /></div>
             <div className="form-group"><label>Contact Phone</label><input name="empPhone" type="text" defaultValue="91234567" disabled={enrolCreateApi.loading} /></div>
             <h4 style={{ marginTop: 16, marginBottom: 8 }}>Training Partner</h4>
-            <div className="form-group"><label>TP UEN</label><input name="tpUen" type="text" defaultValue="201200696W" disabled={enrolCreateApi.loading} /></div>
+            <div className="form-group"><label>TP UEN</label><input name="tpUen" type="text" defaultValue={d('uen')} disabled={enrolCreateApi.loading} /></div>
             <div className="form-group"><label>TP Code</label><input name="tpCode" type="text" defaultValue="201200696W-01" disabled={enrolCreateApi.loading} /></div>
             <div style={{ marginTop: 12 }}><button type="submit" disabled={enrolCreateApi.loading}>{enrolCreateApi.loading ? 'Creating...' : 'Create Enrolment'}</button></div>
           </form>
           {enrolCreateApi.error && <div className="error-alert">{enrolCreateApi.error}</div>}
           {enrolCreateApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Create Enrolment Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolCreateApi.data, null, 2)}</pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolCreateApi.data, null, 2)}</pre>
+              </details>
             </div>
           )}
         </>
@@ -2899,15 +3083,15 @@ function App() {
             }, fd.get('uen') as string);
           }}>
             <div className="form-group"><label>Enrolment Reference Number</label><input name="refNo" type="text" defaultValue="ENR-1912-000123" disabled={enrolUpdateApi.loading} /></div>
-            <div className="form-group"><label>UEN (header)</label><input name="uen" type="text" defaultValue="201200696W" disabled={enrolUpdateApi.loading} /></div>
+            <div className="form-group"><label>UEN (header)</label><input name="uen" type="text" defaultValue={d('uen')} disabled={enrolUpdateApi.loading} /></div>
             <div className="form-group"><label>Action (Update/Cancel)</label><input name="action" type="text" defaultValue="Update" disabled={enrolUpdateApi.loading} /></div>
-            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue="1002600" disabled={enrolUpdateApi.loading} /></div>
+            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue={d('runId')} disabled={enrolUpdateApi.loading} /></div>
             <div className="form-group"><label>Email</label><input name="email" type="text" defaultValue="jon.chua@email.com" disabled={enrolUpdateApi.loading} /></div>
             <div className="form-group"><label>Phone</label><input name="phone" type="text" defaultValue="91234567" disabled={enrolUpdateApi.loading} /></div>
             <div className="form-group"><label>Enrolment Date</label><input name="enrolDate" type="text" defaultValue="2020-05-15" disabled={enrolUpdateApi.loading} /></div>
             <div className="form-group"><label>Discount Amount</label><input name="discount" type="number" defaultValue="50.25" disabled={enrolUpdateApi.loading} /></div>
             <div className="form-group"><label>Fee Collection Status</label><input name="feeStatus" type="text" defaultValue="Full Payment" disabled={enrolUpdateApi.loading} /></div>
-            <div className="form-group"><label>Employer UEN</label><input name="employerUen" type="text" defaultValue="201200696W" disabled={enrolUpdateApi.loading} /></div>
+            <div className="form-group"><label>Employer UEN</label><input name="employerUen" type="text" defaultValue={d('uen')} disabled={enrolUpdateApi.loading} /></div>
             <div className="form-group"><label>Employer Name</label><input name="empName" type="text" defaultValue="Stephen Chua" disabled={enrolUpdateApi.loading} /></div>
             <div className="form-group"><label>Employer Email</label><input name="empEmail" type="text" defaultValue="jon.chua@email.com" disabled={enrolUpdateApi.loading} /></div>
             <div className="form-group"><label>Employer Phone</label><input name="empPhone" type="text" defaultValue="91234567" disabled={enrolUpdateApi.loading} /></div>
@@ -2916,8 +3100,10 @@ function App() {
           {enrolUpdateApi.error && <div className="error-alert">{enrolUpdateApi.error}</div>}
           {enrolUpdateApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolUpdateApi.data, null, 2)}</pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolUpdateApi.data, null, 2)}</pre>
+              </details>
             </div>
           )}
         </>
@@ -2944,16 +3130,16 @@ function App() {
               parameters: { page: Number(fd.get('page')) || 0, pageSize: Number(fd.get('pageSize')) || 20 },
             });
           }}>
-            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue="1002600" disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Course Reference Number</label><input name="courseRef" type="text" defaultValue="TGS-2020505444" disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Trainee ID</label><input name="traineeId" type="text" defaultValue="S0118316H" disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue={d('runId')} disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Course Reference Number</label><input name="courseRef" type="text" defaultValue={d('courseRefNo')} disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Trainee ID</label><input name="traineeId" type="text" defaultValue={d('traineeId')} disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>ID Type</label><input name="idType" type="text" defaultValue="NRIC" disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>Status</label><input name="status" type="text" defaultValue="Confirmed" disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Employer UEN</label><input name="employerUen" type="text" defaultValue="201200696W" disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Employer UEN</label><input name="employerUen" type="text" defaultValue={d('uen')} disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>Sponsorship Type</label><input name="sponsorship" type="text" defaultValue="EMPLOYER" disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>Fee Collection Status</label><input name="feeStatus" type="text" defaultValue="Full Payment" disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>Enrolment Date</label><input name="enrolDate" type="text" defaultValue="2020-05-15" disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Training Partner UEN</label><input name="tpUen" type="text" defaultValue="201200696W" disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Training Partner UEN</label><input name="tpUen" type="text" defaultValue={d('uen')} disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>Training Partner Code</label><input name="tpCode" type="text" defaultValue="201200696W-01" disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>Date From</label><input name="dateFrom" type="text" defaultValue="2020-01-01" disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>Date To</label><input name="dateTo" type="text" defaultValue="2020-02-01" disabled={enrolSearchApi.loading} /></div>
@@ -2964,8 +3150,10 @@ function App() {
           {enrolSearchApi.error && <div className="error-alert">{enrolSearchApi.error}</div>}
           {enrolSearchApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Search Results</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolSearchApi.data, null, 2)}</pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolSearchApi.data, null, 2)}</pre>
+              </details>
             </div>
           )}
         </>
@@ -2988,8 +3176,10 @@ function App() {
           {enrolViewApi.error && <div className="error-alert">{enrolViewApi.error}</div>}
           {enrolViewApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Enrolment Details</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolViewApi.data, null, 2)}</pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolViewApi.data, null, 2)}</pre>
+              </details>
             </div>
           )}
         </>
@@ -3015,8 +3205,10 @@ function App() {
           {enrolFeeApi.error && <div className="error-alert">{enrolFeeApi.error}</div>}
           {enrolFeeApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolFeeApi.data, null, 2)}</pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolFeeApi.data, null, 2)}</pre>
+              </details>
             </div>
           )}
         </>
@@ -3034,8 +3226,10 @@ function App() {
           {enrolCodesApi.error && <div className="error-alert">{enrolCodesApi.error}</div>}
           {enrolCodesApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Sponsorship Type Codes</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolCodesApi.data, null, 2)}</pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolCodesApi.data, null, 2)}</pre>
+              </details>
             </div>
           )}
         </>
@@ -3065,8 +3259,8 @@ function App() {
             });
           }}>
             <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue="1022600" disabled={assessCreateApi.loading} /></div>
-            <div className="form-group"><label>Course Reference Number</label><input name="courseRef" type="text" defaultValue="TGS-2020505444" disabled={assessCreateApi.loading} /></div>
-            <div className="form-group"><label>Trainee ID</label><input name="traineeId" type="text" defaultValue="S0118316H" disabled={assessCreateApi.loading} /></div>
+            <div className="form-group"><label>Course Reference Number</label><input name="courseRef" type="text" defaultValue={d('courseRefNo')} disabled={assessCreateApi.loading} /></div>
+            <div className="form-group"><label>Trainee ID</label><input name="traineeId" type="text" defaultValue={d('traineeId')} disabled={assessCreateApi.loading} /></div>
             <div className="form-group"><label>ID Type</label><input name="idType" type="text" defaultValue="NRIC" disabled={assessCreateApi.loading} /></div>
             <div className="form-group"><label>Full Name</label><input name="fullName" type="text" defaultValue="Jon Chua" disabled={assessCreateApi.loading} /></div>
             <div className="form-group"><label>Grade</label><input name="grade" type="text" defaultValue="B" disabled={assessCreateApi.loading} /></div>
@@ -3074,7 +3268,7 @@ function App() {
             <div className="form-group"><label>Result</label><input name="result" type="text" defaultValue="Pass" disabled={assessCreateApi.loading} /></div>
             <div className="form-group"><label>Skill Code</label><input name="skillCode" type="text" defaultValue="TGS-MKG-234222" disabled={assessCreateApi.loading} /></div>
             <div className="form-group"><label>Assessment Date</label><input name="assessDate" type="text" defaultValue="2020-05-15" disabled={assessCreateApi.loading} /></div>
-            <div className="form-group"><label>Training Partner UEN</label><input name="tpUen" type="text" defaultValue="201200696W" disabled={assessCreateApi.loading} /></div>
+            <div className="form-group"><label>Training Partner UEN</label><input name="tpUen" type="text" defaultValue={d('uen')} disabled={assessCreateApi.loading} /></div>
             <div className="form-group"><label>Training Partner Code</label><input name="tpCode" type="text" defaultValue="201200696W-01" disabled={assessCreateApi.loading} /></div>
             <div className="form-group"><label>Conferring Institute Code</label><input name="confCode" type="text" defaultValue="201200696W-01" disabled={assessCreateApi.loading} /></div>
             <div style={{ marginTop: 12 }}><button type="submit" disabled={assessCreateApi.loading}>{assessCreateApi.loading ? 'Creating...' : 'Create Assessment'}</button></div>
@@ -3082,8 +3276,10 @@ function App() {
           {assessCreateApi.error && <div className="error-alert">{assessCreateApi.error}</div>}
           {assessCreateApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessCreateApi.data, null, 2)}</pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessCreateApi.data, null, 2)}</pre>
+              </details>
             </div>
           )}
         </>
@@ -3123,8 +3319,10 @@ function App() {
           {assessUpdateApi.error && <div className="error-alert">{assessUpdateApi.error}</div>}
           {assessUpdateApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessUpdateApi.data, null, 2)}</pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessUpdateApi.data, null, 2)}</pre>
+              </details>
             </div>
           )}
         </>
@@ -3152,12 +3350,12 @@ function App() {
               },
             });
           }}>
-            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue="1002600" disabled={assessSearchApi.loading} /></div>
-            <div className="form-group"><label>Course Reference Number</label><input name="courseRef" type="text" defaultValue="TGS-2020505444" disabled={assessSearchApi.loading} /></div>
-            <div className="form-group"><label>Trainee ID</label><input name="traineeId" type="text" defaultValue="S0118316H" disabled={assessSearchApi.loading} /></div>
-            <div className="form-group"><label>Enrolment Reference</label><input name="enrolRef" type="text" defaultValue="ENR-2001-123414" disabled={assessSearchApi.loading} /></div>
+            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue={d('runId')} disabled={assessSearchApi.loading} /></div>
+            <div className="form-group"><label>Course Reference Number</label><input name="courseRef" type="text" defaultValue={d('courseRefNo')} disabled={assessSearchApi.loading} /></div>
+            <div className="form-group"><label>Trainee ID</label><input name="traineeId" type="text" defaultValue={d('traineeId')} disabled={assessSearchApi.loading} /></div>
+            <div className="form-group"><label>Enrolment Reference</label><input name="enrolRef" type="text" defaultValue={d('enrolRef')} disabled={assessSearchApi.loading} /></div>
             <div className="form-group"><label>Skill Code</label><input name="skillCode" type="text" defaultValue="TGS-MKG-234222" disabled={assessSearchApi.loading} /></div>
-            <div className="form-group"><label>Training Partner UEN</label><input name="tpUen" type="text" defaultValue="201200696W" disabled={assessSearchApi.loading} /></div>
+            <div className="form-group"><label>Training Partner UEN</label><input name="tpUen" type="text" defaultValue={d('uen')} disabled={assessSearchApi.loading} /></div>
             <div className="form-group"><label>Training Partner Code</label><input name="tpCode" type="text" defaultValue="201200696W-01" disabled={assessSearchApi.loading} /></div>
             <div className="form-group"><label>Date From</label><input name="dateFrom" type="text" defaultValue="2020-01-01" disabled={assessSearchApi.loading} /></div>
             <div className="form-group"><label>Date To</label><input name="dateTo" type="text" defaultValue="2020-01-01" disabled={assessSearchApi.loading} /></div>
@@ -3168,8 +3366,10 @@ function App() {
           {assessSearchApi.error && <div className="error-alert">{assessSearchApi.error}</div>}
           {assessSearchApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Search Results</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessSearchApi.data, null, 2)}</pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessSearchApi.data, null, 2)}</pre>
+              </details>
             </div>
           )}
         </>
@@ -3192,8 +3392,10 @@ function App() {
           {assessViewApi.error && <div className="error-alert">{assessViewApi.error}</div>}
           {assessViewApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Assessment Details</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessViewApi.data, null, 2)}</pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessViewApi.data, null, 2)}</pre>
+              </details>
             </div>
           )}
         </>
@@ -3211,8 +3413,10 @@ function App() {
           {assessCodesApi.error && <div className="error-alert">{assessCodesApi.error}</div>}
           {assessCodesApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Assessment ID Type Codes</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessCodesApi.data, null, 2)}</pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessCodesApi.data, null, 2)}</pre>
+              </details>
             </div>
           )}
         </>
@@ -3246,10 +3450,12 @@ function App() {
           {spQualificationsApi.loading && <div className="loading">Loading qualifications...</div>}
           {spQualificationsApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Qualifications Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
-                {JSON.stringify(spQualificationsApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(spQualificationsApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -3263,7 +3469,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             Extract skills from text descriptions. POST <code>/skillExtract</code>.
           </p>
-          <form className="course-result" autoComplete="off" onSubmit={(e) => {
+          <form className="search-form" autoComplete="off" style={{ display: 'block' }} onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleSeaSkillExtract({
@@ -3271,15 +3477,16 @@ function App() {
               modelVersion: fd.get('modelVersion') as string,
             });
           }}>
-            <div className="form-group">
+            <div className="form-group" style={{ marginBottom: 16 }}>
               <label htmlFor="seaTextData">Text Data</label>
-              <textarea id="seaTextData" name="textData" rows={5} defaultValue="Sustainable Built Environment - apply the systems approach to incorporate natural ecosystems into the built environment through design; gain the necessary knowledge and skills to design and operate green buildings in accordance with Green Mark standards; and embrace waste reduction strategies such as recycling, reuse, and recovery, and learn about eco-friendly building materials properties and performance" disabled={seaSkillExtractApi.loading} />
+              <textarea id="seaTextData" name="textData" rows={10} style={{ width: '100%', resize: 'vertical' }} defaultValue="Sustainable Built Environment - apply the systems approach to incorporate natural ecosystems into the built environment through design; gain the necessary knowledge and skills to design and operate green buildings in accordance with Green Mark standards; and embrace waste reduction strategies such as recycling, reuse, and recovery, and learn about eco-friendly building materials properties and performance" disabled={seaSkillExtractApi.loading} />
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ maxWidth: 300 }}>
               <label htmlFor="seaModelVersion">Model Version</label>
-              <input id="seaModelVersion" name="modelVersion" type="text" defaultValue="1.1-240712" disabled={seaSkillExtractApi.loading} />
+              <input id="seaModelVersion" name="modelVersion" type="text" autoComplete="one-time-code" defaultValue={d('modelVersion')} disabled={seaSkillExtractApi.loading} />
             </div>
-            <div style={{ marginTop: 12 }}>
+            <div className="search-options" style={{ marginTop: 12 }}>
+              <span />
               <button type="submit" disabled={seaSkillExtractApi.loading}>
                 {seaSkillExtractApi.loading ? 'Extracting...' : 'Extract Skills'}
               </button>
@@ -3289,10 +3496,12 @@ function App() {
           {seaSkillExtractApi.loading && <div className="loading">Extracting skills...</div>}
           {seaSkillExtractApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Skill Extraction Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
-                {JSON.stringify(seaSkillExtractApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(seaSkillExtractApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -3306,7 +3515,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             Search for skills from text descriptions. POST <code>/skillSearch</code>.
           </p>
-          <form className="course-result" autoComplete="off" onSubmit={(e) => {
+          <form className="search-form" autoComplete="off" style={{ display: 'block' }} onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             handleSeaSkillSearch({
@@ -3314,15 +3523,16 @@ function App() {
               modelVersion: fd.get('modelVersion') as string,
             });
           }}>
-            <div className="form-group">
+            <div className="form-group" style={{ marginBottom: 16 }}>
               <label htmlFor="ssTextData">Text Data</label>
-              <textarea id="ssTextData" name="textData" rows={5} defaultValue="Develop and implement digital marketing strategies for e-commerce platforms" disabled={seaSkillSearchApi.loading} />
+              <textarea id="ssTextData" name="textData" rows={10} style={{ width: '100%', resize: 'vertical' }} defaultValue="Develop and implement digital marketing strategies for e-commerce platforms" disabled={seaSkillSearchApi.loading} />
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ maxWidth: 300 }}>
               <label htmlFor="ssModelVersion">Model Version</label>
-              <input id="ssModelVersion" name="modelVersion" type="text" defaultValue="1.1-240712" disabled={seaSkillSearchApi.loading} />
+              <input id="ssModelVersion" name="modelVersion" type="text" autoComplete="one-time-code" defaultValue={d('modelVersion')} disabled={seaSkillSearchApi.loading} />
             </div>
-            <div style={{ marginTop: 12 }}>
+            <div className="search-options" style={{ marginTop: 12 }}>
+              <span />
               <button type="submit" disabled={seaSkillSearchApi.loading}>
                 {seaSkillSearchApi.loading ? 'Searching...' : 'Search Skills'}
               </button>
@@ -3332,10 +3542,12 @@ function App() {
           {seaSkillSearchApi.loading && <div className="loading">Searching skills...</div>}
           {seaSkillSearchApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Skill Search Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
-                {JSON.stringify(seaSkillSearchApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(seaSkillSearchApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -3347,7 +3559,7 @@ function App() {
         <>
           <h2 className="page-title">Get Job Role Details</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Retrieve job role details from Skills Framework. GET <code>/sfw/skillsFramework/jobs</code> (v1.0).
+            Retrieve Job Role Details from Skills Framework. GET <code>/skillsFramework/jobRoles/details</code> (v1).
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -3359,36 +3571,8 @@ function App() {
             handleSfwJobRoles(params);
           }}>
             <div className="form-group">
-              <label htmlFor="sfwPage">Page</label>
-              <input id="sfwPage" name="page" type="text" defaultValue="1" disabled={sfwJobRolesApi.loading} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="sfwPageSize">Page Size</label>
-              <input id="sfwPageSize" name="pageSize" type="text" defaultValue="200" disabled={sfwJobRolesApi.loading} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="sfwSector">Sector Title (optional)</label>
-              <input id="sfwSector" name="sectorTitle" type="text" defaultValue="Wholesale Trade" disabled={sfwJobRolesApi.loading} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="sfwTrack">Track Title (optional)</label>
-              <input id="sfwTrack" name="trackTitle" type="text" defaultValue="Finance and Regulations" disabled={sfwJobRolesApi.loading} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="sfwJobrole">Job Role Title (optional)</label>
-              <input id="sfwJobrole" name="jobroleTitle" type="text" defaultValue="Head of Trade Finance" disabled={sfwJobRolesApi.loading} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="sfwKeytask">Key Task Content (optional)</label>
-              <input id="sfwKeytask" name="keytaskContent" type="text" defaultValue="Manage department's recruitment and retention efforts" disabled={sfwJobRolesApi.loading} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="sfwSkillTitle">Skill Title (optional)</label>
-              <input id="sfwSkillTitle" name="skillTitle" type="text" defaultValue="Organisational Analysis" disabled={sfwJobRolesApi.loading} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="sfwVersion">SFW Version (optional)</label>
-              <input id="sfwVersion" name="sfwVersion" type="text" defaultValue="sfw1.0" disabled={sfwJobRolesApi.loading} />
+              <label htmlFor="sfwJobRoleId">Job Role ID</label>
+              <input id="sfwJobRoleId" name="jobRoleId" type="text" defaultValue="101032" disabled={sfwJobRolesApi.loading} />
             </div>
             <div style={{ marginTop: 12 }}>
               <button type="submit" disabled={sfwJobRolesApi.loading}>
@@ -3400,10 +3584,12 @@ function App() {
           {sfwJobRolesApi.loading && <div className="loading">Loading job role details...</div>}
           {sfwJobRolesApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Job Role Details Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
-                {JSON.stringify(sfwJobRolesApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(sfwJobRolesApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -3464,10 +3650,463 @@ function App() {
           {sfwSkillsApi.loading && <div className="loading">Loading skills details...</div>}
           {sfwSkillsApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <h3>Skills Details Response</h3>
-              <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
-                {JSON.stringify(sfwSkillsApi.data, null, 2)}
-              </pre>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(sfwSkillsApi.data, null, 2)}
+                </pre>
+              </details>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    if (activePage === 'sfw-gsc-codes') {
+      return (
+        <>
+          <h2 className="page-title">GSC Code Lookup</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
+            Retrieve Generic Skills Competency (GSC) codes. GET <code>/skillsFramework/codes/skillsAndCompetencies/generic/autocomplete</code> (v1.1).
+          </p>
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            const params: Record<string, string> = {};
+            for (const [k, v] of fd.entries()) {
+              if (v) params[k] = v as string;
+            }
+            handleSfwGscCodes(params);
+          }}>
+            <div className="form-group">
+              <label htmlFor="gscKeyword">Keyword</label>
+              <input id="gscKeyword" name="keyword" type="text" defaultValue="comm" disabled={sfwGscCodesApi.loading} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button type="submit" disabled={sfwGscCodesApi.loading}>
+                {sfwGscCodesApi.loading ? 'Loading...' : 'Search GSC Codes'}
+              </button>
+            </div>
+          </form>
+          {sfwGscCodesApi.error && <div className="error-alert">{sfwGscCodesApi.error}</div>}
+          {sfwGscCodesApi.loading && <div className="loading">Loading GSC codes...</div>}
+          {sfwGscCodesApi.data && (
+            <div className="course-result" style={{ marginTop: 16 }}>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(sfwGscCodesApi.data, null, 2)}
+                </pre>
+              </details>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    if (activePage === 'sfw-ccs-details') {
+      return (
+        <>
+          <h2 className="page-title">CCS Details</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
+            Retrieve Critical Core Skills (CCS) details. GET <code>/skillsFramework/codes/skillsAndCompetencies/generic/details</code> (v1.1).
+          </p>
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            const params: Record<string, string> = {};
+            for (const [k, v] of fd.entries()) {
+              if (v) params[k] = v as string;
+            }
+            handleSfwCcsDetails(params);
+          }}>
+            <div className="form-group">
+              <label htmlFor="ccsPageSize">Page Size</label>
+              <input id="ccsPageSize" name="pageSize" type="text" defaultValue="10" disabled={sfwCcsDetailsApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="ccsPage">Page</label>
+              <input id="ccsPage" name="page" type="text" defaultValue="0" disabled={sfwCcsDetailsApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="ccsRetrieveType">Retrieve Type</label>
+              <input id="ccsRetrieveType" name="retrieveType" type="text" defaultValue="FULL" disabled={sfwCcsDetailsApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="ccsLastUpdate">Last Update Date (optional)</label>
+              <input id="ccsLastUpdate" name="lastUpdateDate" type="text" defaultValue="20190811" disabled={sfwCcsDetailsApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="ccsGscCode">GSC Level Code (optional)</label>
+              <input id="ccsGscCode" name="gscLevelCode" type="text" defaultValue="067050,068251" disabled={sfwCcsDetailsApi.loading} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button type="submit" disabled={sfwCcsDetailsApi.loading}>
+                {sfwCcsDetailsApi.loading ? 'Loading...' : 'Get CCS Details'}
+              </button>
+            </div>
+          </form>
+          {sfwCcsDetailsApi.error && <div className="error-alert">{sfwCcsDetailsApi.error}</div>}
+          {sfwCcsDetailsApi.loading && <div className="loading">Loading CCS details...</div>}
+          {sfwCcsDetailsApi.data && (
+            <div className="course-result" style={{ marginTop: 16 }}>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(sfwCcsDetailsApi.data, null, 2)}
+                </pre>
+              </details>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    if (activePage === 'sfw-tsc-codes') {
+      return (
+        <>
+          <h2 className="page-title">TSC Code Lookup</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
+            Retrieve Technical Skills Competency (TSC) codes. GET <code>/skillsFramework/codes/skillsAndCompetencies/technical/autocomplete</code> (v1.1).
+          </p>
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            const params: Record<string, string> = {};
+            for (const [k, v] of fd.entries()) {
+              if (v) params[k] = v as string;
+            }
+            handleSfwTscCodes(params);
+          }}>
+            <div className="form-group">
+              <label htmlFor="tscKeyword">Keyword</label>
+              <input id="tscKeyword" name="keyword" type="text" defaultValue="comm" disabled={sfwTscCodesApi.loading} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button type="submit" disabled={sfwTscCodesApi.loading}>
+                {sfwTscCodesApi.loading ? 'Loading...' : 'Search TSC Codes'}
+              </button>
+            </div>
+          </form>
+          {sfwTscCodesApi.error && <div className="error-alert">{sfwTscCodesApi.error}</div>}
+          {sfwTscCodesApi.loading && <div className="loading">Loading TSC codes...</div>}
+          {sfwTscCodesApi.data && (
+            <div className="course-result" style={{ marginTop: 16 }}>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(sfwTscCodesApi.data, null, 2)}
+                </pre>
+              </details>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    if (activePage === 'sfw-tsc-codes-details') {
+      return (
+        <>
+          <h2 className="page-title">TSC Code Details</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
+            Retrieve TSC codes with full details. GET <code>/skillsFramework/codes/skillsAndCompetencies/technical/autocomplete/details</code> (v1.1).
+          </p>
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            const params: Record<string, string> = {};
+            for (const [k, v] of fd.entries()) {
+              if (v) params[k] = v as string;
+            }
+            handleSfwTscCodesDetails(params);
+          }}>
+            <div className="form-group">
+              <label htmlFor="tsccdKeyword">Keyword</label>
+              <input id="tsccdKeyword" name="keyword" type="text" defaultValue="comm" disabled={sfwTscCodesDetailsApi.loading} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button type="submit" disabled={sfwTscCodesDetailsApi.loading}>
+                {sfwTscCodesDetailsApi.loading ? 'Loading...' : 'Search TSC Code Details'}
+              </button>
+            </div>
+          </form>
+          {sfwTscCodesDetailsApi.error && <div className="error-alert">{sfwTscCodesDetailsApi.error}</div>}
+          {sfwTscCodesDetailsApi.loading && <div className="loading">Loading TSC code details...</div>}
+          {sfwTscCodesDetailsApi.data && (
+            <div className="course-result" style={{ marginTop: 16 }}>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(sfwTscCodesDetailsApi.data, null, 2)}
+                </pre>
+              </details>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    if (activePage === 'sfw-tsc-details') {
+      return (
+        <>
+          <h2 className="page-title">TSC Full Details</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
+            Retrieve Technical Skills Competency (TSC) full details. GET <code>/skillsFramework/codes/skillsAndCompetencies/technical/details</code> (v1.1).
+          </p>
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            const params: Record<string, string> = {};
+            for (const [k, v] of fd.entries()) {
+              if (v) params[k] = v as string;
+            }
+            handleSfwTscDetails(params);
+          }}>
+            <div className="form-group">
+              <label htmlFor="tscdetPageSize">Page Size</label>
+              <input id="tscdetPageSize" name="pageSize" type="text" defaultValue="10" disabled={sfwTscDetailsApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="tscdetPage">Page</label>
+              <input id="tscdetPage" name="page" type="text" defaultValue="0" disabled={sfwTscDetailsApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="tscdetRetrieveType">Retrieve Type</label>
+              <input id="tscdetRetrieveType" name="retrieveType" type="text" defaultValue="FULL" disabled={sfwTscDetailsApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="tscdetLastUpdate">Last Update Date (optional)</label>
+              <input id="tscdetLastUpdate" name="lastUpdateDate" type="text" defaultValue="20190811" disabled={sfwTscDetailsApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="tscdetLevelCode">TSC Level Code (optional)</label>
+              <input id="tscdetLevelCode" name="tscLevelCode" type="text" defaultValue="067050,068251" disabled={sfwTscDetailsApi.loading} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button type="submit" disabled={sfwTscDetailsApi.loading}>
+                {sfwTscDetailsApi.loading ? 'Loading...' : 'Get TSC Details'}
+              </button>
+            </div>
+          </form>
+          {sfwTscDetailsApi.error && <div className="error-alert">{sfwTscDetailsApi.error}</div>}
+          {sfwTscDetailsApi.loading && <div className="loading">Loading TSC details...</div>}
+          {sfwTscDetailsApi.data && (
+            <div className="course-result" style={{ marginTop: 16 }}>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(sfwTscDetailsApi.data, null, 2)}
+                </pre>
+              </details>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    if (activePage === 'sfw-job-roles-search') {
+      return (
+        <>
+          <h2 className="page-title">Search Job Roles</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
+            Retrieve Job Roles from Skills Framework. GET <code>/skillsFramework/jobRoles</code> (v1).
+          </p>
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            const params: Record<string, string> = {};
+            for (const [k, v] of fd.entries()) {
+              if (v) params[k] = v as string;
+            }
+            handleSfwJobRolesSearch(params);
+          }}>
+            <div className="form-group">
+              <label htmlFor="jrKeyword">Keyword</label>
+              <input id="jrKeyword" name="keyword" type="text" defaultValue="Engineer" disabled={sfwJobRolesSearchApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="jrPageSize">Page Size</label>
+              <input id="jrPageSize" name="pageSize" type="text" defaultValue="20" disabled={sfwJobRolesSearchApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="jrPage">Page</label>
+              <input id="jrPage" name="page" type="text" defaultValue="0" disabled={sfwJobRolesSearchApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="jrSector">Sector (optional)</label>
+              <input id="jrSector" name="sector" type="text" defaultValue="18161" disabled={sfwJobRolesSearchApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="jrQualification">Qualification (optional)</label>
+              <input id="jrQualification" name="qualification" type="text" defaultValue="" disabled={sfwJobRolesSearchApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="jrFieldOfStudy">Field of Study (optional)</label>
+              <input id="jrFieldOfStudy" name="fieldOfStudy" type="text" defaultValue="" disabled={sfwJobRolesSearchApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="jrTrack">Track (optional)</label>
+              <input id="jrTrack" name="track" type="text" defaultValue="" disabled={sfwJobRolesSearchApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="jrMinSalary">Min Salary (optional)</label>
+              <input id="jrMinSalary" name="minSalary" type="text" defaultValue="" disabled={sfwJobRolesSearchApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="jrMaxSalary">Max Salary (optional)</label>
+              <input id="jrMaxSalary" name="maxSalary" type="text" defaultValue="" disabled={sfwJobRolesSearchApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="jrSortby">Sort By (optional)</label>
+              <input id="jrSortby" name="sortby" type="text" defaultValue="title" disabled={sfwJobRolesSearchApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="jrSortDir">Sort Direction (optional)</label>
+              <input id="jrSortDir" name="sortDirection" type="text" defaultValue="asc" disabled={sfwJobRolesSearchApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="jrType">Type (optional)</label>
+              <input id="jrType" name="type" type="text" defaultValue="0" disabled={sfwJobRolesSearchApi.loading} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button type="submit" disabled={sfwJobRolesSearchApi.loading}>
+                {sfwJobRolesSearchApi.loading ? 'Loading...' : 'Search Job Roles'}
+              </button>
+            </div>
+          </form>
+          {sfwJobRolesSearchApi.error && <div className="error-alert">{sfwJobRolesSearchApi.error}</div>}
+          {sfwJobRolesSearchApi.loading && <div className="loading">Loading job roles...</div>}
+          {sfwJobRolesSearchApi.data && (
+            <div className="course-result" style={{ marginTop: 16 }}>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(sfwJobRolesSearchApi.data, null, 2)}
+                </pre>
+              </details>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    if (activePage === 'sfw-job-role-profile') {
+      return (
+        <>
+          <h2 className="page-title">Job Role Profile</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
+            Retrieve Job Role Profile from Skills Framework. GET <code>/skillsFramework/jobRoles/profile</code> (v1).
+          </p>
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            const params: Record<string, string> = {};
+            for (const [k, v] of fd.entries()) {
+              if (v) params[k] = v as string;
+            }
+            handleSfwJobRoleProfile(params);
+          }}>
+            <div className="form-group">
+              <label htmlFor="jrpJobRoleId">Job Role ID</label>
+              <input id="jrpJobRoleId" name="jobRoleId" type="text" defaultValue="101032" disabled={sfwJobRoleProfileApi.loading} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button type="submit" disabled={sfwJobRoleProfileApi.loading}>
+                {sfwJobRoleProfileApi.loading ? 'Loading...' : 'Get Job Role Profile'}
+              </button>
+            </div>
+          </form>
+          {sfwJobRoleProfileApi.error && <div className="error-alert">{sfwJobRoleProfileApi.error}</div>}
+          {sfwJobRoleProfileApi.loading && <div className="loading">Loading job role profile...</div>}
+          {sfwJobRoleProfileApi.data && (
+            <div className="course-result" style={{ marginTop: 16 }}>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(sfwJobRoleProfileApi.data, null, 2)}
+                </pre>
+              </details>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    if (activePage === 'sfw-occupations') {
+      return (
+        <>
+          <h2 className="page-title">List Occupations</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
+            Retrieve list of occupations from Skills Framework. GET <code>/skillsFramework/occupations</code> (v1).
+          </p>
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            const params: Record<string, string> = {};
+            for (const [k, v] of fd.entries()) {
+              if (v) params[k] = v as string;
+            }
+            handleSfwOccupations(params);
+          }}>
+            <div className="form-group">
+              <label htmlFor="occSectorId">Sector ID</label>
+              <input id="occSectorId" name="sectorId" type="text" defaultValue="11390" disabled={sfwOccupationsApi.loading} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button type="submit" disabled={sfwOccupationsApi.loading}>
+                {sfwOccupationsApi.loading ? 'Loading...' : 'Get Occupations'}
+              </button>
+            </div>
+          </form>
+          {sfwOccupationsApi.error && <div className="error-alert">{sfwOccupationsApi.error}</div>}
+          {sfwOccupationsApi.loading && <div className="loading">Loading occupations...</div>}
+          {sfwOccupationsApi.data && (
+            <div className="course-result" style={{ marginTop: 16 }}>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(sfwOccupationsApi.data, null, 2)}
+                </pre>
+              </details>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    if (activePage === 'sfw-job-role-codes') {
+      return (
+        <>
+          <h2 className="page-title">Job Role Codes by Occupation</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
+            Retrieve Job Role Codes by Occupation ID. GET <code>/skillsFramework/{'{'} occupationId {'}'}/jobRoles</code> (v1).
+          </p>
+          <form className="course-result" autoComplete="off" onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            const occupationId = fd.get('occupationId') as string;
+            if (occupationId) handleSfwJobRoleCodes(occupationId);
+          }}>
+            <div className="form-group">
+              <label htmlFor="jrcOccupationId">Occupation ID</label>
+              <input id="jrcOccupationId" name="occupationId" type="text" defaultValue="57197" disabled={sfwJobRoleCodesApi.loading} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button type="submit" disabled={sfwJobRoleCodesApi.loading}>
+                {sfwJobRoleCodesApi.loading ? 'Loading...' : 'Get Job Role Codes'}
+              </button>
+            </div>
+          </form>
+          {sfwJobRoleCodesApi.error && <div className="error-alert">{sfwJobRoleCodesApi.error}</div>}
+          {sfwJobRoleCodesApi.loading && <div className="loading">Loading job role codes...</div>}
+          {sfwJobRoleCodesApi.data && (
+            <div className="course-result" style={{ marginTop: 16 }}>
+              <details className="json-collapsible">
+                <summary>JSON Response</summary>
+                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                  {JSON.stringify(sfwJobRoleCodesApi.data, null, 2)}
+                </pre>
+              </details>
             </div>
           )}
         </>
@@ -3494,23 +4133,23 @@ function App() {
           }}>
             <div className="form-group">
               <label htmlFor="certCN">Common Name (CN)</label>
-              <input id="certCN" name="commonName" type="text" autoComplete="off" defaultValue="api.ssg-wsg.sg" disabled={generateCertApi.loading} />
+              <input id="certCN" name="commonName" type="text" autoComplete="one-time-code" defaultValue="api.ssg-wsg.sg" disabled={generateCertApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="certO">Organization (O)</label>
-              <input id="certO" name="organization" type="text" autoComplete="off" defaultValue="Tertiary Infotech Academy Pte Ltd" disabled={generateCertApi.loading} />
+              <input id="certO" name="organization" type="text" autoComplete="one-time-code" defaultValue="Tertiary Infotech Academy Pte Ltd" disabled={generateCertApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="certC">Country (C)</label>
-              <input id="certC" name="country" type="text" autoComplete="off" defaultValue="SG" disabled={generateCertApi.loading} />
+              <input id="certC" name="country" type="text" autoComplete="one-time-code" defaultValue="SG" disabled={generateCertApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="certDays">Validity (days)</label>
-              <input id="certDays" name="days" type="text" autoComplete="off" defaultValue="3650" disabled={generateCertApi.loading} />
+              <input id="certDays" name="days" type="text" autoComplete="one-time-code" defaultValue="3650" disabled={generateCertApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="certKeySize">Key Size (bits)</label>
-              <input id="certKeySize" name="keySize" type="text" autoComplete="off" defaultValue="4096" disabled={generateCertApi.loading} />
+              <input id="certKeySize" name="keySize" type="text" autoComplete="one-time-code" defaultValue="4096" disabled={generateCertApi.loading} />
             </div>
             <div style={{ marginTop: 12 }}>
               <button type="submit" disabled={generateCertApi.loading}>
@@ -3576,7 +4215,7 @@ function App() {
           }}>
             <div className="form-group">
               <label htmlFor="kpKeySize">Key Size (bits)</label>
-              <input id="kpKeySize" name="keySize" type="text" autoComplete="off" defaultValue="2048" disabled={generateKeypairApi.loading} />
+              <input id="kpKeySize" name="keySize" type="text" autoComplete="one-time-code" defaultValue="2048" disabled={generateKeypairApi.loading} />
             </div>
             <div style={{ marginTop: 12 }}>
               <button type="submit" disabled={generateKeypairApi.loading}>
@@ -3648,7 +4287,7 @@ function App() {
           }}>
             <div className="form-group">
               <label htmlFor="ekBytes">Key Size (bytes)</label>
-              <input id="ekBytes" name="bytes" type="text" autoComplete="off" defaultValue="32" disabled={encryptionKeyApi.loading} />
+              <input id="ekBytes" name="bytes" type="text" autoComplete="one-time-code" defaultValue="32" disabled={encryptionKeyApi.loading} />
             </div>
             <div style={{ marginTop: 12 }}>
               <button type="submit" disabled={encryptionKeyApi.loading}>
@@ -3674,6 +4313,65 @@ function App() {
               </div>
             </>
           )}
+        </>
+      );
+    }
+
+    if (activePage === 'default-values') {
+      const categories = [...new Set(INITIAL_DEFAULTS.map(e => e.category))];
+      const hasChanges = INITIAL_DEFAULTS.some(e => draftDefaults[e.key] !== defaults[e.key]);
+      return (
+        <>
+          <h2 className="page-title">Default Values</h2>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
+            Edit the default values used to auto-populate API forms. Click <strong>Save</strong> to apply changes.
+          </p>
+          {categories.map(cat => (
+            <div key={cat} className="card" style={{ marginBottom: 16 }}>
+              <h3 style={{ marginBottom: 12 }}>{cat}</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: '8px 12px', width: 200 }}>Field</th>
+                    <th style={{ textAlign: 'left', padding: '8px 12px' }}>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {INITIAL_DEFAULTS.filter(e => e.category === cat).map(entry => (
+                    <tr key={entry.key}>
+                      <td style={{ padding: '8px 12px', fontWeight: 500 }}>{entry.label}</td>
+                      <td style={{ padding: '8px 12px' }}>
+                        <input
+                          type="text"
+                          value={draftDefaults[entry.key] ?? entry.value}
+                          onChange={(e) => setDraftDefaults({ ...draftDefaults, [entry.key]: e.target.value })}
+                          style={{ width: '100%', padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+          {defaultsSaved && (
+            <div style={{ padding: '12px 16px', background: '#d1fae5', color: '#065f46', borderRadius: 8, marginBottom: 12, fontWeight: 500, fontSize: 14 }}>
+              Default values updated successfully.
+            </div>
+          )}
+          <div style={{ position: 'sticky', bottom: 0, background: '#f5f7fa', padding: '16px 0', borderTop: '1px solid #e5e7eb' }}>
+            <button
+              disabled={!hasChanges}
+              style={{ padding: '10px 24px', background: hasChanges ? '#3b82f6' : '#93c5fd', color: '#fff', border: 'none', borderRadius: 6, cursor: hasChanges ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: 15 }}
+              onClick={() => {
+                setDefaults({ ...draftDefaults });
+                setDefaultsSaved(true);
+                setTimeout(() => setDefaultsSaved(false), 3000);
+              }}
+            >
+              Save
+            </button>
+          </div>
         </>
       );
     }
@@ -3808,7 +4506,15 @@ function App() {
             </table>
           </div>
 
-          <h3 style={{ marginTop: 24, marginBottom: 8 }}>References</h3>
+        </>
+      );
+    }
+
+    if (activePage === 'api-references') {
+      return (
+        <>
+          <h2 className="page-title">SSG API References</h2>
+          <p style={{ color: '#666', margin: '0 0 16px 0' }}>Official SSG-WSG Developer Portal links, organised by API Discovery categories.</p>
           <div className="course-result" style={{ padding: 16 }}>
             <h4 style={{ margin: '0 0 4px 0', fontSize: 13, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Portal</h4>
             <ul style={{ margin: '0 0 12px 0', paddingLeft: 20, lineHeight: 2 }}>

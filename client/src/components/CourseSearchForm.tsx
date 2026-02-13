@@ -9,6 +9,7 @@ interface CourseSearchFormProps {
     pageSize: number;
   }) => void;
   loading: boolean;
+  defaults?: Record<string, string>;
 }
 
 function getDefaultDateFrom() {
@@ -21,8 +22,8 @@ function getDefaultDateTo() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export default function CourseSearchForm({ onSearch, loading }: CourseSearchFormProps) {
-  const [uen, setUen] = useState('201200696W');
+export default function CourseSearchForm({ onSearch, loading, defaults = {} }: CourseSearchFormProps) {
+  const [uen, setUen] = useState(defaults.uen || '201200696W');
   const [keyword, setKeyword] = useState('');
   const [dateFrom, setDateFrom] = useState(getDefaultDateFrom);
   const [dateTo, setDateTo] = useState(getDefaultDateTo);

@@ -3,11 +3,12 @@ import { useState } from 'react';
 interface SearchFormProps {
   onSearch: (params: { refNo: string; uen: string; courseRunStartDate: string }) => void;
   loading: boolean;
+  defaults?: Record<string, string>;
 }
 
-export default function SearchForm({ onSearch, loading }: SearchFormProps) {
-  const [refNo, setRefNo] = useState('TGS-2020505444');
-  const [uen, setUen] = useState('201200696W');
+export default function SearchForm({ onSearch, loading, defaults = {} }: SearchFormProps) {
+  const [refNo, setRefNo] = useState(defaults.courseRefNo || 'TGS-2020505444');
+  const [uen, setUen] = useState(defaults.uen || '201200696W');
   const [courseRunStartDate, setCourseRunStartDate] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {

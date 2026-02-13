@@ -420,6 +420,56 @@ export async function getSkillsFrameworkSkills(params: Record<string, string>) {
   return response.data;
 }
 
+export async function getSkillsFrameworkGscCodes(params: Record<string, string>) {
+  const response = await apiClient.get<Record<string, unknown>>('/skills-framework/gsc-codes', { params });
+  return response.data;
+}
+
+export async function getSkillsFrameworkCcsDetails(params: Record<string, string>) {
+  const response = await apiClient.get<Record<string, unknown>>('/skills-framework/ccs-details', { params });
+  return response.data;
+}
+
+export async function getSkillsFrameworkTscCodes(params: Record<string, string>) {
+  const response = await apiClient.get<Record<string, unknown>>('/skills-framework/tsc-codes', { params });
+  return response.data;
+}
+
+export async function getSkillsFrameworkTscCodesDetails(params: Record<string, string>) {
+  const response = await apiClient.get<Record<string, unknown>>('/skills-framework/tsc-codes-details', { params });
+  return response.data;
+}
+
+export async function getSkillsFrameworkTscDetails(params: Record<string, string>) {
+  const response = await apiClient.get<Record<string, unknown>>('/skills-framework/tsc-details', { params });
+  return response.data;
+}
+
+export async function getSkillsFrameworkJobRoles(params: Record<string, string>) {
+  const response = await apiClient.get<Record<string, unknown>>('/skills-framework/job-roles', { params });
+  return response.data;
+}
+
+export async function getSkillsFrameworkJobRoleProfile(params: Record<string, string>) {
+  const response = await apiClient.get<Record<string, unknown>>('/skills-framework/job-role-profile', { params });
+  return response.data;
+}
+
+export async function getSkillsFrameworkOccupations(params: Record<string, string>) {
+  const response = await apiClient.get<Record<string, unknown>>('/skills-framework/occupations', { params });
+  return response.data;
+}
+
+export async function getSkillsFrameworkJobRoleCodes(occupationId: string) {
+  const response = await apiClient.get<Record<string, unknown>>(`/skills-framework/occupations/${occupationId}/jobRoles`);
+  return response.data;
+}
+
+export async function getSkillsFrameworkSectorProfile(sectorId: string) {
+  const response = await apiClient.get<Record<string, unknown>>(`/skills-framework/sector-profile/${sectorId}`);
+  return response.data;
+}
+
 // Tools
 
 export async function generateCertificate(body: { commonName: string; organization: string; country: string; days: string; keySize: string }) {
