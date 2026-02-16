@@ -9,6 +9,13 @@ const apiClient = axios.create({
   },
 });
 
+// Attach the selected certificate ID to every request
+apiClient.interceptors.request.use((config) => {
+  const certId = localStorage.getItem('ssg-active-cert') || '1';
+  config.headers['x-cert-id'] = certId;
+  return config;
+});
+
 export async function getCourseByRefNo(refNo: string, includeExpired = true) {
   const response = await apiClient.get<CourseResponse>(
     `/courses/${encodeURIComponent(refNo)}`,

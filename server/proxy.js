@@ -5,9 +5,11 @@ const https = require('https');
 const crypto = require('crypto');
 const { execSync } = require('child_process');
 const os = require('os');
+const { AsyncLocalStorage } = require('async_hooks');
 const { getAccessToken } = require('./oauth');
 
 const router = express.Router();
+const certStore = new AsyncLocalStorage();
 
 // ─────────────────────────────────────────────────────────────────
 // SSG API Authentication
@@ -22,36 +24,117 @@ const router = express.Router();
 //    - Used by: Course Details (GET /tpg/courses/registry/details/:refNo)
 // ─────────────────────────────────────────────────────────────────
 
-// mTLS credentials for certificate-authenticated APIs (api.ssg-wsg.sg)
-// Support base64-encoded certs via env vars (for Vercel/serverless) or file paths (for local dev)
-let cert, key;
-if (process.env.CERT_PEM_BASE64 && process.env.CERT_KEY_PEM_BASE64) {
-  cert = Buffer.from(process.env.CERT_PEM_BASE64, 'base64');
-  key = Buffer.from(process.env.CERT_KEY_PEM_BASE64, 'base64');
-} else {
-  const certPath = process.env.CERT_PATH || './server/.cert/skilleto_tertiary_cert_v3.pem';
-  const keyPath = process.env.CERT_KEY_PATH || './server/.cert/skilleto_private_key_v3.pem';
-  cert = fs.readFileSync(path.resolve(certPath));
-  key = fs.readFileSync(path.resolve(keyPath));
+// ─────────────────────────────────────────────────────────────────
+// Multi-certificate support
+// Load up to 3 certificate sets from env vars (CERT_1_*, CERT_2_*, CERT_3_*)
+// Wrap multiline PEM values in double quotes in .env for dotenv to parse them.
+// The active cert is selected per-request via the x-cert-id header.
+// ─────────────────────────────────────────────────────────────────
+const certsMap = new Map();
+for (let i = 1; i <= 3; i++) {
+  const name = process.env[`CERT_${i}_NAME`];
+  const certPem = process.env[`CERT_${i}_CERT`];
+  const keyPem = process.env[`CERT_${i}_KEY`];
+  
+  // Debug logging to identify missing variables
+  console.log(`\n--- Checking certificate ${i} ---`);
+  console.log(`CERT_${i}_NAME:`, name ? `"${name}"` : '❌ MISSING');
+  console.log(`CERT_${i}_CERT:`, certPem ? `✓ Present (${certPem.length} chars)` : '❌ MISSING');
+  console.log(`CERT_${i}_KEY:`, keyPem ? `✓ Present (${keyPem.length} chars)` : '❌ MISSING');
+  
+  if (!name || !certPem || !keyPem) {
+    console.log(`⚠️  Certificate ${i} skipped - missing required variables`);
+    continue;
+  }
+
+  const encKey = process.env[`CERT_${i}_ENCRYPTION_KEY`];
+  certsMap.set(String(i), {
+    id: String(i),
+    name,
+    cert: Buffer.from(certPem),
+    key: Buffer.from(keyPem),
+    encryptionKey: encKey ? Buffer.from(encKey, 'base64') : null,
+  });
+  console.log(`✅ Loaded certificate ${i}: ${name}`);
 }
+if (certsMap.size === 0) {
+  console.warn('No certificates configured. Set CERT_1_NAME, CERT_1_CERT, CERT_1_KEY in .env (wrap PEM in double quotes)');
+}
+
 const certApiBase = process.env.SSG_CERT_API_BASE_URL || 'https://api.ssg-wsg.sg';
 
-// AES-256-ECB encryption/decryption for cert-based API payloads
-const encryptionKey = process.env.CERT_ENCRYPTION_KEY
-  ? Buffer.from(process.env.CERT_ENCRYPTION_KEY, 'base64')
-  : null;
+// Get the active cert for the current request (via AsyncLocalStorage)
+function getActiveCert() {
+  const certId = certStore.getStore() || '1';
+  
+  console.log(`getActiveCert: certId="${certId}"`);
+  console.log('Available cert IDs:', Array.from(certsMap.keys()));
+  
+  // OAuth doesn't use certificates
+  if (certId === 'oauth') {
+    console.log('OAuth mode selected - no certificate needed');
+    return null;
+  }
+  
+  const cert = certsMap.get(certId);
+  if (!cert) {
+    console.error(`Certificate ${certId} not found in certsMap`);
+    console.error('Available certificates:', Array.from(certsMap.entries()).map(([id, c]) => ({ id, name: c.name })));
+    // Try to get the first available cert as fallback
+    const firstCert = certsMap.values().next().value;
+    if (firstCert) {
+      console.log(`Using fallback certificate: ${firstCert.name}`);
+      return firstCert;
+    }
+    return null;
+  }
+  
+  console.log(`Using certificate: ${cert.name} (ID: ${cert.id})`);
+  return cert;
+}
 
+// Middleware: resolve cert selection from x-cert-id header
+router.use((req, res, next) => {
+  const certId = req.headers['x-cert-id'] || '1';
+  console.log(`[${req.method} ${req.path}] x-cert-id header: "${certId}"`);
+  certStore.run(certId, next);
+});
+
+// GET /api/certs endpoint
+router.get('/certs', (req, res) => {
+  const certs = [];
+  
+  // Add loaded certificates from certsMap
+  for (const [id, certData] of certsMap.entries()) {
+    certs.push({ id, name: certData.name });
+  }
+  
+  // Add OAuth option
+  certs.push({ id: 'oauth', name: 'TMS 2 (OAuth)' });
+  
+  res.json(certs);
+});
+
+// AES-256-CBC encryption/decryption for cert-based API payloads
 function aesEncrypt(plaintext) {
-  if (!encryptionKey) throw new Error('CERT_ENCRYPTION_KEY not configured');
-  const cipher = crypto.createCipheriv('aes-256-ecb', encryptionKey, null);
+  const active = getActiveCert();
+  if (!active || !active.encryptionKey) {
+    throw new Error('Encryption key not configured for the active certificate. OAuth mode does not support encryption.');
+  }
+  const iv = Buffer.from('SSGAPIInitVector', 'utf8');
+  const cipher = crypto.createCipheriv('aes-256-cbc', active.encryptionKey, iv);
   let encrypted = cipher.update(plaintext, 'utf8', 'base64');
   encrypted += cipher.final('base64');
   return encrypted;
 }
 
 function aesDecrypt(ciphertext) {
-  if (!encryptionKey) throw new Error('CERT_ENCRYPTION_KEY not configured');
-  const decipher = crypto.createDecipheriv('aes-256-ecb', encryptionKey, null);
+  const active = getActiveCert();
+  if (!active || !active.encryptionKey) {
+    throw new Error('Decryption key not configured for the active certificate. OAuth mode does not support decryption.');
+  }
+  const iv = Buffer.from('SSGAPIInitVector', 'utf8');
+  const decipher = crypto.createDecipheriv('aes-256-cbc', active.encryptionKey, iv);
   let decrypted = decipher.update(ciphertext, 'base64', 'utf8');
   decrypted += decipher.final('utf8');
   return decrypted;
@@ -59,6 +142,8 @@ function aesDecrypt(ciphertext) {
 
 // mTLS GET helper — returns { status, body } or throws on network error
 function certApiGet(apiPath, queryParams = {}, { apiVersion = 'v1.2', headers: extraHeaders = {} } = {}) {
+  const active = getActiveCert();
+  if (!active) throw new Error('No certificate configured');
   const url = new URL(apiPath, certApiBase);
   for (const [k, v] of Object.entries(queryParams)) {
     if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
@@ -70,8 +155,8 @@ function certApiGet(apiPath, queryParams = {}, { apiVersion = 'v1.2', headers: e
       port: 443,
       path: url.pathname + url.search,
       method: 'GET',
-      cert,
-      key,
+      cert: active.cert,
+      key: active.key,
       headers: {
         'Accept': 'application/json',
         'x-api-version': apiVersion,
@@ -90,6 +175,34 @@ function certApiGet(apiPath, queryParams = {}, { apiVersion = 'v1.2', headers: e
     httpsReq.on('error', reject);
     httpsReq.end();
   });
+}
+
+// OAuth GET helper for public APIs (public-api.ssg-wsg.sg)
+async function oauthApiGet(apiPath, queryParams = {}, { apiVersion = 'v3.0' } = {}) {
+  const token = await getAccessToken();
+  const baseUrl = process.env.SSG_API_BASE_URL || 'https://public-api.ssg-wsg.sg';
+
+  const url = new URL(apiPath, baseUrl);
+  for (const [key, value] of Object.entries(queryParams)) {
+    if (value !== undefined && value !== null && value !== '') {
+      url.searchParams.set(key, value);
+    }
+  }
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/json',
+      'x-api-version': apiVersion,
+    },
+  });
+
+  const text = await response.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = text; }
+
+  return { status: response.status, body: data };
 }
 
 // OAuth helper for public APIs (public-api.ssg-wsg.sg)
@@ -129,6 +242,8 @@ async function ssgApiGet(endpoint, queryParams = {}, { apiVersion = 'v1.2', base
 
 // mTLS POST helper — returns { status, body } or throws on network error
 function certApiPost(apiPath, jsonBody, { apiVersion = 'v1.2', headers: extraHeaders = {} } = {}) {
+  const active = getActiveCert();
+  if (!active) throw new Error('No certificate configured');
   const url = new URL(apiPath, certApiBase);
   const requestBody = JSON.stringify(jsonBody);
 
@@ -138,8 +253,8 @@ function certApiPost(apiPath, jsonBody, { apiVersion = 'v1.2', headers: extraHea
       port: 443,
       path: url.pathname,
       method: 'POST',
-      cert,
-      key,
+      cert: active.cert,
+      key: active.key,
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -342,6 +457,9 @@ router.post('/courses/runs/:runId/sessions/attendance/upload', async (req, res) 
     const apiPath = `/courses/runs/${encodeURIComponent(runId)}/sessions/attendance`;
     const url = new URL(apiPath, certApiBase);
     const requestBody = JSON.stringify({ payload: encryptedPayload });
+    
+    const active = getActiveCert();
+    if (!active) throw new Error('No certificate configured');
 
     const result = await new Promise((resolve, reject) => {
       const reqOptions = {
@@ -349,8 +467,8 @@ router.post('/courses/runs/:runId/sessions/attendance/upload', async (req, res) 
         port: 443,
         path: url.pathname,
         method: 'POST',
-        cert,
-        key,
+        cert: active.cert,
+        key: active.key,
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
@@ -518,14 +636,18 @@ router.post('/courses/courseRuns/publish', async (req, res) => {
       if (v !== undefined && v !== null && v !== '') certUrl.searchParams.set(k, v);
     }
     const requestBody = JSON.stringify(body);
+    
+    const active = getActiveCert();
+    if (!active) throw new Error('No certificate configured');
+    
     const result = await new Promise((resolve, reject) => {
       const reqOptions = {
         hostname: certUrl.hostname,
         port: 443,
         path: certUrl.pathname + certUrl.search,
         method: 'POST',
-        cert,
-        key,
+        cert: active.cert,
+        key: active.key,
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
@@ -595,14 +717,18 @@ router.post('/courses/courseRuns/edit/:runId', async (req, res) => {
       if (v !== undefined && v !== null && v !== '') certUrl.searchParams.set(k, v);
     }
     const requestBody = JSON.stringify(body);
+    
+    const active = getActiveCert();
+    if (!active) throw new Error('No certificate configured');
+    
     const result = await new Promise((resolve, reject) => {
       const reqOptions = {
         hostname: certUrl.hostname,
         port: 443,
         path: certUrl.pathname + certUrl.search,
         method: 'POST',
-        cert,
-        key,
+        cert: active.cert,
+        key: active.key,
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
@@ -886,6 +1012,9 @@ router.get('/courses/details/:refNo', async (req, res) => {
     }
 
     console.log('Course details request:', url.pathname + url.search);
+    
+    const active = getActiveCert();
+    if (!active) throw new Error('No certificate configured');
 
     const result = await new Promise((resolve, reject) => {
       const reqOptions = {
@@ -893,8 +1022,8 @@ router.get('/courses/details/:refNo', async (req, res) => {
         port: 443,
         path: url.pathname + url.search,
         method: 'GET',
-        cert,
-        key,
+        cert: active.cert,
+        key: active.key,
         headers: {
           'Accept': 'application/json',
           'x-api-version': 'v8.0',
@@ -961,8 +1090,8 @@ async function fetchCourseSearchPage(searchBody, uen) {
       port: 443,
       path: url.pathname,
       method: 'POST',
-      cert,
-      key,
+      cert: getActiveCert()?.cert,
+      key: getActiveCert()?.key,
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -1543,30 +1672,73 @@ router.post('/enrolments/search', async (req, res) => {
 // GET /api/enrolments/details/:enrolmentRefNo — View Enrolment
 // mTLS Certificate with OAuth fallback
 router.get('/enrolments/details/:enrolmentRefNo', async (req, res) => {
+  const { enrolmentRefNo } = req.params;
+  const apiPath = `/tpg/enrolments/details/${enrolmentRefNo}`;
+  
   try {
-    const { enrolmentRefNo } = req.params;
-    const apiPath = `/tpg/enrolments/details/${encodeURIComponent(enrolmentRefNo)}`;
-
-    // Try certificate first
-    const certResult = await certApiGet(apiPath, {}, { apiVersion: 'v3.0' });
-    if (certResult.status >= 200 && certResult.status < 300) {
-      let parsed;
-      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      if (typeof parsed !== 'string') { return res.json(parsed); }
-      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+    const certId = certStore.getStore();
+    console.log(`View Enrolment: certId="${certId}", enrolmentRefNo="${enrolmentRefNo}"`);
+    
+    // Check if OAuth is selected (cert ID 'oauth')
+    if (certId === 'oauth') {
+      console.log('View Enrolment: using OAuth authentication');
+      const result = await oauthApiGet(apiPath, {}, { apiVersion: 'v3.0' });
+      
+      if (result.status >= 200 && result.status < 300) {
+        // OAuth returns plain JSON, no decryption needed
+        return res.json(result.body);
+      }
+      
+      return res.status(result.status).json({
+        error: 'OAuth authentication failed',
+        details: result.body
+      });
     }
-
-    console.log(`View Enrolment: certificate returned ${certResult.status} — falling back to OAuth`);
-
-    // Fall back to OAuth
-    const oauthResult = await ssgApiGet(apiPath, {}, { apiVersion: 'v3.0' });
-    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
-    return res.json(oauthResult);
-  } catch (err) {
-    console.error('View Enrolment error:', err.message);
-    res.status(err.status || 500).json({
-      error: err.message,
-      details: err.body || null,
+    
+    // Use certificate authentication
+    const activeCert = getActiveCert();
+    console.log('View Enrolment: using certificate authentication with cert:', activeCert?.name);
+    
+    if (!activeCert) {
+      return res.status(500).json({
+        error: 'No certificate configured',
+        details: 'Unable to find certificate for authentication'
+      });
+    }
+    
+    const certResult = await certApiGet(apiPath, {}, { apiVersion: 'v3.0' });
+    
+    if (certResult.status >= 200 && certResult.status < 300) {
+      console.log('View Enrolment: certificate auth succeeded (status', certResult.status + ')');
+      try {
+        // Certificate responses are AES-encrypted
+        const decrypted = aesDecrypt(certResult.body.trim());
+        const parsed = JSON.parse(decrypted);
+        return res.json(parsed);
+      } catch (decErr) {
+        console.error('View Enrolment: decryption failed, returning raw response —', decErr.message);
+        let parsed;
+        try {
+          parsed = JSON.parse(certResult.body);
+        } catch {
+          parsed = certResult.body;
+        }
+        return res.json(parsed);
+      }
+    }
+    
+    // Certificate auth failed
+    console.error('View Enrolment: certificate auth failed with status', certResult.status);
+    return res.status(certResult.status).json({
+      error: 'Certificate authentication failed',
+      details: certResult.body
+    });
+    
+  } catch (error) {
+    console.error('View Enrolment error:', error);
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: error.message
     });
   }
 });
@@ -2218,7 +2390,7 @@ router.get('/skills-framework/occupations', async (req, res) => {
 
     console.log('Skills Framework Occupations: certificate returned', certResult.status, '— falling back to OAuth');
     const oauthResult = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1' });
-    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
+    if (typeof oauthResult === 'string') { return res.status(500).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Skills Framework Occupations error:', err.message);

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useApi } from './hooks/useApi';
 import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications, postSkillExtract, postSkillSearch, getSkillsFrameworkJobs, getSkillsFrameworkSkills, getSkillsFrameworkGscCodes, getSkillsFrameworkTscCodes, getSkillsFrameworkTscCodesDetails, getSkillsFrameworkCcsDetails, getSkillsFrameworkTscDetails, getSkillsFrameworkJobRoles, getSkillsFrameworkJobRoleProfile, getSkillsFrameworkOccupations, getSkillsFrameworkJobRoleCodes, generateCertificate, generateKeypair, generateEncryptionKey, getTrainingProviderCourses } from './api/courseApi';
 import SearchForm from './components/SearchForm';
@@ -197,7 +197,15 @@ function AuthBadge({ method }: { method: 'cert' | 'cert+oauth' | 'cert+aes' | 'n
   return <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600, background: s.bg, color: s.color, marginLeft: 6, verticalAlign: 'middle' }}>{s.label}</span>;
 }
 
-function Sidebar({ activePage, onNavigate }: { activePage: Page; onNavigate: (page: Page) => void }) {
+interface CertOption { id: string; name: string }
+
+function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange }: {
+  activePage: Page;
+  onNavigate: (page: Page) => void;
+  certs: CertOption[];
+  activeCertId: string;
+  onCertChange: (id: string) => void;
+}) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['Courses']));
 
   const toggleCategory = (label: string) => {
@@ -217,6 +225,20 @@ function Sidebar({ activePage, onNavigate }: { activePage: Page; onNavigate: (pa
       <div className="sidebar-header">
         <h1>SSG API Portal</h1>
         <p>Developer Explorer</p>
+        {certs.length > 0 && (
+          <div className="cert-switcher">
+            <label htmlFor="cert-select">Certificate / Oauth</label>
+            <select
+              id="cert-select"
+              value={activeCertId}
+              onChange={(e) => onCertChange(e.target.value)}
+            >
+              {certs.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
       <nav className="sidebar-nav">
         {NAV_ITEMS.map((cat) => {
@@ -310,6 +332,23 @@ function App() {
   const [defaults, setDefaultsState] = useState<Record<string, string>>(loadDefaults);
   const [draftDefaults, setDraftDefaults] = useState<Record<string, string>>(loadDefaults);
   const [defaultsSaved, setDefaultsSaved] = useState(false);
+  const [certs, setCerts] = useState<CertOption[]>([]);
+  const [activeCertId, setActiveCertId] = useState(() => localStorage.getItem('ssg-active-cert') || '1');
+
+  useEffect(() => {
+    fetch('/api/certs').then(r => r.json()).then((list: CertOption[]) => {
+      setCerts(list);
+      if (list.length > 0 && !list.find(c => c.id === activeCertId)) {
+        setActiveCertId(list[0].id);
+        localStorage.setItem('ssg-active-cert', list[0].id);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const handleCertChange = (id: string) => {
+    setActiveCertId(id);
+    localStorage.setItem('ssg-active-cert', id);
+  };
   const d = (key: string) => defaults[key] ?? '';
   const setDefaults = (next: Record<string, string>) => {
     setDefaultsState(next);
@@ -3192,7 +3231,7 @@ function App() {
             const fd = new FormData(e.currentTarget);
             handleEnrolView(fd.get('refNo') as string);
           }}>
-            <div className="form-group"><label>Enrolment Reference Number</label><input name="refNo" type="text" defaultValue="ENR-2003-123456" disabled={enrolViewApi.loading} /></div>
+            <div className="form-group"><label>Enrolment Reference Number</label><input name="refNo" type="text" defaultValue="ENR-2512-167877" disabled={enrolViewApi.loading} /></div>
             <div style={{ marginTop: 12 }}><button type="submit" disabled={enrolViewApi.loading}>{enrolViewApi.loading ? 'Loading...' : 'View Enrolment'}</button></div>
           </form>
           {enrolViewApi.error && <div className="error-alert">{enrolViewApi.error}</div>}
@@ -4579,7 +4618,7 @@ function App() {
 
   return (
     <div className="app">
-      <Sidebar activePage={activePage} onNavigate={handleNavigate} />
+      <Sidebar activePage={activePage} onNavigate={handleNavigate} certs={certs} activeCertId={activeCertId} onCertChange={handleCertChange} />
       <main className="main-content">
         <div className="main-content-inner">
           {renderContent()}

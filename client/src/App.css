@@ -46,6 +46,47 @@ body {
   margin-top: 0.25rem;
 }
 
+.cert-switcher {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cert-switcher label {
+  font-size: 0.65rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.cert-switcher select {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.cert-switcher select:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.cert-switcher select:focus {
+  border-color: #60a5fa;
+}
+
+.cert-switcher select option {
+  background: #1e293b;
+  color: #fff;
+}
+
 .sidebar-nav {
   flex: 1;
   padding: 0.5rem 0;
