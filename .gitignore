@@ -1,5 +1,11 @@
-node_modules/
+.playwright-mcp
 .env
-client/dist/
-server/.cert/
-.vercel
+.venv
+node_modules
+.pytest_cache
+.ruff_cache
+.vscode
+__pycache__
+.claude
+PIVLoopDiagram.png
+.agents

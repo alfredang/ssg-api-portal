@@ -7,6 +7,7 @@ const { execSync } = require('child_process');
 const os = require('os');
 const { AsyncLocalStorage } = require('async_hooks');
 const { getAccessToken } = require('./oauth');
+const forge = require('node-forge');
 
 const router = express.Router();
 const certStore = new AsyncLocalStorage();
@@ -2508,19 +2509,23 @@ router.post('/skill-search', async (req, res) => {
 // Tools
 // ─────────────────────────────────────────────────────────────────
 
-// POST /api/tools/generate-cert — Generate self-signed certificate via OpenSSL
-router.post('/tools/generate-cert', (req, res) => {
+// POST /api/tools/generate-cert — Generate self-signed certificate via node-forge
+router.post('/tools/generate-cert', async (req, res) => {
   const {
-    commonName = 'localhost',
-    organization = 'My Organization',
+    commonName = 'Alfred Ang',
+    organization = 'Tertiary Infotech Pte Ltd',
+    organizationalUnit = '201200696W',
     country = 'SG',
-    days = '3650',
+    state = 'Singapore',
+    locality = 'Singapore',
+    emailAddress = 'angch@tertiaryinfotech.com',
+    days = '36500',
     keySize = '4096',
   } = req.body;
 
   // Validate inputs — only allow safe characters
-  const safePattern = /^[a-zA-Z0-9 ._\-]+$/;
-  for (const [field, value] of Object.entries({ commonName, organization, country })) {
+  const safePattern = /^[a-zA-Z0-9 ._\-@]+$/;
+  for (const [field, value] of Object.entries({ commonName, organization, organizationalUnit, country, state, locality, emailAddress })) {
     if (!safePattern.test(value)) {
       return res.status(400).json({ error: `Invalid characters in ${field}` });
     }
@@ -2529,61 +2534,113 @@ router.post('/tools/generate-cert', (req, res) => {
     return res.status(400).json({ error: 'days and keySize must be numeric' });
   }
 
-  let tmpDir;
   try {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ssg-cert-'));
-    const certPath = path.join(tmpDir, 'cert.pem');
-    const keyPath = path.join(tmpDir, 'key.pem');
+    const daysValue = parseInt(days, 10);
+    const keySizeValue = parseInt(keySize, 10);
 
-    const subject = `/C=${country}/O=${organization}/CN=${commonName}`;
-    const cmd = `openssl req -x509 -newkey rsa:${keySize} -keyout "${keyPath}" -out "${certPath}" -days ${days} -nodes -subj "${subject}"`;
-
-    execSync(cmd, { stdio: 'pipe', timeout: 30000 });
-
-    const certPem = fs.readFileSync(certPath, 'utf8');
-    const keyPem = fs.readFileSync(keyPath, 'utf8');
-
+    // Generate key pair
+    console.log(`Generating ${keySizeValue}-bit RSA key pair...`);
+    const keys = forge.pki.rsa.generateKeyPair(keySizeValue);
+    
+    // Create certificate
+    const cert = forge.pki.createCertificate();
+    cert.publicKey = keys.publicKey;
+    cert.serialNumber = '01' + Math.floor(Math.random() * 1000000000000000).toString(16);
+    
+    // Set validity period
+    const notBefore = new Date();
+    const notAfter = new Date();
+    notAfter.setDate(notAfter.getDate() + daysValue);
+    
+    cert.validity.notBefore = notBefore;
+    cert.validity.notAfter = notAfter;
+    
+    console.log(`Certificate validity: ${daysValue} days (${Math.round(daysValue/365)} years)`);
+    console.log(`Not Before: ${notBefore.toISOString()}`);
+    console.log(`Not After: ${notAfter.toISOString()}`);
+    
+    // Set subject attributes
+    const attrs = [
+      { shortName: 'C', value: country },
+      { shortName: 'ST', value: state },
+      { shortName: 'L', value: locality },
+      { shortName: 'O', value: organization },
+      { shortName: 'OU', value: organizationalUnit },
+      { shortName: 'CN', value: commonName },
+      { name: 'emailAddress', value: emailAddress }
+    ];
+    
+    cert.setSubject(attrs);
+    cert.setIssuer(attrs); // Self-signed
+    
+    // Add extensions
+    cert.setExtensions([
+      {
+        name: 'basicConstraints',
+        cA: true
+      },
+      {
+        name: 'keyUsage',
+        keyCertSign: true,
+        digitalSignature: true,
+        nonRepudiation: true,
+        keyEncipherment: true,
+        dataEncipherment: true
+      },
+      {
+        name: 'subjectAltName',
+        altNames: [{
+          type: 6, // URI
+          value: `mailto:${emailAddress}`
+        }]
+      }
+    ]);
+    
+    // Sign certificate with private key
+    cert.sign(keys.privateKey, forge.md.sha256.create());
+    
+    // Convert to PEM format
+    const certPem = forge.pki.certificateToPem(cert);
+    const keyPem = forge.pki.privateKeyToPem(keys.privateKey);
+    
+    const subject = `/C=${country}/ST=${state}/L=${locality}/O=${organization}/OU=${organizationalUnit}/CN=${commonName}`;
+    
+    console.log('Certificate generated successfully');
+    
     res.json({
       cert: certPem,
       key: keyPem,
-      command: `openssl req -x509 -newkey rsa:${keySize} -keyout key.pem -out cert.pem -days ${days} -nodes -subj "${subject}"`,
+      command: `Generated using Node.js node-forge library with: keySize=${keySizeValue}, days=${daysValue} (~${Math.round(daysValue/365)} years), subject="${subject}", emailAddress=${emailAddress}`,
     });
   } catch (err) {
     console.error('Certificate generation error:', err.message);
     res.status(500).json({
       error: 'Failed to generate certificate',
-      details: err.stderr ? err.stderr.toString() : err.message,
+      details: err.message,
     });
-  } finally {
-    // Clean up temp files
-    if (tmpDir) {
-      try { fs.rmSync(tmpDir, { recursive: true }); } catch {}
-    }
   }
 });
 
 // POST /api/tools/generate-keypair — Generate RSA key pair and extract public key
-router.post('/tools/generate-keypair', (req, res) => {
+router.post('/tools/generate-keypair', async (req, res) => {
   const { keySize = '2048' } = req.body;
 
   if (!/^\d+$/.test(String(keySize))) {
     return res.status(400).json({ error: 'keySize must be numeric' });
   }
 
-  let tmpDir;
   try {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ssg-keypair-'));
-    const keyPath = path.join(tmpDir, 'key.pem');
-    const pubPath = path.join(tmpDir, 'public.pem');
+    const keySizeValue = parseInt(keySize, 10);
+    console.log(`Generating ${keySizeValue}-bit RSA key pair for digital signature...`);
 
-    // Generate RSA private key
-    execSync(`openssl genrsa -out "${keyPath}" ${keySize}`, { stdio: 'pipe', timeout: 30000 });
+    // Generate RSA key pair using node-forge
+    const keypair = forge.pki.rsa.generateKeyPair({ bits: keySizeValue, e: 0x10001 });
 
-    // Extract public key in PEM format
-    execSync(`openssl rsa -in "${keyPath}" -outform PEM -pubout -out "${pubPath}"`, { stdio: 'pipe', timeout: 30000 });
+    // Convert private key to PEM format
+    const privateKey = forge.pki.privateKeyToPem(keypair.privateKey);
 
-    const privateKey = fs.readFileSync(keyPath, 'utf8');
-    const publicKeyPem = fs.readFileSync(pubPath, 'utf8');
+    // Convert public key to PEM format
+    const publicKeyPem = forge.pki.publicKeyToPem(keypair.publicKey);
 
     // Strip PEM header/footer and newlines to get raw base64
     const publicKeyStripped = publicKeyPem
@@ -2591,6 +2648,8 @@ router.post('/tools/generate-keypair', (req, res) => {
       .replace(/-----END PUBLIC KEY-----/, '')
       .replace(/\r?\n/g, '')
       .trim();
+
+    console.log('Key pair generated successfully');
 
     res.json({
       privateKey,
@@ -2605,12 +2664,8 @@ router.post('/tools/generate-keypair', (req, res) => {
     console.error('Key pair generation error:', err.message);
     res.status(500).json({
       error: 'Failed to generate key pair',
-      details: err.stderr ? err.stderr.toString() : err.message,
+      details: err.message,
     });
-  } finally {
-    if (tmpDir) {
-      try { fs.rmSync(tmpDir, { recursive: true }); } catch {}
-    }
   }
 });
 
@@ -2623,8 +2678,16 @@ router.post('/tools/generate-encryption-key', (req, res) => {
   }
 
   try {
-    const output = execSync(`openssl rand -base64 ${bytes}`, { stdio: 'pipe', timeout: 10000 });
-    const key = output.toString().trim();
+    const bytesValue = parseInt(bytes, 10);
+    console.log(`Generating ${bytesValue}-byte random encryption key...`);
+
+    // Generate random bytes using node-forge
+    const randomBytes = forge.random.getBytesSync(bytesValue);
+    
+    // Convert to base64
+    const key = forge.util.encode64(randomBytes);
+
+    console.log('Encryption key generated successfully');
 
     res.json({
       key,
@@ -2634,7 +2697,37 @@ router.post('/tools/generate-encryption-key', (req, res) => {
     console.error('Encryption key generation error:', err.message);
     res.status(500).json({
       error: 'Failed to generate encryption key',
-      details: err.stderr ? err.stderr.toString() : err.message,
+      details: err.message,
+    });
+  }
+});
+
+// POST /api/tools/sign-data — Sign data with RSA private key
+router.post('/tools/sign-data', (req, res) => {
+  const { privateKey, data } = req.body;
+
+  if (!privateKey || !data) {
+    return res.status(400).json({ error: 'privateKey and data are required' });
+  }
+
+  try {
+    // Create signature using RSA-SHA256
+    const sign = crypto.createSign('RSA-SHA256');
+    sign.update(data);
+    sign.end();
+    
+    const signature = sign.sign(privateKey, 'base64');
+
+    res.json({
+      signature,
+      algorithm: 'RSA-SHA256',
+      encoding: 'base64',
+    });
+  } catch (err) {
+    console.error('Data signing error:', err.message);
+    res.status(500).json({
+      error: 'Failed to sign data',
+      details: err.message,
     });
   }
 });

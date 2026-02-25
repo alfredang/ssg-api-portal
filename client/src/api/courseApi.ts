@@ -479,7 +479,17 @@ export async function getSkillsFrameworkSectorProfile(sectorId: string) {
 
 // Tools
 
-export async function generateCertificate(body: { commonName: string; organization: string; country: string; days: string; keySize: string }) {
+export async function generateCertificate(body: { 
+  commonName: string; 
+  organization: string; 
+  organizationalUnit: string;
+  country: string; 
+  state: string;
+  locality: string;
+  emailAddress: string;
+  days: string; 
+  keySize: string 
+}) {
   const response = await apiClient.post<{ cert: string; key: string; command: string }>('/tools/generate-cert', body);
   return response.data;
 }
@@ -491,5 +501,10 @@ export async function generateKeypair(body: { keySize: string }) {
 
 export async function generateEncryptionKey(body: { bytes: string }) {
   const response = await apiClient.post<{ key: string; command: string }>('/tools/generate-encryption-key', body);
+  return response.data;
+}
+
+export async function signData(body: { privateKey: string; data: string }) {
+  const response = await apiClient.post<{ signature: string; algorithm: string; encoding: string }>('/tools/sign-data', body);
   return response.data;
 }

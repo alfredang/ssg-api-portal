@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useApi } from './hooks/useApi';
-import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications, postSkillExtract, postSkillSearch, getSkillsFrameworkJobs, getSkillsFrameworkSkills, getSkillsFrameworkGscCodes, getSkillsFrameworkTscCodes, getSkillsFrameworkTscCodesDetails, getSkillsFrameworkCcsDetails, getSkillsFrameworkTscDetails, getSkillsFrameworkJobRoles, getSkillsFrameworkJobRoleProfile, getSkillsFrameworkOccupations, getSkillsFrameworkJobRoleCodes, generateCertificate, generateKeypair, generateEncryptionKey, getTrainingProviderCourses } from './api/courseApi';
+import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications, postSkillExtract, postSkillSearch, getSkillsFrameworkJobs, getSkillsFrameworkSkills, getSkillsFrameworkGscCodes, getSkillsFrameworkTscCodes, getSkillsFrameworkTscCodesDetails, getSkillsFrameworkCcsDetails, getSkillsFrameworkTscDetails, getSkillsFrameworkJobRoles, getSkillsFrameworkJobRoleProfile, getSkillsFrameworkOccupations, getSkillsFrameworkJobRoleCodes, generateCertificate, generateKeypair, generateEncryptionKey, signData, getTrainingProviderCourses } from './api/courseApi';
 import SearchForm from './components/SearchForm';
 import CourseSearchForm from './components/CourseSearchForm';
 import CourseOverview from './components/CourseOverview';
@@ -140,7 +140,7 @@ const NAV_ITEMS: NavCategory[] = [
     label: 'Tools',
     children: [
       { id: 'tools-generate-cert', label: 'Generate Certificate' },
-      { id: 'tools-generate-keypair', label: 'Generate Digital Signature' },
+      { id: 'tools-generate-keypair', label: 'Generate Digital Signature ' },
       { id: 'tools-encryption-key', label: 'Generate Encryption Key' },
     ],
   },
@@ -355,6 +355,12 @@ function App() {
     localStorage.setItem('ssg-api-defaults', JSON.stringify(next));
   };
   const [keyword, setKeyword] = useState('');
+  
+  // Controlled state for tool form inputs to prevent browser autofill interference
+  const [certKeySize, setCertKeySize] = useState('4096');
+  const [keypairKeySize, setKeypairKeySize] = useState('2048');
+  const [encryptionBytes, setEncryptionBytes] = useState('32');
+  
   const lookupApi = useApi<CourseResponse>();
   const searchApi = useApi<CourseSearchResponse>();
   const qualityApi = useApi<CourseQualityResponse>();
@@ -615,7 +621,17 @@ function App() {
     await sfwJobRoleCodesApi.execute(() => getSkillsFrameworkJobRoleCodes(occupationId));
   };
 
-  const handleGenerateCert = async (body: { commonName: string; organization: string; country: string; days: string; keySize: string }) => {
+  const handleGenerateCert = async (body: { 
+    commonName: string; 
+    organization: string; 
+    organizationalUnit: string;
+    country: string; 
+    state: string;
+    locality: string;
+    emailAddress: string;
+    days: string; 
+    keySize: string 
+  }) => {
     await generateCertApi.execute(() => generateCertificate(body));
   };
 
@@ -4179,7 +4195,7 @@ function App() {
         <>
           <h2 className="page-title">Generate Certificate</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            Generate a self-signed X.509 certificate using OpenSSL. Output files are in <code>.pem</code> format. <AuthBadge method="none" />
+            Generate a self-signed X.509 certificate. Output files are in <code>.pem</code> format. <AuthBadge method="none" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -4187,30 +4203,50 @@ function App() {
             handleGenerateCert({
               commonName: fd.get('commonName') as string,
               organization: fd.get('organization') as string,
+              organizationalUnit: fd.get('organizationalUnit') as string,
               country: fd.get('country') as string,
+              state: fd.get('state') as string,
+              locality: fd.get('locality') as string,
+              emailAddress: fd.get('emailAddress') as string,
               days: fd.get('days') as string,
               keySize: fd.get('keySize') as string,
             });
           }}>
             <div className="form-group">
               <label htmlFor="certCN">Common Name (CN)</label>
-              <input id="certCN" name="commonName" type="text" autoComplete="one-time-code" defaultValue="api.ssg-wsg.sg" disabled={generateCertApi.loading} />
+              <input id="certCN" name="commonName" type="text" autoComplete="new-password" defaultValue="Alfred Ang" disabled={generateCertApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="certO">Organization (O)</label>
-              <input id="certO" name="organization" type="text" autoComplete="one-time-code" defaultValue="Tertiary Infotech Academy Pte Ltd" disabled={generateCertApi.loading} />
+              <input id="certO" name="organization" type="text" autoComplete="new-password" defaultValue="Tertiary Infotech Pte Ltd" disabled={generateCertApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="certOU">Organizational Unit (OU)</label>
+              <input id="certOU" name="organizationalUnit" type="text" autoComplete="new-password" defaultValue="201200696W" disabled={generateCertApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="certC">Country (C)</label>
-              <input id="certC" name="country" type="text" autoComplete="one-time-code" defaultValue="SG" disabled={generateCertApi.loading} />
+              <input id="certC" name="country" type="text" autoComplete="new-password" defaultValue="SG" disabled={generateCertApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="certST">State/Province (ST)</label>
+              <input id="certST" name="state" type="text" autoComplete="new-password" defaultValue="Singapore" disabled={generateCertApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="certL">Locality/City (L)</label>
+              <input id="certL" name="locality" type="text" autoComplete="new-password" defaultValue="Singapore" disabled={generateCertApi.loading} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="certEmail">Email Address</label>
+              <input id="certEmail" name="emailAddress" type="email" autoComplete="new-password" defaultValue="angch@tertiaryinfotech.com" disabled={generateCertApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="certDays">Validity (days)</label>
-              <input id="certDays" name="days" type="text" autoComplete="one-time-code" defaultValue="3650" disabled={generateCertApi.loading} />
+              <input id="certDays" name="days" type="text" autoComplete="new-password" defaultValue="36500" disabled={generateCertApi.loading} />
             </div>
             <div className="form-group">
               <label htmlFor="certKeySize">Key Size (bits)</label>
-              <input id="certKeySize" name="keySize" type="text" autoComplete="one-time-code" defaultValue="4096" disabled={generateCertApi.loading} />
+              <input id="certKeySize" name="keySize" type="text" autoComplete="new-password" value={certKeySize} onChange={(e) => setCertKeySize(e.target.value)} disabled={generateCertApi.loading} />
             </div>
             <div style={{ marginTop: 12 }}>
               <button type="submit" disabled={generateCertApi.loading}>
@@ -4276,7 +4312,7 @@ function App() {
           }}>
             <div className="form-group">
               <label htmlFor="kpKeySize">Key Size (bits)</label>
-              <input id="kpKeySize" name="keySize" type="text" autoComplete="one-time-code" defaultValue="2048" disabled={generateKeypairApi.loading} />
+              <input id="kpKeySize" name="keySize" type="text" autoComplete="new-password" value={keypairKeySize} onChange={(e) => setKeypairKeySize(e.target.value)} disabled={generateKeypairApi.loading} />
             </div>
             <div style={{ marginTop: 12 }}>
               <button type="submit" disabled={generateKeypairApi.loading}>
@@ -4348,7 +4384,7 @@ function App() {
           }}>
             <div className="form-group">
               <label htmlFor="ekBytes">Key Size (bytes)</label>
-              <input id="ekBytes" name="bytes" type="text" autoComplete="one-time-code" defaultValue="32" disabled={encryptionKeyApi.loading} />
+              <input id="ekBytes" name="bytes" type="text" autoComplete="new-password" value={encryptionBytes} onChange={(e) => setEncryptionBytes(e.target.value)} disabled={encryptionKeyApi.loading} />
             </div>
             <div style={{ marginTop: 12 }}>
               <button type="submit" disabled={encryptionKeyApi.loading}>
