@@ -342,7 +342,7 @@ function App() {
         setActiveCertId(list[0].id);
         localStorage.setItem('ssg-active-cert', list[0].id);
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   const handleCertChange = (id: string) => {
@@ -355,12 +355,12 @@ function App() {
     localStorage.setItem('ssg-api-defaults', JSON.stringify(next));
   };
   const [keyword, setKeyword] = useState('');
-  
+
   // Controlled state for tool form inputs to prevent browser autofill interference
   const [certKeySize, setCertKeySize] = useState('4096');
   const [keypairKeySize, setKeypairKeySize] = useState('2048');
   const [encryptionBytes, setEncryptionBytes] = useState('32');
-  
+
   const lookupApi = useApi<CourseResponse>();
   const searchApi = useApi<CourseSearchResponse>();
   const qualityApi = useApi<CourseQualityResponse>();
@@ -533,8 +533,8 @@ function App() {
     await enrolSearchApi.execute(() => searchEnrolments(body));
   };
 
-  const handleEnrolView = async (refNo: string) => {
-    await enrolViewApi.execute(() => viewEnrolment(refNo));
+  const handleEnrolView = async (refNo: string, uen: string) => {
+    await enrolViewApi.execute(() => viewEnrolment(refNo, uen));
   };
 
   const handleEnrolFee = async (refNo: string, body: Record<string, unknown>) => {
@@ -621,16 +621,16 @@ function App() {
     await sfwJobRoleCodesApi.execute(() => getSkillsFrameworkJobRoleCodes(occupationId));
   };
 
-  const handleGenerateCert = async (body: { 
-    commonName: string; 
-    organization: string; 
+  const handleGenerateCert = async (body: {
+    commonName: string;
+    organization: string;
     organizationalUnit: string;
-    country: string; 
+    country: string;
     state: string;
     locality: string;
     emailAddress: string;
-    days: string; 
-    keySize: string 
+    days: string;
+    keySize: string
   }) => {
     await generateCertApi.execute(() => generateCertificate(body));
   };
@@ -716,7 +716,7 @@ function App() {
     const kw = keyword.toLowerCase();
     return rawCourses.filter(
       (c) => (c.title && c.title.toLowerCase().includes(kw)) ||
-             (c.description && c.description.toLowerCase().includes(kw))
+        (c.description && c.description.toLowerCase().includes(kw))
     );
   }, [rawCourses, keyword]);
 
@@ -922,14 +922,35 @@ function App() {
 
           {tpCoursesApi.error && <div className="error-alert">{tpCoursesApi.error}</div>}
           {tpCoursesApi.loading && <div className="loading">Loading courses...</div>}
-          {tpCoursesApi.data && (
+          {tpCoursesApi.data?.data?.courses && (
             <div className="course-result" style={{ marginTop: 16 }}>
-              <details className="json-collapsible">
-                <summary>JSON Response</summary>
-                <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13, background: '#f5f5f5', padding: 16, maxHeight: 600, overflow: 'auto' }}>
-                  {JSON.stringify(tpCoursesApi.data, null, 2)}
-                </pre>
-              </details>
+              <div style={{ marginBottom: 12, color: '#666', fontSize: 14 }}>
+                Found {(tpCoursesApi.data as any).meta?.total ?? (tpCoursesApi.data.data.courses as any[]).length} course(s)
+              </div>
+              <table className="sessions-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Reference No</th>
+                    <th>Title</th>
+                    <th>Area of Training</th>
+                    <th>Category</th>
+                    <th>Total Hours</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(tpCoursesApi.data.data.courses as any[]).map((course: any, idx: number) => (
+                    <tr key={course.referenceNumber || idx}>
+                      <td>{idx + 1}</td>
+                      <td>{course.referenceNumber || '-'}</td>
+                      <td>{course.title || '-'}</td>
+                      <td>{course.areaOfTrainings?.[0]?.description || '-'}</td>
+                      <td>{course.category?.description || '-'}</td>
+                      <td>{course.totalTrainingDurationHours ?? '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </>
@@ -3195,31 +3216,33 @@ function App() {
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
+            // SSG docs schema: { search: { filter: { course, trainee, trainingPartner, enrolment } } }
             handleEnrolSearch({
-              meta: { lastUpdateDateFrom: fd.get('dateFrom') as string, lastUpdateDateTo: fd.get('dateTo') as string },
-              sortBy: { field: 'updatedOn', order: 'asc' },
-              enrolment: {
-                status: fd.get('status') as string,
-                course: { run: { id: fd.get('runId') as string }, referenceNumber: fd.get('courseRef') as string },
-                trainee: { id: fd.get('traineeId') as string, idType: { type: fd.get('idType') as string }, employer: { uen: fd.get('employerUen') as string }, enrolmentDate: fd.get('enrolDate') as string, sponsorshipType: fd.get('sponsorship') as string, fees: { feeCollectionStatus: fd.get('feeStatus') as string } },
-                trainingPartner: { uen: fd.get('tpUen') as string, code: fd.get('tpCode') as string },
+              search: {
+                filter: {
+                  course: { run: { id: fd.get('runId') as string }, referenceNumber: fd.get('courseRef') as string },
+                  trainee: { id: fd.get('traineeId') as string, idType: { type: fd.get('idType') as string } },
+                  trainingPartner: { uen: fd.get('tpUen') as string, code: fd.get('tpCode') as string },
+                  enrolment: {
+                    referenceNumber: fd.get('enrolRef') as string,
+                    status: fd.get('status') as string,
+                    createdDate: { from: fd.get('dateFrom') as string, to: fd.get('dateTo') as string },
+                  },
+                },
               },
               parameters: { page: Number(fd.get('page')) || 0, pageSize: Number(fd.get('pageSize')) || 20 },
             });
           }}>
-            <div className="form-group"><label>Course Run ID</label><input name="runId" type="text" defaultValue={d('runId')} disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Course Reference Number</label><input name="courseRef" type="text" defaultValue={d('courseRefNo')} disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Trainee ID</label><input name="traineeId" type="text" defaultValue={d('traineeId')} disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>ID Type</label><input name="idType" type="text" defaultValue="NRIC" disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Status</label><input name="status" type="text" defaultValue="Confirmed" disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Employer UEN</label><input name="employerUen" type="text" defaultValue={d('uen')} disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Sponsorship Type</label><input name="sponsorship" type="text" defaultValue="EMPLOYER" disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Fee Collection Status</label><input name="feeStatus" type="text" defaultValue="Full Payment" disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Enrolment Date</label><input name="enrolDate" type="text" defaultValue="2020-05-15" disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Training Partner UEN</label><input name="tpUen" type="text" defaultValue={d('uen')} disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Training Partner Code</label><input name="tpCode" type="text" defaultValue="201200696W-01" disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Date From</label><input name="dateFrom" type="text" defaultValue="2020-01-01" disabled={enrolSearchApi.loading} /></div>
-            <div className="form-group"><label>Date To</label><input name="dateTo" type="text" defaultValue="2020-02-01" disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Course Run ID (filter)</label><input name="runId" type="text" defaultValue={d('runId')} disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Course Reference Number (filter)</label><input name="courseRef" type="text" defaultValue={d('courseRefNo')} disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Trainee ID (filter)</label><input name="traineeId" type="text" defaultValue={d('traineeId')} disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>ID Type (filter)</label><input name="idType" type="text" defaultValue="NRIC" disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Enrolment Reference Number (filter)</label><input name="enrolRef" type="text" defaultValue={d('enrolRef')} disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Enrolment Status (filter)</label><input name="status" type="text" defaultValue="Confirmed" disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Training Partner UEN (filter)</label><input name="tpUen" type="text" defaultValue={d('uen')} disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Training Partner Code (filter)</label><input name="tpCode" type="text" defaultValue="201200696W-01" disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Created Date From (filter)</label><input name="dateFrom" type="text" defaultValue="2020-01-01" disabled={enrolSearchApi.loading} /></div>
+            <div className="form-group"><label>Created Date To (filter)</label><input name="dateTo" type="text" defaultValue="2020-12-31" disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>Page</label><input name="page" type="number" defaultValue="0" disabled={enrolSearchApi.loading} /></div>
             <div className="form-group"><label>Page Size</label><input name="pageSize" type="number" defaultValue="20" disabled={enrolSearchApi.loading} /></div>
             <div style={{ marginTop: 12 }}><button type="submit" disabled={enrolSearchApi.loading}>{enrolSearchApi.loading ? 'Searching...' : 'Search Enrolments'}</button></div>
@@ -3245,9 +3268,10 @@ function App() {
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
-            handleEnrolView(fd.get('refNo') as string);
+            handleEnrolView(fd.get('refNo') as string, fd.get('uen') as string);
           }}>
             <div className="form-group"><label>Enrolment Reference Number</label><input name="refNo" type="text" defaultValue="ENR-2512-167877" disabled={enrolViewApi.loading} /></div>
+            <div className="form-group"><label>UEN (required header)</label><input name="uen" type="text" defaultValue={d('uen')} disabled={enrolViewApi.loading} /></div>
             <div style={{ marginTop: 12 }}><button type="submit" disabled={enrolViewApi.loading}>{enrolViewApi.loading ? 'Loading...' : 'View Enrolment'}</button></div>
           </form>
           {enrolViewApi.error && <div className="error-alert">{enrolViewApi.error}</div>}

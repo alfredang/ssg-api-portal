@@ -31,30 +31,89 @@ const certStore = new AsyncLocalStorage();
 // Wrap multiline PEM values in double quotes in .env for dotenv to parse them.
 // The active cert is selected per-request via the x-cert-id header.
 // ─────────────────────────────────────────────────────────────────
+// Validate that a PEM string is structurally valid (not a placeholder stub).
+// Checks for correct header/footer and that the base64 body is long enough
+// to be a real certificate or key (stubs like "MIIG..." are < 100 chars).
+function isValidPem(pem, type) {
+  if (!pem || typeof pem !== 'string') return false;
+  const header = `-----BEGIN ${type}-----`;
+  const footer = `-----END ${type}-----`;
+  if (!pem.includes(header) || !pem.includes(footer)) return false;
+  // Extract the base64 body between the header and footer
+  const body = pem
+    .split(header)[1]
+    .split(footer)[0]
+    .replace(/[\r\n\s]/g, '');
+  // Real certs/keys have hundreds of base64 chars; stubs have < 20
+  return body.length > 100;
+}
+
 const certsMap = new Map();
 for (let i = 1; i <= 3; i++) {
   const name = process.env[`CERT_${i}_NAME`];
   const certPem = process.env[`CERT_${i}_CERT`];
   const keyPem = process.env[`CERT_${i}_KEY`];
-  
+
   // Debug logging to identify missing variables
   console.log(`\n--- Checking certificate ${i} ---`);
   console.log(`CERT_${i}_NAME:`, name ? `"${name}"` : '❌ MISSING');
   console.log(`CERT_${i}_CERT:`, certPem ? `✓ Present (${certPem.length} chars)` : '❌ MISSING');
   console.log(`CERT_${i}_KEY:`, keyPem ? `✓ Present (${keyPem.length} chars)` : '❌ MISSING');
-  
+
   if (!name || !certPem || !keyPem) {
     console.log(`⚠️  Certificate ${i} skipped - missing required variables`);
     continue;
   }
 
+  // Validate PEM format — reject placeholder stubs before they cause TLS errors
+  const certValid = isValidPem(certPem, 'CERTIFICATE');
+  const keyValid = isValidPem(keyPem, 'PRIVATE KEY') || isValidPem(keyPem, 'RSA PRIVATE KEY');
+  if (!certValid || !keyValid) {
+    console.warn(`⚠️  Certificate ${i} (${name}) skipped — PEM values appear to be placeholder stubs.`);
+    console.warn(`    CERT_${i}_CERT valid: ${certValid}, CERT_${i}_KEY valid: ${keyValid}`);
+    console.warn(`    Replace with real PEM certificate and private key data in .env`);
+    continue;
+  }
+
   const encKey = process.env[`CERT_${i}_ENCRYPTION_KEY`];
+  const privateKey = process.env[`CERT_${i}_PRIVATE_KEY`] || null;
+  console.log(`CERT_${i}_PRIVATE_KEY:`, privateKey ? `✓ Present (${privateKey.length} chars)` : '⚠️  Not set (optional — needed for digital signatures)');
+
+  // Validate the encryption key before storing it. AES-256-CBC requires exactly 32 bytes.
+  // Placeholder values like "your-32-char-encryption-key-here" decode to the wrong length and
+  // cause Node.js crypto to throw "Invalid key length" at request time.
+  let encryptionKeyBuf = null;
+  if (encKey) {
+    const PLACEHOLDER_PATTERNS = ['your-32-char', 'your-encryption-key', 'placeholder'];
+    const isPlaceholder = PLACEHOLDER_PATTERNS.some(p => encKey.toLowerCase().includes(p));
+    if (isPlaceholder) {
+      console.warn(`⚠️  CERT_${i}_ENCRYPTION_KEY appears to be a placeholder. AES encryption will be disabled for cert ${i}.`);
+      console.warn(`   Set a real 32-byte base64-encoded key: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`);
+    } else {
+      try {
+        const decoded = Buffer.from(encKey, 'base64');
+        if (decoded.length !== 32) {
+          console.warn(`⚠️  CERT_${i}_ENCRYPTION_KEY decodes to ${decoded.length} bytes — AES-256 requires exactly 32 bytes. AES encryption disabled for cert ${i}.`);
+          console.warn(`   Generate a valid key: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`);
+        } else {
+          encryptionKeyBuf = decoded;
+          console.log(`CERT_${i}_ENCRYPTION_KEY: ✓ Valid (32 bytes)`);
+        }
+      } catch (e) {
+        console.warn(`⚠️  CERT_${i}_ENCRYPTION_KEY is not valid base64. AES encryption disabled for cert ${i}: ${e.message}`);
+      }
+    }
+  } else {
+    console.log(`CERT_${i}_ENCRYPTION_KEY: not set (AES encryption disabled for cert ${i})`);
+  }
+
   certsMap.set(String(i), {
     id: String(i),
     name,
     cert: Buffer.from(certPem),
     key: Buffer.from(keyPem),
-    encryptionKey: encKey ? Buffer.from(encKey, 'base64') : null,
+    encryptionKey: encryptionKeyBuf,
+    privateKey,
   });
   console.log(`✅ Loaded certificate ${i}: ${name}`);
 }
@@ -67,16 +126,16 @@ const certApiBase = process.env.SSG_CERT_API_BASE_URL || 'https://api.ssg-wsg.sg
 // Get the active cert for the current request (via AsyncLocalStorage)
 function getActiveCert() {
   const certId = certStore.getStore() || '1';
-  
+
   console.log(`getActiveCert: certId="${certId}"`);
   console.log('Available cert IDs:', Array.from(certsMap.keys()));
-  
+
   // OAuth doesn't use certificates
   if (certId === 'oauth') {
     console.log('OAuth mode selected - no certificate needed');
     return null;
   }
-  
+
   const cert = certsMap.get(certId);
   if (!cert) {
     console.error(`Certificate ${certId} not found in certsMap`);
@@ -89,7 +148,7 @@ function getActiveCert() {
     }
     return null;
   }
-  
+
   console.log(`Using certificate: ${cert.name} (ID: ${cert.id})`);
   return cert;
 }
@@ -104,15 +163,15 @@ router.use((req, res, next) => {
 // GET /api/certs endpoint
 router.get('/certs', (req, res) => {
   const certs = [];
-  
+
   // Add loaded certificates from certsMap
   for (const [id, certData] of certsMap.entries()) {
     certs.push({ id, name: certData.name });
   }
-  
+
   // Add OAuth option
   certs.push({ id: 'oauth', name: 'TMS 2 (OAuth)' });
-  
+
   res.json(certs);
 });
 
@@ -120,7 +179,8 @@ router.get('/certs', (req, res) => {
 function aesEncrypt(plaintext) {
   const active = getActiveCert();
   if (!active || !active.encryptionKey) {
-    throw new Error('Encryption key not configured for the active certificate. OAuth mode does not support encryption.');
+    const certId = certStore.getStore() || '1';
+    throw new Error(`AES encryption key not configured for certificate ${certId}. Set CERT_${certId}_ENCRYPTION_KEY to a 32-byte base64-encoded key in .env. Generate one with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`);
   }
   const iv = Buffer.from('SSGAPIInitVector', 'utf8');
   const cipher = crypto.createCipheriv('aes-256-cbc', active.encryptionKey, iv);
@@ -132,7 +192,8 @@ function aesEncrypt(plaintext) {
 function aesDecrypt(ciphertext) {
   const active = getActiveCert();
   if (!active || !active.encryptionKey) {
-    throw new Error('Decryption key not configured for the active certificate. OAuth mode does not support decryption.');
+    const certId = certStore.getStore() || '1';
+    throw new Error(`AES decryption key not configured for certificate ${certId}. Set CERT_${certId}_ENCRYPTION_KEY to a 32-byte base64-encoded key in .env. Generate one with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`);
   }
   const iv = Buffer.from('SSGAPIInitVector', 'utf8');
   const decipher = crypto.createDecipheriv('aes-256-cbc', active.encryptionKey, iv);
@@ -141,10 +202,45 @@ function aesDecrypt(ciphertext) {
   return decrypted;
 }
 
-// mTLS GET helper — returns { status, body } or throws on network error
+// RSA-SHA256 digital signature for SSG API requests requiring X-Api-Signature header.
+// Requires CERT_X_PRIVATE_KEY to be set in .env. Throws if no private key configured.
+function createSignature(payload) {
+  const active = getActiveCert();
+  if (!active || !active.privateKey) {
+    throw new Error('Private key not configured for the active certificate. Set CERT_1_PRIVATE_KEY in .env');
+  }
+  const sign = crypto.createSign('RSA-SHA256');
+  sign.update(payload);
+  sign.end();
+  return sign.sign(active.privateKey, 'base64');
+}
+
+// Recursively walk a JSON object/array and decrypt any AES-encrypted string values.
+// SSG often returns encrypted strings even inside error JSON objects — this makes them readable.
+// A string is considered possibly encrypted if it looks like valid base64 and is >20 chars.
+function decryptJsonFields(obj) {
+  if (typeof obj === 'string') {
+    if (obj.length > 20 && /^[A-Za-z0-9+/=]+$/.test(obj.trim())) {
+      try { return aesDecrypt(obj.trim()); } catch { /* not encrypted or wrong key — return as-is */ }
+    }
+    return obj;
+  }
+  if (Array.isArray(obj)) return obj.map(decryptJsonFields);
+  if (obj && typeof obj === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(obj)) out[k] = decryptJsonFields(v);
+    return out;
+  }
+  return obj;
+}
+
+// mTLS GET helper — returns { status, body } or throws on network error.
+// When no certificate is configured, resolves with a synthetic 503 so the
+// calling route's existing `status < 200 || status >= 300` check fires and
+// the OAuth fallback path is taken automatically.
 function certApiGet(apiPath, queryParams = {}, { apiVersion = 'v1.2', headers: extraHeaders = {} } = {}) {
   const active = getActiveCert();
-  if (!active) throw new Error('No certificate configured');
+  if (!active) { console.log('certApiGet: no cert loaded — skipping cert call, will fall back to OAuth'); return Promise.resolve({ status: 503, body: '' }); }
   const url = new URL(apiPath, certApiBase);
   for (const [k, v] of Object.entries(queryParams)) {
     if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
@@ -180,7 +276,7 @@ function certApiGet(apiPath, queryParams = {}, { apiVersion = 'v1.2', headers: e
 
 // OAuth GET helper for public APIs (public-api.ssg-wsg.sg)
 async function oauthApiGet(apiPath, queryParams = {}, { apiVersion = 'v3.0' } = {}) {
-  const token = await getAccessToken();
+  const token = await getAccessToken(getActiveCert());
   const baseUrl = process.env.SSG_API_BASE_URL || 'https://public-api.ssg-wsg.sg';
 
   const url = new URL(apiPath, baseUrl);
@@ -208,7 +304,7 @@ async function oauthApiGet(apiPath, queryParams = {}, { apiVersion = 'v3.0' } = 
 
 // OAuth helper for public APIs (public-api.ssg-wsg.sg)
 async function ssgApiGet(endpoint, queryParams = {}, { apiVersion = 'v1.2', baseUrl: baseUrlOverride } = {}) {
-  const token = await getAccessToken();
+  const token = await getAccessToken(getActiveCert());
   const baseUrl = baseUrlOverride || process.env.SSG_API_BASE_URL || 'https://public-api.ssg-wsg.sg';
 
   const url = new URL(endpoint, baseUrl);
@@ -241,10 +337,13 @@ async function ssgApiGet(endpoint, queryParams = {}, { apiVersion = 'v1.2', base
   return data;
 }
 
-// mTLS POST helper — returns { status, body } or throws on network error
+// mTLS POST helper — returns { status, body } or throws on network error.
+// When no certificate is configured, resolves with a synthetic 503 so the
+// calling route's existing `status < 200 || status >= 300` check fires and
+// the OAuth fallback path is taken automatically.
 function certApiPost(apiPath, jsonBody, { apiVersion = 'v1.2', headers: extraHeaders = {} } = {}) {
   const active = getActiveCert();
-  if (!active) throw new Error('No certificate configured');
+  if (!active) { console.log('certApiPost: no cert loaded — skipping cert call, will fall back to OAuth'); return Promise.resolve({ status: 503, body: '' }); }
   const url = new URL(apiPath, certApiBase);
   const requestBody = JSON.stringify(jsonBody);
 
@@ -281,7 +380,7 @@ function certApiPost(apiPath, jsonBody, { apiVersion = 'v1.2', headers: extraHea
 
 // OAuth POST helper for public APIs (public-api.ssg-wsg.sg)
 async function ssgApiPost(endpoint, jsonBody, { apiVersion = 'v1.2' } = {}) {
-  const token = await getAccessToken();
+  const token = await getAccessToken(getActiveCert());
   const baseUrl = process.env.SSG_API_BASE_URL || 'https://public-api.ssg-wsg.sg';
 
   const url = new URL(endpoint, baseUrl);
@@ -311,7 +410,9 @@ async function ssgApiPost(endpoint, jsonBody, { apiVersion = 'v1.2' } = {}) {
   return data;
 }
 
-// GET /api/training-providers/:uen/trainers — mTLS Certificate with OAuth fallback
+// GET /api/training-providers/:uen/trainers — mTLS Certificate only (api.ssg-wsg.sg)
+// NOTE: Response may be AES-encrypted if SSG requires it — set CERT_1_ENCRYPTION_KEY in .env.
+// The OAuth public API returns 403 for this endpoint, so no OAuth fallback is used.
 router.get('/training-providers/:uen/trainers', async (req, res) => {
   try {
     const { uen } = req.params;
@@ -328,23 +429,27 @@ router.get('/training-providers/:uen/trainers', async (req, res) => {
     };
     const apiPath = `/trainingProviders/${encodeURIComponent(uen)}/trainers`;
 
-    // Try certificate first
     console.log('Trainers request (cert):', apiPath);
     const result = await certApiGet(apiPath, queryParams, { apiVersion: 'v2.0' });
     console.log('Trainers cert response status:', result.status);
 
+    let parsed;
+    try { parsed = JSON.parse(result.body); } catch { parsed = result.body; }
+
     if (result.status >= 200 && result.status < 300) {
       console.log('Trainers: certificate auth succeeded');
-      let parsed; try { parsed = JSON.parse(result.body); } catch { parsed = result.body; }
-      if (typeof parsed !== 'string') { return res.json(parsed); }
-      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+      // Response may be AES-encrypted — attempt decryption if key is set
+      if (typeof parsed === 'string') {
+        try { parsed = JSON.parse(aesDecrypt(parsed)); } catch { /* return as-is */ }
+      }
+      return res.json(typeof parsed === 'object' ? parsed : { raw: parsed });
     }
 
-    // Certificate failed — fall back to OAuth
-    console.log('Trainers: certificate returned', result.status, '— falling back to OAuth');
-    const data = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v2.0' });
-    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
-    res.json(data);
+    // Return the cert's error directly — OAuth fallback not applicable for this endpoint
+    console.log('Trainers: cert returned', result.status, '— returning SSG error to client');
+    return res.status(result.status).json(
+      typeof parsed === 'object' ? parsed : { error: result.body }
+    );
   } catch (err) {
     console.error('Trainers error:', err.message);
     res.status(err.status || 500).json({
@@ -458,7 +563,7 @@ router.post('/courses/runs/:runId/sessions/attendance/upload', async (req, res) 
     const apiPath = `/courses/runs/${encodeURIComponent(runId)}/sessions/attendance`;
     const url = new URL(apiPath, certApiBase);
     const requestBody = JSON.stringify({ payload: encryptedPayload });
-    
+
     const active = getActiveCert();
     if (!active) throw new Error('No certificate configured');
 
@@ -527,7 +632,8 @@ router.post('/courses/runs/:runId/sessions/attendance/upload', async (req, res) 
   }
 });
 
-// GET /api/courses/runs/:runId/sessions/attendance — mTLS Certificate with OAuth fallback
+// GET /api/courses/runs/:runId/sessions/attendance — mTLS Certificate only (api.ssg-wsg.sg)
+// OAuth public API returns 403 for this endpoint — no OAuth fallback.
 router.get('/courses/runs/:runId/sessions/attendance', async (req, res) => {
   try {
     const { runId } = req.params;
@@ -544,23 +650,30 @@ router.get('/courses/runs/:runId/sessions/attendance', async (req, res) => {
     };
     const apiPath = `/courses/runs/${encodeURIComponent(runId)}/sessions/attendance`;
 
-    // Try certificate first
     console.log('Session attendance request (cert):', apiPath);
     const result = await certApiGet(apiPath, queryParams, { apiVersion: 'v1.5' });
     console.log('Session attendance cert response status:', result.status);
 
+    let parsed;
+    try { parsed = JSON.parse(result.body); } catch { parsed = result.body; }
+
     if (result.status >= 200 && result.status < 300) {
       console.log('Session attendance: certificate auth succeeded');
-      let parsed; try { parsed = JSON.parse(result.body); } catch { parsed = result.body; }
-      if (typeof parsed !== 'string') { return res.json(parsed); }
-      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+      // Response may be AES-encrypted — attempt decryption if it's a string
+      if (typeof parsed === 'string') {
+        try { parsed = JSON.parse(aesDecrypt(parsed.trim())); } catch { /* return as-is */ }
+      }
+      return res.json(typeof parsed === 'object' ? parsed : { raw: parsed });
     }
 
-    // Certificate failed — fall back to OAuth
-    console.log('Session attendance: certificate returned', result.status, '— falling back to OAuth');
-    const data = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.5' });
-    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
-    res.json(data);
+    console.log('Session attendance: cert returned', result.status, '— attempting decrypt then returning SSG error to client');
+    // SSG encrypts error responses too — try to decrypt before returning
+    if (typeof parsed === 'string') {
+      try { parsed = JSON.parse(aesDecrypt(parsed.trim())); } catch { /* return as-is */ }
+    }
+    return res.status(result.status).json(
+      typeof parsed === 'object' ? parsed : { error: result.body }
+    );
   } catch (err) {
     console.error('Session attendance error:', err.message);
     res.status(err.status || 500).json({
@@ -570,7 +683,10 @@ router.get('/courses/runs/:runId/sessions/attendance', async (req, res) => {
   }
 });
 
-// GET /api/courses/runs/:runId/sessions — mTLS Certificate with OAuth fallback
+// GET /api/courses/runs/:runId/sessions — mTLS Certificate only
+// NOTE: This endpoint lives on api.ssg-wsg.sg (cert-based). The OAuth path
+// (public-api.ssg-wsg.sg) returns 403 "Access disallowed" for all versions, so
+// we do NOT fall back to OAuth — we return the cert response directly.
 router.get('/courses/runs/:runId/sessions', async (req, res) => {
   try {
     const { runId } = req.params;
@@ -588,23 +704,31 @@ router.get('/courses/runs/:runId/sessions', async (req, res) => {
     };
     const apiPath = `/courses/runs/${encodeURIComponent(runId)}/sessions`;
 
-    // Try certificate first
     console.log('Course sessions request (cert):', apiPath);
     const result = await certApiGet(apiPath, queryParams, { apiVersion: 'v1.5' });
     console.log('Course sessions cert response status:', result.status);
 
+    let parsed;
+    try { parsed = JSON.parse(result.body); } catch { parsed = result.body; }
+
     if (result.status >= 200 && result.status < 300) {
       console.log('Course sessions: certificate auth succeeded');
-      let parsed; try { parsed = JSON.parse(result.body); } catch { parsed = result.body; }
-      if (typeof parsed !== 'string') { return res.json(parsed); }
-      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+      // Response may be AES-encrypted — try decryption if it's a string
+      if (typeof parsed === 'string') {
+        try { parsed = JSON.parse(aesDecrypt(parsed.trim())); } catch { /* return as-is */ }
+      }
+      return res.json(typeof parsed === 'object' ? parsed : { raw: parsed });
     }
 
-    // Certificate failed — fall back to OAuth
-    console.log('Course sessions: certificate returned', result.status, '— falling back to OAuth');
-    const data = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.5' });
-    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
-    res.json(data);
+    // Return the cert's error response directly — do NOT fall back to OAuth.
+    // SSG encrypts error responses too — try to decrypt before returning.
+    console.log('Course sessions: cert returned', result.status, '— attempting decrypt, then returning SSG error to client');
+    if (typeof parsed === 'string') {
+      try { parsed = JSON.parse(aesDecrypt(parsed.trim())); } catch { /* return as-is */ }
+    }
+    return res.status(result.status).json(
+      typeof parsed === 'object' ? parsed : { error: result.body }
+    );
   } catch (err) {
     console.error('Course sessions error:', err.message);
     res.status(err.status || 500).json({
@@ -637,54 +761,59 @@ router.post('/courses/courseRuns/publish', async (req, res) => {
       if (v !== undefined && v !== null && v !== '') certUrl.searchParams.set(k, v);
     }
     const requestBody = JSON.stringify(body);
-    
+
     const active = getActiveCert();
-    if (!active) throw new Error('No certificate configured');
-    
-    const result = await new Promise((resolve, reject) => {
-      const reqOptions = {
-        hostname: certUrl.hostname,
-        port: 443,
-        path: certUrl.pathname + certUrl.search,
-        method: 'POST',
-        cert: active.cert,
-        key: active.key,
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(requestBody),
-          'x-api-version': 'v1.2',
-        },
-      };
+    let result;
+    if (!active) {
+      console.log('Publish course run: no cert loaded — skipping cert call, will fall back to OAuth');
+      result = { status: 503, body: '' };
+    } else {
+      result = await new Promise((resolve, reject) => {
+        const reqOptions = {
+          hostname: certUrl.hostname,
+          port: 443,
+          path: certUrl.pathname + certUrl.search,
+          method: 'POST',
+          cert: active.cert,
+          key: active.key,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(requestBody),
+            'x-api-version': 'v1.2',
+          },
+        };
 
-      const httpsReq = https.request(reqOptions, (httpsRes) => {
-        let data = '';
-        httpsRes.on('data', (chunk) => { data += chunk; });
-        httpsRes.on('end', () => {
-          resolve({ status: httpsRes.statusCode, body: data });
+        const httpsReq = https.request(reqOptions, (httpsRes) => {
+          let data = '';
+          httpsRes.on('data', (chunk) => { data += chunk; });
+          httpsRes.on('end', () => {
+            resolve({ status: httpsRes.statusCode, body: data });
+          });
         });
-      });
 
-      httpsReq.on('error', reject);
-      httpsReq.write(requestBody);
-      httpsReq.end();
-    });
+        httpsReq.on('error', reject);
+        httpsReq.write(requestBody);
+        httpsReq.end();
+      });
+    }
 
     console.log('Publish course run cert response status:', result.status);
 
+    let publishData;
+    try { publishData = JSON.parse(result.body); } catch { publishData = result.body; }
+
     if (result.status >= 200 && result.status < 300) {
       console.log('Publish course run: certificate auth succeeded');
-      let data;
-      try { data = JSON.parse(result.body); } catch { data = result.body; }
-      if (typeof data !== 'string') { return res.json(data); }
-      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+      return res.json(typeof publishData === 'object' ? publishData : { raw: publishData });
     }
 
-    // Certificate failed — fall back to OAuth
-    console.log('Publish course run: certificate returned', result.status, '— falling back to OAuth');
-    const data = await ssgApiPost(`${apiPath}?${new URLSearchParams(queryParams).toString()}`, body, { apiVersion: 'v1.2' });
-    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
-    res.json(data);
+    // Return the cert's error directly — OAuth fallback not applicable.
+    // SSG returns 500 if body isn't AES-encrypted, or other errors for bad data.
+    console.log('Publish course run: cert returned', result.status, '— returning SSG error to client');
+    return res.status(result.status).json(
+      typeof publishData === 'object' ? publishData : { error: result.body }
+    );
   } catch (err) {
     console.error('Publish course run error:', err.message);
     res.status(err.status || 500).json({
@@ -718,55 +847,58 @@ router.post('/courses/courseRuns/edit/:runId', async (req, res) => {
       if (v !== undefined && v !== null && v !== '') certUrl.searchParams.set(k, v);
     }
     const requestBody = JSON.stringify(body);
-    
+
     const active = getActiveCert();
-    if (!active) throw new Error('No certificate configured');
-    
-    const result = await new Promise((resolve, reject) => {
-      const reqOptions = {
-        hostname: certUrl.hostname,
-        port: 443,
-        path: certUrl.pathname + certUrl.search,
-        method: 'POST',
-        cert: active.cert,
-        key: active.key,
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(requestBody),
-          'x-api-version': 'v1.2',
-        },
-      };
+    let result;
+    if (!active) {
+      console.log('Edit course run: no cert loaded — skipping cert call, will fall back to OAuth');
+      result = { status: 503, body: '' };
+    } else {
+      result = await new Promise((resolve, reject) => {
+        const reqOptions = {
+          hostname: certUrl.hostname,
+          port: 443,
+          path: certUrl.pathname + certUrl.search,
+          method: 'POST',
+          cert: active.cert,
+          key: active.key,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(requestBody),
+            'x-api-version': 'v1.2',
+          },
+        };
 
-      const httpsReq = https.request(reqOptions, (httpsRes) => {
-        let data = '';
-        httpsRes.on('data', (chunk) => { data += chunk; });
-        httpsRes.on('end', () => {
-          resolve({ status: httpsRes.statusCode, body: data });
+        const httpsReq = https.request(reqOptions, (httpsRes) => {
+          let data = '';
+          httpsRes.on('data', (chunk) => { data += chunk; });
+          httpsRes.on('end', () => {
+            resolve({ status: httpsRes.statusCode, body: data });
+          });
         });
-      });
 
-      httpsReq.on('error', reject);
-      httpsReq.write(requestBody);
-      httpsReq.end();
-    });
+        httpsReq.on('error', reject);
+        httpsReq.write(requestBody);
+        httpsReq.end();
+      });
+    }
 
     console.log('Edit course run cert response status:', result.status);
 
+    let editData;
+    try { editData = JSON.parse(result.body); } catch { editData = result.body; }
+
     if (result.status >= 200 && result.status < 300) {
       console.log('Edit course run: certificate auth succeeded');
-      let data;
-      try { data = JSON.parse(result.body); } catch { data = result.body; }
-      if (typeof data !== 'string') { return res.json(data); }
-      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+      return res.json(typeof editData === 'object' ? editData : { raw: editData });
     }
 
-    // Certificate failed — fall back to OAuth
-    console.log('Edit course run: certificate returned', result.status, '— falling back to OAuth');
-    const oauthPath = `${apiPath}?${new URLSearchParams(queryParams).toString()}`;
-    const data = await ssgApiPost(oauthPath, body, { apiVersion: 'v1.2' });
-    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
-    res.json(data);
+    // Return the cert's error directly — OAuth fallback not applicable.
+    console.log('Edit course run: cert returned', result.status, '— returning SSG error to client');
+    return res.status(result.status).json(
+      typeof editData === 'object' ? editData : { error: result.body }
+    );
   } catch (err) {
     console.error('Edit course run error:', err.message);
     res.status(err.status || 500).json({
@@ -823,8 +955,8 @@ router.get('/courses/courseRuns/reference', async (req, res) => {
   }
 });
 
-// GET /api/courses/courseRuns/id/:runId — mTLS Certificate with OAuth fallback
-// Retrieve course run based on run ID
+// GET /api/courses/courseRuns/id/:runId — mTLS Certificate only (api.ssg-wsg.sg v1.0)
+// OAuth public API returns 403 "Access disallowed" — no OAuth fallback.
 router.get('/courses/courseRuns/id/:runId', async (req, res) => {
   try {
     const { runId } = req.params;
@@ -834,23 +966,23 @@ router.get('/courses/courseRuns/id/:runId', async (req, res) => {
     };
     const apiPath = `/courses/courseRuns/id/${encodeURIComponent(runId)}`;
 
-    // Try certificate first
     console.log('Course run by ID request (cert):', apiPath);
     const result = await certApiGet(apiPath, queryParams, { apiVersion: 'v1.0' });
     console.log('Course run by ID cert response status:', result.status);
 
+    let parsed;
+    try { parsed = JSON.parse(result.body); } catch { parsed = result.body; }
+
     if (result.status >= 200 && result.status < 300) {
       console.log('Course run by ID: certificate auth succeeded');
-      let parsed; try { parsed = JSON.parse(result.body); } catch { parsed = result.body; }
-      if (typeof parsed !== 'string') { return res.json(parsed); }
-      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+      return res.json(parsed);
     }
 
-    // Certificate failed — fall back to OAuth
-    console.log('Course run by ID: certificate returned', result.status, '— falling back to OAuth');
-    const data = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.0' });
-    if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
-    res.json(data);
+    // Return the cert's error directly — not falling back to OAuth for this cert-only endpoint
+    console.log('Course run by ID: cert returned', result.status, '— returning SSG error to client');
+    return res.status(result.status).json(
+      typeof parsed === 'object' ? parsed : { error: result.body }
+    );
   } catch (err) {
     console.error('Course run by ID error:', err.message);
     res.status(err.status || 500).json({
@@ -874,7 +1006,7 @@ router.get('/courses/popular', async (req, res) => {
 
     // Try certificate first
     console.log('Popular courses request (cert):', apiPath);
-    const result = await certApiGet(apiPath, queryParams, { apiVersion: 'v1.1' });
+    const result = await certApiGet(apiPath, queryParams, { apiVersion: 'v1.2' });
     console.log('Popular courses cert response status:', result.status);
 
     if (result.status >= 200 && result.status < 300) {
@@ -886,7 +1018,7 @@ router.get('/courses/popular', async (req, res) => {
 
     // Certificate failed — fall back to OAuth
     console.log('Popular courses: certificate returned', result.status, '— falling back to OAuth');
-    const data = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.1' });
+    const data = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.2' });
     if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
     res.json(data);
   } catch (err) {
@@ -1013,7 +1145,7 @@ router.get('/courses/details/:refNo', async (req, res) => {
     }
 
     console.log('Course details request:', url.pathname + url.search);
-    
+
     const active = getActiveCert();
     if (!active) throw new Error('No certificate configured');
 
@@ -1204,7 +1336,7 @@ router.post('/grants/baseline', async (req, res) => {
     const apiPath = '/grantCalculators/individual';
 
     // Try certificate first
-    const certResult = await certApiPost(apiPath, body, { apiVersion: 'v3.0' });
+    const certResult = await certApiPost(apiPath, body, { apiVersion: 'v1.0' });
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
@@ -1215,7 +1347,7 @@ router.post('/grants/baseline', async (req, res) => {
     console.log(`Grant Calculator Baseline: certificate returned ${certResult.status} — falling back to OAuth`);
 
     // Fall back to OAuth
-    const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v3.0' });
+    const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v1.0' });
     if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
@@ -1235,7 +1367,7 @@ router.post('/grants/personalised', async (req, res) => {
     const apiPath = '/grantCalculators/individual/personalised';
 
     // Try certificate first
-    const certResult = await certApiPost(apiPath, body, { apiVersion: 'v3.0' });
+    const certResult = await certApiPost(apiPath, body, { apiVersion: 'v1.0' });
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
@@ -1246,7 +1378,7 @@ router.post('/grants/personalised', async (req, res) => {
     console.log(`Grant Calculator Personalised: certificate returned ${certResult.status} — falling back to OAuth`);
 
     // Fall back to OAuth
-    const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v3.0' });
+    const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v1.0' });
     if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
@@ -1281,7 +1413,7 @@ router.post('/grants/search', async (req, res) => {
     console.log(`Search Grants: certificate returned ${certResult.status} — falling back to OAuth`);
 
     // Fall back to OAuth — need to pass Uen header
-    const token = await require('./oauth').getAccessToken();
+    const token = await require('./oauth').getAccessToken(getActiveCert());
     const baseUrl = process.env.SSG_API_BASE_URL || 'https://public-api.ssg-wsg.sg';
     const url = new URL(apiPath, baseUrl);
 
@@ -1483,64 +1615,67 @@ router.post('/sf-credits/claims/:claimId/supportingdocuments', async (req, res) 
 });
 
 // POST /api/sf-credits/claims/encryptRequests — Request Encryption
-// mTLS Certificate with OAuth fallback
+// SSG gateway requires an AES-encrypted payload (raw string, not wrapped object) for this endpoint
 router.post('/sf-credits/claims/encryptRequests', async (req, res) => {
   try {
     const body = req.body;
     const apiPath = '/skillsFutureCredits/claims/encryptRequests';
 
-    // Try certificate first
-    const certResult = await certApiPost(apiPath, body, { apiVersion: 'v2' });
+    // SSG WAF requires AES-encrypted payload for all mTLS cert endpoints
+    console.log('SF Credit Encrypt Request: encrypting payload before sending...');
+    const encryptedPayload = aesEncrypt(JSON.stringify(body));
+    const certResult = await certApiPost(apiPath, encryptedPayload, { apiVersion: 'v2' });
+    console.log(`SF Credit Encrypt Request: response status: ${certResult.status}`);
+
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
-      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      if (typeof parsed !== 'string') { return res.json(parsed); }
-      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = null; }
+      if (!parsed) { try { parsed = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { parsed = certResult.body; } }
+      return res.json(parsed);
     }
 
-    console.log(`SF Credit Encrypt Request: certificate returned ${certResult.status} — falling back to OAuth`);
-
-    // Fall back to OAuth
-    const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v2' });
-    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
-    return res.json(oauthResult);
+    // Return SSG error — decrypt error body if needed
+    let errBody;
+    try { errBody = JSON.parse(certResult.body); } catch { errBody = null; }
+    if (!errBody) { try { errBody = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { errBody = certResult.body; } }
+    const readable = decryptJsonFields(errBody);
+    console.log(`SF Credit Encrypt Request: failed, status ${certResult.status}`);
+    return res.status(certResult.status >= 400 ? certResult.status : 500).json(readable);
   } catch (err) {
     console.error('SF Credit Encrypt Request error:', err.message);
-    res.status(err.status || 500).json({
-      error: err.message,
-      details: err.body || null,
-    });
+    res.status(err.status || 500).json({ error: err.message, details: err.body || null });
   }
 });
 
 // POST /api/sf-credits/claims/decryptRequests — Request Decryption
-// mTLS Certificate with OAuth fallback
+// SSG gateway requires an AES-encrypted payload (raw string) for this endpoint
 router.post('/sf-credits/claims/decryptRequests', async (req, res) => {
   try {
     const body = req.body;
     const apiPath = '/skillsFutureCredits/claims/decryptRequests';
 
-    // Try certificate first
-    const certResult = await certApiPost(apiPath, body, { apiVersion: 'v2' });
+    console.log('SF Credit Decrypt Request: encrypting payload before sending...');
+    const encryptedPayload = aesEncrypt(JSON.stringify(body));
+    const certResult = await certApiPost(apiPath, encryptedPayload, { apiVersion: 'v2' });
+    console.log(`SF Credit Decrypt Request: response status: ${certResult.status}`);
+
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
-      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      if (typeof parsed !== 'string') { return res.json(parsed); }
-      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = null; }
+      if (!parsed) { try { parsed = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { parsed = certResult.body; } }
+      return res.json(parsed);
     }
 
-    console.log(`SF Credit Decrypt Request: certificate returned ${certResult.status} — falling back to OAuth`);
-
-    // Fall back to OAuth
-    const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v2' });
-    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
-    return res.json(oauthResult);
+    // Decrypt SSG error body before returning
+    let errBody;
+    try { errBody = JSON.parse(certResult.body); } catch { errBody = null; }
+    if (!errBody) { try { errBody = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { errBody = certResult.body; } }
+    const readable = decryptJsonFields(errBody);
+    console.log(`SF Credit Decrypt Request: failed, status ${certResult.status}`);
+    return res.status(certResult.status >= 400 ? certResult.status : 500).json(readable);
   } catch (err) {
     console.error('SF Credit Decrypt Request error:', err.message);
-    res.status(err.status || 500).json({
-      error: err.message,
-      details: err.body || null,
-    });
+    res.status(err.status || 500).json({ error: err.message, details: err.body || null });
   }
 });
 
@@ -1549,166 +1684,203 @@ router.post('/sf-credits/claims/decryptRequests', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────
 
 // POST /api/enrolments — Create Enrolment
-// mTLS Certificate with OAuth fallback
+// mTLS cert with AES encrypt retry (try plain → retry encrypted if SSG can't decrypt)
 router.post('/enrolments', async (req, res) => {
   try {
     const body = req.body;
     const apiPath = '/tpg/enrolments';
 
-    // Try certificate first
-    const certResult = await certApiPost(apiPath, body, { apiVersion: 'v3.0' });
+    // Try plain JSON first
+    console.log('Create Enrolment: attempting plain cert request...');
+    let certResult = await certApiPost(apiPath, body, { apiVersion: 'v3.0' });
+    console.log(`Create Enrolment (plain): response status: ${certResult.status}`);
+
+    // SSG requires AES-encrypted payload — retry if decryption error returned
+    if (certResult.status === 500 && (certResult.body.includes('Unable to perform decryption') || certResult.body.includes('Middleware error'))) {
+      console.log('Create Enrolment: got decryption error, retrying WITH AES encryption...');
+      const encryptedPayload = aesEncrypt(JSON.stringify(body));
+      certResult = await certApiPost(apiPath, { payload: encryptedPayload }, { apiVersion: 'v3.0' });
+      console.log(`Create Enrolment (encrypted): response status: ${certResult.status}`);
+    }
+
     if (certResult.status >= 200 && certResult.status < 300) {
+      // mTLS responses may be AES-encrypted — try JSON.parse first, then aesDecrypt
       let parsed;
-      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      if (typeof parsed !== 'string') { return res.json(parsed); }
-      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = null; }
+      if (!parsed) { try { parsed = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { parsed = certResult.body; } }
+      return res.json(parsed);
+    }
+
+    // Bubble up 400/403 SSG business errors directly — decrypt the error response first
+    if (certResult.status === 400 || certResult.status === 403) {
+      let errBody;
+      try { errBody = JSON.parse(certResult.body); } catch { errBody = null; }
+      if (!errBody) { try { errBody = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { errBody = certResult.body; } }
+      return res.status(certResult.status).json(decryptJsonFields(errBody));
     }
 
     console.log(`Create Enrolment: certificate returned ${certResult.status} — falling back to OAuth`);
-
-    // Fall back to OAuth
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v3.0' });
     if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Create Enrolment error:', err.message);
-    res.status(err.status || 500).json({
-      error: err.message,
-      details: err.body || null,
-    });
+    res.status(err.status || 500).json({ error: err.message, details: err.body || null });
   }
 });
 
 // POST /api/enrolments/details/:enrolmentRefNo — Update/Cancel Enrolment
-// mTLS Certificate with OAuth fallback
+// mTLS cert with AES encrypt retry
 router.post('/enrolments/details/:enrolmentRefNo', async (req, res) => {
   try {
     const { enrolmentRefNo } = req.params;
     const body = req.body;
     const uen = req.headers['uen'] || req.query.uen || '';
     const apiPath = `/tpg/enrolments/details/${encodeURIComponent(enrolmentRefNo)}`;
+    const extraHeaders = uen ? { 'uen': uen } : {};
 
-    // Try certificate first
-    const certResult = await certApiPost(apiPath, body, {
-      apiVersion: 'v3.0',
-      headers: uen ? { 'uen': uen } : {},
-    });
+    console.log('Update/Cancel Enrolment: attempting plain cert request...');
+    let certResult = await certApiPost(apiPath, body, { apiVersion: 'v3.0', headers: extraHeaders });
+    console.log(`Update/Cancel Enrolment (plain): response status: ${certResult.status}`);
+
+    if (certResult.status === 500 && (certResult.body.includes('Unable to perform decryption') || certResult.body.includes('Middleware error'))) {
+      console.log('Update/Cancel Enrolment: got decryption error, retrying WITH AES encryption...');
+      const encryptedPayload = aesEncrypt(JSON.stringify(body));
+      certResult = await certApiPost(apiPath, { payload: encryptedPayload }, { apiVersion: 'v3.0', headers: extraHeaders });
+      console.log(`Update/Cancel Enrolment (encrypted): response status: ${certResult.status}`);
+    }
+
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
-      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      if (typeof parsed !== 'string') { return res.json(parsed); }
-      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = null; }
+      if (!parsed) { try { parsed = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { parsed = certResult.body; } }
+      return res.json(parsed);
+    }
+
+    if (certResult.status === 400 || certResult.status === 403) {
+      let errBody;
+      try { errBody = JSON.parse(certResult.body); } catch { errBody = null; }
+      if (!errBody) { try { errBody = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { errBody = certResult.body; } }
+      return res.status(certResult.status).json(decryptJsonFields(errBody));
     }
 
     console.log(`Update/Cancel Enrolment: certificate returned ${certResult.status} — falling back to OAuth`);
-
-    // Fall back to OAuth — need to pass uen header
-    const token = await require('./oauth').getAccessToken();
+    const token = await require('./oauth').getAccessToken(getActiveCert());
     const baseUrl = process.env.SSG_API_BASE_URL || 'https://public-api.ssg-wsg.sg';
     const url = new URL(apiPath, baseUrl);
-
     const response = await fetch(url.toString(), {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'x-api-version': 'v3.0',
-        ...(uen ? { 'uen': uen } : {}),
-      },
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json', 'Content-Type': 'application/json', 'x-api-version': 'v3.0', ...extraHeaders },
       body: JSON.stringify(body),
     });
-
     const text = await response.text();
     let data;
     try { data = JSON.parse(text); } catch { data = text; }
-    if (!response.ok) {
-      return res.status(response.status).json({
-        error: `SSG API error: ${response.status}`,
-        details: data,
-      });
-    }
+    if (!response.ok) { return res.status(response.status).json({ error: `SSG API error: ${response.status}`, details: data }); }
     if (typeof data === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: data.substring(0, 200) }); }
     return res.json(data);
   } catch (err) {
     console.error('Update/Cancel Enrolment error:', err.message);
-    res.status(err.status || 500).json({
-      error: err.message,
-      details: err.body || null,
-    });
+    res.status(err.status || 500).json({ error: err.message, details: err.body || null });
   }
 });
 
 // POST /api/enrolments/search — Search Enrolments
-// mTLS Certificate with OAuth fallback
+// mTLS cert with AES encrypt retry + optional RSA-SHA256 digital signature
 router.post('/enrolments/search', async (req, res) => {
   try {
     const body = req.body;
     const apiPath = '/tpg/enrolments/search';
 
-    // Try certificate first
-    const certResult = await certApiPost(apiPath, body, { apiVersion: 'v3.0' });
+    console.log('Search Enrolments: attempting plain cert request...');
+    let certResult = await certApiPost(apiPath, body, { apiVersion: 'v3.0' });
+    console.log(`Search Enrolments (plain): response status: ${certResult.status}`);
+
+    if (certResult.status === 500 && (certResult.body.includes('Unable to perform decryption') || certResult.body.includes('Middleware error'))) {
+      console.log('Search Enrolments: got decryption error, retrying WITH AES encryption...');
+      const encryptedPayload = aesEncrypt(JSON.stringify(body));
+      const encryptedBody = { payload: encryptedPayload };
+      const retryHeaders = {};
+
+      // Optional RSA-SHA256 signature — gracefully skipped if CERT_X_PRIVATE_KEY not configured
+      try {
+        const signature = createSignature(JSON.stringify(encryptedBody));
+        retryHeaders['X-Api-Signature'] = signature;
+        console.log('Search Enrolments: created digital signature (RSA-SHA256)');
+      } catch {
+        console.log('Search Enrolments: no private key configured, skipping digital signature');
+      }
+
+      certResult = await certApiPost(apiPath, encryptedBody, { apiVersion: 'v3.0', headers: retryHeaders });
+      console.log(`Search Enrolments (encrypted${retryHeaders['X-Api-Signature'] ? ' + signed' : ''}): response status: ${certResult.status}`);
+    }
+
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
-      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      if (typeof parsed !== 'string') { return res.json(parsed); }
-      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = null; }
+      if (!parsed) { try { parsed = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { parsed = certResult.body; } }
+      return res.json(parsed);
+    }
+
+    if (certResult.status === 400 || certResult.status === 403) {
+      let errBody;
+      try { errBody = JSON.parse(certResult.body); } catch { errBody = null; }
+      if (!errBody) { try { errBody = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { errBody = certResult.body; } }
+      return res.status(certResult.status).json(decryptJsonFields(errBody));
     }
 
     console.log(`Search Enrolments: certificate returned ${certResult.status} — falling back to OAuth`);
-
-    // Fall back to OAuth
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v3.0' });
     if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Search Enrolments error:', err.message);
-    res.status(err.status || 500).json({
-      error: err.message,
-      details: err.body || null,
-    });
+    res.status(err.status || 500).json({ error: err.message, details: err.body || null });
   }
 });
 
 // GET /api/enrolments/details/:enrolmentRefNo — View Enrolment
 // mTLS Certificate with OAuth fallback
+// SSG docs require 'uen' header to be passed
 router.get('/enrolments/details/:enrolmentRefNo', async (req, res) => {
   const { enrolmentRefNo } = req.params;
   const apiPath = `/tpg/enrolments/details/${enrolmentRefNo}`;
-  
+  const uen = req.headers['uen'] || '';
+  const extraHeaders = uen ? { 'uen': uen } : {};
+
   try {
     const certId = certStore.getStore();
-    console.log(`View Enrolment: certId="${certId}", enrolmentRefNo="${enrolmentRefNo}"`);
-    
+    console.log(`View Enrolment: certId="${certId}", enrolmentRefNo="${enrolmentRefNo}", uen="${uen}"`);
+
     // Check if OAuth is selected (cert ID 'oauth')
     if (certId === 'oauth') {
       console.log('View Enrolment: using OAuth authentication');
       const result = await oauthApiGet(apiPath, {}, { apiVersion: 'v3.0' });
-      
+
       if (result.status >= 200 && result.status < 300) {
         // OAuth returns plain JSON, no decryption needed
         return res.json(result.body);
       }
-      
+
       return res.status(result.status).json({
         error: 'OAuth authentication failed',
         details: result.body
       });
     }
-    
+
     // Use certificate authentication
     const activeCert = getActiveCert();
     console.log('View Enrolment: using certificate authentication with cert:', activeCert?.name);
-    
+
     if (!activeCert) {
       return res.status(500).json({
         error: 'No certificate configured',
         details: 'Unable to find certificate for authentication'
       });
     }
-    
-    const certResult = await certApiGet(apiPath, {}, { apiVersion: 'v3.0' });
-    
+
+    const certResult = await certApiGet(apiPath, {}, { apiVersion: 'v3.0', headers: extraHeaders });
+
     if (certResult.status >= 200 && certResult.status < 300) {
       console.log('View Enrolment: certificate auth succeeded (status', certResult.status + ')');
       try {
@@ -1727,14 +1899,14 @@ router.get('/enrolments/details/:enrolmentRefNo', async (req, res) => {
         return res.json(parsed);
       }
     }
-    
+
     // Certificate auth failed
     console.error('View Enrolment: certificate auth failed with status', certResult.status);
     return res.status(certResult.status).json({
       error: 'Certificate authentication failed',
       details: certResult.body
     });
-    
+
   } catch (error) {
     console.error('View Enrolment error:', error);
     return res.status(500).json({
@@ -1745,44 +1917,57 @@ router.get('/enrolments/details/:enrolmentRefNo', async (req, res) => {
 });
 
 // POST /api/enrolments/feeCollections/:enrolmentRefNo — Update Enrolment Fee Collection
-// mTLS Certificate with OAuth fallback
+// mTLS cert with AES encrypt retry
 router.post('/enrolments/feeCollections/:enrolmentRefNo', async (req, res) => {
   try {
     const { enrolmentRefNo } = req.params;
     const body = req.body;
     const apiPath = `/tpg/enrolments/feeCollections/${encodeURIComponent(enrolmentRefNo)}`;
 
-    // Try certificate first
-    const certResult = await certApiPost(apiPath, body, { apiVersion: 'v3.0' });
+    console.log('Fee Collection: attempting plain cert request...');
+    let certResult = await certApiPost(apiPath, body, { apiVersion: 'v3.0' });
+    console.log(`Fee Collection (plain): response status: ${certResult.status}`);
+
+    if (certResult.status === 500 && (certResult.body.includes('Unable to perform decryption') || certResult.body.includes('Middleware error'))) {
+      console.log('Fee Collection: got decryption error, retrying WITH AES encryption...');
+      const encryptedPayload = aesEncrypt(JSON.stringify(body));
+      certResult = await certApiPost(apiPath, { payload: encryptedPayload }, { apiVersion: 'v3.0' });
+      console.log(`Fee Collection (encrypted): response status: ${certResult.status}`);
+    }
+
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
-      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      if (typeof parsed !== 'string') { return res.json(parsed); }
-      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = null; }
+      if (!parsed) { try { parsed = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { parsed = certResult.body; } }
+      return res.json(parsed);
+    }
+
+    if (certResult.status === 400 || certResult.status === 403) {
+      let errBody;
+      try { errBody = JSON.parse(certResult.body); } catch { errBody = null; }
+      if (!errBody) { try { errBody = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { errBody = certResult.body; } }
+      return res.status(certResult.status).json(decryptJsonFields(errBody));
     }
 
     console.log(`Fee Collection: certificate returned ${certResult.status} — falling back to OAuth`);
-
-    // Fall back to OAuth
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v3.0' });
     if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Fee Collection error:', err.message);
-    res.status(err.status || 500).json({
-      error: err.message,
-      details: err.body || null,
-    });
+    res.status(err.status || 500).json({ error: err.message, details: err.body || null });
   }
 });
 
 // GET /api/enrolments/codes/sponsorshipType — Enrolment Code Lookup
 // mTLS Certificate with OAuth fallback
+// SSG docs: GET /tpg/enrolments/codes?parameter=sponsorshipType (v1.0.0)
 router.get('/enrolments/codes/sponsorshipType', async (req, res) => {
   try {
-    const apiPath = '/tpg/codes/enrolments/sponsorshipType';
+    const apiPath = '/tpg/enrolments/codes';
+    const queryParams = { parameter: 'sponsorshipType' };
 
-    const certResult = await certApiGet(apiPath, {}, { apiVersion: 'v1' });
+    const certResult = await certApiGet(apiPath, queryParams, { apiVersion: 'v1.0.0' });
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
       try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
@@ -1792,7 +1977,7 @@ router.get('/enrolments/codes/sponsorshipType', async (req, res) => {
 
     console.log(`Enrolment Code Lookup: certificate returned ${certResult.status} — falling back to OAuth`);
 
-    const oauthResult = await ssgApiGet(apiPath, {}, { apiVersion: 'v1' });
+    const oauthResult = await ssgApiGet(apiPath, queryParams, { apiVersion: 'v1.0.0' });
     if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
@@ -1809,92 +1994,135 @@ router.get('/enrolments/codes/sponsorshipType', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────
 
 // POST /api/assessments — Create Assessment
-// mTLS Certificate with OAuth fallback
+// mTLS cert with AES raw-string encrypt retry (Assessment API uses raw string, NOT {payload:})
 router.post('/assessments', async (req, res) => {
   try {
     const body = req.body;
     const apiPath = '/tpg/assessments';
 
-    const certResult = await certApiPost(apiPath, body, { apiVersion: 'v1' });
+    console.log('Create Assessment: attempting plain cert request...');
+    let certResult = await certApiPost(apiPath, body, { apiVersion: 'v1' });
+    console.log(`Create Assessment (plain): response status: ${certResult.status}`);
+
+    // Assessment API uses RAW STRING format (not wrapped in {payload:})
+    if (certResult.status === 500 && (certResult.body.includes('Unable to perform decryption') || certResult.body.includes('Middleware error'))) {
+      console.log('Create Assessment: got decryption error, retrying WITH AES encryption (raw string)...');
+      const encryptedPayload = aesEncrypt(JSON.stringify(body));
+      certResult = await certApiPost(apiPath, encryptedPayload, { apiVersion: 'v1' });
+      console.log(`Create Assessment (encrypted): response status: ${certResult.status}`);
+    }
+
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
-      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      if (typeof parsed !== 'string') { return res.json(parsed); }
-      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = null; }
+      if (!parsed) { try { parsed = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { parsed = certResult.body; } }
+      return res.json(parsed);
+    }
+
+    if (certResult.status === 400 || certResult.status === 403) {
+      let errBody;
+      try { errBody = JSON.parse(certResult.body); } catch { errBody = null; }
+      if (!errBody) { try { errBody = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { errBody = certResult.body; } }
+      return res.status(certResult.status).json(decryptJsonFields(errBody));
     }
 
     console.log(`Create Assessment: certificate returned ${certResult.status} — falling back to OAuth`);
-
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v1' });
     if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Create Assessment error:', err.message);
-    res.status(err.status || 500).json({
-      error: err.message,
-      details: err.body || null,
-    });
+    res.status(err.status || 500).json({ error: err.message, details: err.body || null });
   }
 });
 
 // POST /api/assessments/details/:assessmentRefNo — Update/Void Assessment
+// mTLS cert with AES raw-string encrypt retry
 router.post('/assessments/details/:assessmentRefNo', async (req, res) => {
   try {
     const { assessmentRefNo } = req.params;
     const body = req.body;
     const apiPath = `/tpg/assessments/details/${encodeURIComponent(assessmentRefNo)}`;
 
-    const certResult = await certApiPost(apiPath, body, { apiVersion: 'v1' });
+    console.log('Update/Void Assessment: attempting plain cert request...');
+    let certResult = await certApiPost(apiPath, body, { apiVersion: 'v1' });
+    console.log(`Update/Void Assessment (plain): response status: ${certResult.status}`);
+
+    if (certResult.status === 500 && (certResult.body.includes('Unable to perform decryption') || certResult.body.includes('Middleware error'))) {
+      console.log('Update/Void Assessment: got decryption error, retrying WITH AES encryption (raw string)...');
+      const encryptedPayload = aesEncrypt(JSON.stringify(body));
+      certResult = await certApiPost(apiPath, encryptedPayload, { apiVersion: 'v1' });
+      console.log(`Update/Void Assessment (encrypted): response status: ${certResult.status}`);
+    }
+
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
-      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      if (typeof parsed !== 'string') { return res.json(parsed); }
-      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = null; }
+      if (!parsed) { try { parsed = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { parsed = certResult.body; } }
+      return res.json(parsed);
+    }
+
+    if (certResult.status === 400 || certResult.status === 403) {
+      let errBody;
+      try { errBody = JSON.parse(certResult.body); } catch { errBody = null; }
+      if (!errBody) { try { errBody = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { errBody = certResult.body; } }
+      return res.status(certResult.status).json(decryptJsonFields(errBody));
     }
 
     console.log(`Update/Void Assessment: certificate returned ${certResult.status} — falling back to OAuth`);
-
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v1' });
     if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Update/Void Assessment error:', err.message);
-    res.status(err.status || 500).json({
-      error: err.message,
-      details: err.body || null,
-    });
+    res.status(err.status || 500).json({ error: err.message, details: err.body || null });
   }
 });
 
 // POST /api/assessments/search — Search Assessments
+// mTLS cert with AES raw-string encrypt retry
 router.post('/assessments/search', async (req, res) => {
   try {
     const body = req.body;
     const apiPath = '/tpg/assessments/search';
 
-    const certResult = await certApiPost(apiPath, body, { apiVersion: 'v1' });
+    console.log('Search Assessments: attempting plain cert request...');
+    let certResult = await certApiPost(apiPath, body, { apiVersion: 'v1' });
+    console.log(`Search Assessments (plain): response status: ${certResult.status}`);
+
+    if (certResult.status === 500 && (certResult.body.includes('Unable to perform decryption') || certResult.body.includes('Middleware error'))) {
+      console.log('Search Assessments: got decryption error, retrying WITH AES encryption (raw string)...');
+      const encryptedPayload = aesEncrypt(JSON.stringify(body));
+      certResult = await certApiPost(apiPath, encryptedPayload, { apiVersion: 'v1' });
+      console.log(`Search Assessments (encrypted): response status: ${certResult.status}`);
+    }
+
     if (certResult.status >= 200 && certResult.status < 300) {
       let parsed;
-      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      if (typeof parsed !== 'string') { return res.json(parsed); }
-      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = null; }
+      if (!parsed) { try { parsed = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { parsed = certResult.body; } }
+      return res.json(parsed);
+    }
+
+    if (certResult.status === 400 || certResult.status === 403) {
+      let errBody;
+      try { errBody = JSON.parse(certResult.body); } catch { errBody = null; }
+      if (!errBody) { try { errBody = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { errBody = certResult.body; } }
+      return res.status(certResult.status).json(decryptJsonFields(errBody));
     }
 
     console.log(`Search Assessments: certificate returned ${certResult.status} — falling back to OAuth`);
-
     const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v1' });
     if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('Search Assessments error:', err.message);
-    res.status(err.status || 500).json({
-      error: err.message,
-      details: err.body || null,
-    });
+    res.status(err.status || 500).json({ error: err.message, details: err.body || null });
   }
 });
 
 // GET /api/assessments/details/:assessmentRefNo — View Assessment
+// Response is AES-encrypted when accessed via mTLS cert
 router.get('/assessments/details/:assessmentRefNo', async (req, res) => {
   try {
     const { assessmentRefNo } = req.params;
@@ -1902,23 +2130,29 @@ router.get('/assessments/details/:assessmentRefNo', async (req, res) => {
 
     const certResult = await certApiGet(apiPath, {}, { apiVersion: 'v1' });
     if (certResult.status >= 200 && certResult.status < 300) {
+      // Certificate response body may be AES-encrypted — try JSON.parse first, fallback to aesDecrypt
       let parsed;
-      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      if (typeof parsed !== 'string') { return res.json(parsed); }
-      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+      try { parsed = JSON.parse(certResult.body); } catch { parsed = null; }
+      if (!parsed) {
+        try { parsed = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { parsed = certResult.body; }
+      }
+      return res.json(parsed);
+    }
+
+    if (certResult.status === 400 || certResult.status === 403) {
+      let errBody;
+      try { errBody = JSON.parse(certResult.body); } catch { errBody = null; }
+      if (!errBody) { try { errBody = JSON.parse(aesDecrypt(certResult.body.trim())); } catch { errBody = certResult.body; } }
+      return res.status(certResult.status).json(decryptJsonFields(errBody));
     }
 
     console.log(`View Assessment: certificate returned ${certResult.status} — falling back to OAuth`);
-
     const oauthResult = await ssgApiGet(apiPath, {}, { apiVersion: 'v1' });
     if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
     return res.json(oauthResult);
   } catch (err) {
     console.error('View Assessment error:', err.message);
-    res.status(err.status || 500).json({
-      error: err.message,
-      details: err.body || null,
-    });
+    res.status(err.status || 500).json({ error: err.message, details: err.body || null });
   }
 });
 
@@ -2541,24 +2775,24 @@ router.post('/tools/generate-cert', async (req, res) => {
     // Generate key pair
     console.log(`Generating ${keySizeValue}-bit RSA key pair...`);
     const keys = forge.pki.rsa.generateKeyPair(keySizeValue);
-    
+
     // Create certificate
     const cert = forge.pki.createCertificate();
     cert.publicKey = keys.publicKey;
     cert.serialNumber = '01' + Math.floor(Math.random() * 1000000000000000).toString(16);
-    
+
     // Set validity period
     const notBefore = new Date();
     const notAfter = new Date();
     notAfter.setDate(notAfter.getDate() + daysValue);
-    
+
     cert.validity.notBefore = notBefore;
     cert.validity.notAfter = notAfter;
-    
-    console.log(`Certificate validity: ${daysValue} days (${Math.round(daysValue/365)} years)`);
+
+    console.log(`Certificate validity: ${daysValue} days (${Math.round(daysValue / 365)} years)`);
     console.log(`Not Before: ${notBefore.toISOString()}`);
     console.log(`Not After: ${notAfter.toISOString()}`);
-    
+
     // Set subject attributes
     const attrs = [
       { shortName: 'C', value: country },
@@ -2569,10 +2803,10 @@ router.post('/tools/generate-cert', async (req, res) => {
       { shortName: 'CN', value: commonName },
       { name: 'emailAddress', value: emailAddress }
     ];
-    
+
     cert.setSubject(attrs);
     cert.setIssuer(attrs); // Self-signed
-    
+
     // Add extensions
     cert.setExtensions([
       {
@@ -2595,22 +2829,22 @@ router.post('/tools/generate-cert', async (req, res) => {
         }]
       }
     ]);
-    
+
     // Sign certificate with private key
     cert.sign(keys.privateKey, forge.md.sha256.create());
-    
+
     // Convert to PEM format
     const certPem = forge.pki.certificateToPem(cert);
     const keyPem = forge.pki.privateKeyToPem(keys.privateKey);
-    
+
     const subject = `/C=${country}/ST=${state}/L=${locality}/O=${organization}/OU=${organizationalUnit}/CN=${commonName}`;
-    
+
     console.log('Certificate generated successfully');
-    
+
     res.json({
       cert: certPem,
       key: keyPem,
-      command: `Generated using Node.js node-forge library with: keySize=${keySizeValue}, days=${daysValue} (~${Math.round(daysValue/365)} years), subject="${subject}", emailAddress=${emailAddress}`,
+      command: `Generated using Node.js node-forge library with: keySize=${keySizeValue}, days=${daysValue} (~${Math.round(daysValue / 365)} years), subject="${subject}", emailAddress=${emailAddress}`,
     });
   } catch (err) {
     console.error('Certificate generation error:', err.message);
@@ -2683,7 +2917,7 @@ router.post('/tools/generate-encryption-key', (req, res) => {
 
     // Generate random bytes using node-forge
     const randomBytes = forge.random.getBytesSync(bytesValue);
-    
+
     // Convert to base64
     const key = forge.util.encode64(randomBytes);
 
@@ -2715,7 +2949,7 @@ router.post('/tools/sign-data', (req, res) => {
     const sign = crypto.createSign('RSA-SHA256');
     sign.update(data);
     sign.end();
-    
+
     const signature = sign.sign(privateKey, 'base64');
 
     res.json({

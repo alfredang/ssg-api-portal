@@ -1,5 +1,7 @@
 .playwright-mcp
 .env
+certs-and-keys/
+cert-and-key/
 .venv
 node_modules
 .pytest_cache

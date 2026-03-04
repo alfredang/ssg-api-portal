@@ -351,9 +351,10 @@ export async function updateFeeCollection(enrolmentRefNo: string, body: Record<s
   return response.data;
 }
 
-export async function viewEnrolment(enrolmentRefNo: string) {
+export async function viewEnrolment(enrolmentRefNo: string, uen: string) {
   const response = await apiClient.get<EnrolmentResponse>(
-    `/enrolments/details/${encodeURIComponent(enrolmentRefNo)}`
+    `/enrolments/details/${encodeURIComponent(enrolmentRefNo)}`,
+    { headers: { 'uen': uen } }
   );
   return response.data;
 }
@@ -479,16 +480,16 @@ export async function getSkillsFrameworkSectorProfile(sectorId: string) {
 
 // Tools
 
-export async function generateCertificate(body: { 
-  commonName: string; 
-  organization: string; 
+export async function generateCertificate(body: {
+  commonName: string;
+  organization: string;
   organizationalUnit: string;
-  country: string; 
+  country: string;
   state: string;
   locality: string;
   emailAddress: string;
-  days: string; 
-  keySize: string 
+  days: string;
+  keySize: string
 }) {
   const response = await apiClient.post<{ cert: string; key: string; command: string }>('/tools/generate-cert', body);
   return response.data;
