@@ -107,16 +107,45 @@ router.use((req, res, next) => {
 // DEBUG: temporary endpoint to diagnose PEM issues on Vercel (remove after fix)
 router.get('/debug-cert', (req, res) => {
   const raw = process.env['CERT_1_CERT'] || '';
-  const fixed = raw.replace(/\\n/g, '\n');
+  const keyRaw = process.env['CERT_1_KEY'] || '';
+  // Try to parse with Node's crypto to validate
+  let certValid = false;
+  let keyValid = false;
+  let certErr = null;
+  let keyErr = null;
+  try {
+    const c = new crypto.X509Certificate(raw);
+    certValid = true;
+  } catch (e) {
+    certErr = e.message;
+  }
+  try {
+    crypto.createPrivateKey(keyRaw);
+    keyValid = true;
+  } catch (e) {
+    keyErr = e.message;
+  }
+  // Also try what the actual code does: Buffer.from
+  let bufCertErr = null;
+  let bufKeyErr = null;
+  try {
+    const c = new crypto.X509Certificate(Buffer.from(raw));
+    bufCertErr = 'OK';
+  } catch (e) {
+    bufCertErr = e.message;
+  }
+  try {
+    crypto.createPrivateKey(Buffer.from(keyRaw));
+    bufKeyErr = 'OK';
+  } catch (e) {
+    bufKeyErr = e.message;
+  }
   res.json({
     rawLen: raw.length,
-    fixedLen: fixed.length,
-    hasLiteralBackslashN: raw.includes('\\n'),
-    hasRealNewlines: raw.includes('\n'),
-    first80raw: raw.substring(0, 80),
-    first80fixed: fixed.substring(0, 80),
-    startsCorrectly: fixed.startsWith('-----BEGIN CERTIFICATE-----'),
-    endsCorrectly: fixed.trimEnd().endsWith('-----END CERTIFICATE-----'),
+    certValid, certErr,
+    keyValid, keyErr,
+    bufCert: bufCertErr,
+    bufKey: bufKeyErr,
   });
 });
 
