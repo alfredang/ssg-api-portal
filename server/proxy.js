@@ -104,38 +104,6 @@ router.use((req, res, next) => {
   certStore.run(certId, next);
 });
 
-// DEBUG: temporary endpoint to diagnose PEM issues on Vercel (remove after fix)
-router.get('/debug-cert', (req, res) => {
-  const raw = process.env['CERT_1_CERT'] || '';
-  // Check each line of the PEM
-  const lines = raw.split('\n');
-  const lineInfo = lines.map((line, i) => ({
-    i,
-    len: line.length,
-    hasCarriageReturn: line.includes('\r'),
-    hasSpaces: line.includes(' '),
-    first10: line.substring(0, 10),
-    last10: line.substring(Math.max(0, line.length - 10)),
-  }));
-  // Also try trimming each line
-  const trimmed = lines.map(l => l.trim()).join('\n');
-  let trimValid = false;
-  let trimErr = null;
-  try {
-    new crypto.X509Certificate(trimmed);
-    trimValid = true;
-  } catch (e) {
-    trimErr = e.message;
-  }
-  res.json({
-    rawLen: raw.length,
-    lineCount: lines.length,
-    lineInfo,
-    trimmedValid: trimValid,
-    trimmedErr: trimErr,
-  });
-});
-
 // GET /api/certs endpoint
 router.get('/certs', (req, res) => {
   const certs = [];
