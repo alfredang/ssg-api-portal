@@ -107,45 +107,32 @@ router.use((req, res, next) => {
 // DEBUG: temporary endpoint to diagnose PEM issues on Vercel (remove after fix)
 router.get('/debug-cert', (req, res) => {
   const raw = process.env['CERT_1_CERT'] || '';
-  const keyRaw = process.env['CERT_1_KEY'] || '';
-  // Try to parse with Node's crypto to validate
-  let certValid = false;
-  let keyValid = false;
-  let certErr = null;
-  let keyErr = null;
+  // Check each line of the PEM
+  const lines = raw.split('\n');
+  const lineInfo = lines.map((line, i) => ({
+    i,
+    len: line.length,
+    hasCarriageReturn: line.includes('\r'),
+    hasSpaces: line.includes(' '),
+    first10: line.substring(0, 10),
+    last10: line.substring(Math.max(0, line.length - 10)),
+  }));
+  // Also try trimming each line
+  const trimmed = lines.map(l => l.trim()).join('\n');
+  let trimValid = false;
+  let trimErr = null;
   try {
-    const c = new crypto.X509Certificate(raw);
-    certValid = true;
+    new crypto.X509Certificate(trimmed);
+    trimValid = true;
   } catch (e) {
-    certErr = e.message;
-  }
-  try {
-    crypto.createPrivateKey(keyRaw);
-    keyValid = true;
-  } catch (e) {
-    keyErr = e.message;
-  }
-  // Also try what the actual code does: Buffer.from
-  let bufCertErr = null;
-  let bufKeyErr = null;
-  try {
-    const c = new crypto.X509Certificate(Buffer.from(raw));
-    bufCertErr = 'OK';
-  } catch (e) {
-    bufCertErr = e.message;
-  }
-  try {
-    crypto.createPrivateKey(Buffer.from(keyRaw));
-    bufKeyErr = 'OK';
-  } catch (e) {
-    bufKeyErr = e.message;
+    trimErr = e.message;
   }
   res.json({
     rawLen: raw.length,
-    certValid, certErr,
-    keyValid, keyErr,
-    bufCert: bufCertErr,
-    bufKey: bufKeyErr,
+    lineCount: lines.length,
+    lineInfo,
+    trimmedValid: trimValid,
+    trimmedErr: trimErr,
   });
 });
 
