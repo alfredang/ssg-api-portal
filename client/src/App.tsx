@@ -199,12 +199,14 @@ function AuthBadge({ method }: { method: 'cert' | 'cert+oauth' | 'cert+aes' | 'n
 
 interface CertOption { id: string; name: string }
 
-function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange }: {
+function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange, theme, onToggleTheme }: {
   activePage: Page;
   onNavigate: (page: Page) => void;
   certs: CertOption[];
   activeCertId: string;
   onCertChange: (id: string) => void;
+  theme: 'dark' | 'light';
+  onToggleTheme: () => void;
 }) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['Courses']));
 
@@ -282,6 +284,16 @@ function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange }: 
           );
         })}
       </nav>
+      <div className="sidebar-links">
+        <h2>Useful Links</h2>
+        <a href="https://ssg-api-portal.vercel.app/" target="_blank" rel="noopener noreferrer">SSG API Portal</a>
+        <a href="https://developer.ssg-wsg.gov.sg" target="_blank" rel="noopener noreferrer">SSG Developer</a>
+      </div>
+      <div className="theme-toggle">
+        <button onClick={onToggleTheme}>
+          {theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode'}
+        </button>
+      </div>
     </aside>
   );
 }
@@ -334,6 +346,14 @@ function App() {
   const [defaultsSaved, setDefaultsSaved] = useState(false);
   const [certs, setCerts] = useState<CertOption[]>([]);
   const [activeCertId, setActiveCertId] = useState(() => localStorage.getItem('ssg-active-cert') || '1');
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('ssg-theme') as 'dark' | 'light') || 'dark');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('ssg-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
   useEffect(() => {
     fetch('/api/certs').then(r => r.json()).then((list: CertOption[]) => {
@@ -4654,7 +4674,7 @@ function App() {
 
   return (
     <div className="app">
-      <Sidebar activePage={activePage} onNavigate={handleNavigate} certs={certs} activeCertId={activeCertId} onCertChange={handleCertChange} />
+      <Sidebar activePage={activePage} onNavigate={handleNavigate} certs={certs} activeCertId={activeCertId} onCertChange={handleCertChange} theme={theme} onToggleTheme={toggleTheme} />
       <main className="main-content">
         <div className="main-content-inner">
           {renderContent()}

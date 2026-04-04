@@ -1,3 +1,68 @@
+/* Theme variables — dark is default */
+:root {
+  --bg-body: #0f1117;
+  --text-body: #e5e7eb;
+  --bg-card: #1a1c25;
+  --bg-card-alt: #1e2029;
+  --border-card: #2a2d3a;
+  --text-heading: #f3f4f6;
+  --text-primary: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --bg-input: #1e2029;
+  --border-input: #374151;
+  --bg-table-header: #1e2029;
+  --bg-table-row-even: #161820;
+  --bg-table-hover: #1e2536;
+  --bg-tag: #272a36;
+  --text-tag: #d1d5db;
+  --bg-sidebar: #1a1a2e;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --bg-json-summary: #1e2029;
+  --border-json: #2a2d3a;
+  --bg-error: #3b1111;
+  --text-error: #fca5a5;
+  --bg-collapsible: linear-gradient(135deg, #3730a3, #4f46e5);
+  --bg-collapsible-hover: linear-gradient(135deg, #312e81, #4338ca);
+  --text-link: #60a5fa;
+  --text-results-summary: #93c5fd;
+  --fee-before: #e5e7eb;
+  --fee-grant: #34d399;
+  --fee-after: #60a5fa;
+}
+
+[data-theme="light"] {
+  --bg-body: #f5f7fa;
+  --text-body: #1a1a2e;
+  --bg-card: #fff;
+  --bg-card-alt: #f9fafb;
+  --border-card: #e5e7eb;
+  --text-heading: #1a1a2e;
+  --text-primary: #374151;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --bg-input: #fff;
+  --border-input: #d1d5db;
+  --bg-table-header: #f9fafb;
+  --bg-table-row-even: #f9fafb;
+  --bg-table-hover: #f0f4ff;
+  --bg-tag: #f3f4f6;
+  --text-tag: #374151;
+  --bg-sidebar: #1a1a2e;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --bg-json-summary: #f9fafb;
+  --border-json: #e5e7eb;
+  --bg-error: #fee2e2;
+  --text-error: #991b1b;
+  --bg-collapsible: linear-gradient(135deg, #4f7cf7, #6b93fb);
+  --bg-collapsible-hover: linear-gradient(135deg, #4270e8, #5d85f5);
+  --text-link: #3b82f6;
+  --text-results-summary: #1e40af;
+  --fee-before: #374151;
+  --fee-grant: #059669;
+  --fee-after: #1e40af;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -6,8 +71,8 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #f5f7fa;
-  color: #1a1a2e;
+  background: var(--bg-body);
+  color: var(--text-body);
   line-height: 1.6;
 }
 
@@ -92,6 +157,34 @@ body {
   padding: 0.5rem 0;
 }
 
+.sidebar-links {
+  padding: 0.9rem 1.25rem 1.1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sidebar-links h2 {
+  margin: 0 0 0.25rem;
+  font-size: 0.68rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+.sidebar-links a {
+  color: #d1d5db;
+  font-size: 0.82rem;
+  text-decoration: none;
+  line-height: 1.5;
+}
+
+.sidebar-links a:hover {
+  color: #60a5fa;
+}
+
 .nav-category {
   margin-bottom: 0.125rem;
 }
@@ -173,6 +266,36 @@ body {
   background: rgba(59, 130, 246, 0.1);
 }
 
+/* Theme Toggle */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.theme-toggle button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #d1d5db;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.theme-toggle button:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
 /* Main Content */
 .main-content {
   flex: 1;
@@ -187,22 +310,22 @@ body {
 
 .page-title {
   font-size: 1.5rem;
-  color: #1a1a2e;
+  color: var(--text-heading);
   margin-bottom: 1.5rem;
 }
 
 .placeholder-card {
-  background: #fff;
+  background: var(--bg-card);
   padding: 3rem 2rem;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-card);
   text-align: center;
-  color: #9ca3af;
+  color: var(--text-muted);
 }
 
 .placeholder-card h3 {
   font-size: 1.1rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin-bottom: 0.5rem;
 }
 
@@ -212,10 +335,10 @@ body {
 
 /* Search Form */
 .search-form {
-  background: #fff;
+  background: var(--bg-card);
   padding: 1.5rem;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-card);
   margin-bottom: 1.5rem;
 }
 
@@ -233,10 +356,12 @@ body {
 .search-input-group input {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   font-size: 1rem;
   transition: border-color 0.2s;
+  background: var(--bg-input);
+  color: var(--text-body);
 }
 
 .search-input-group input:focus,
@@ -249,10 +374,11 @@ body {
 .search-input-group select {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   font-size: 1rem;
-  background: #fff;
+  background: var(--bg-input);
+  color: var(--text-body);
   transition: border-color 0.2s;
 }
 
@@ -275,7 +401,7 @@ body {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.9rem;
-  color: #4b5563;
+  color: var(--text-primary);
   cursor: pointer;
 }
 
@@ -343,11 +469,13 @@ form.course-result > div:not(.form-group) {
 .form-group textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   font-size: 1rem;
   transition: border-color 0.2s;
   box-sizing: border-box;
+  background: var(--bg-input);
+  color: var(--text-body);
 }
 
 .form-group input:focus,
@@ -359,8 +487,8 @@ form.course-result > div:not(.form-group) {
 }
 
 .form-group input:disabled {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--bg-card-alt);
+  color: var(--text-muted);
 }
 
 .course-result button {
@@ -386,10 +514,10 @@ form.course-result > div:not(.form-group) {
 
 /* Cards */
 .card {
-  background: #fff;
+  background: var(--bg-card);
   padding: 1.5rem;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-card);
   margin-bottom: 1rem;
 }
 
@@ -397,7 +525,7 @@ form.course-result > div:not(.form-group) {
   font-size: 1.1rem;
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-card);
 }
 
 .card h4 {
@@ -455,7 +583,7 @@ form.course-result > div:not(.form-group) {
 
 .meta-label {
   font-size: 0.8rem;
-  color: #6b7280;
+  color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -463,12 +591,12 @@ form.course-result > div:not(.form-group) {
 
 .meta-value {
   font-size: 0.95rem;
-  color: #1a1a2e;
+  color: var(--text-primary);
   word-break: break-word;
 }
 
 .meta-value a {
-  color: #3b82f6;
+  color: var(--text-link);
   text-decoration: none;
 }
 
@@ -485,17 +613,17 @@ form.course-result > div:not(.form-group) {
   margin-bottom: 0.5rem;
   border-bottom: none;
   padding-bottom: 0;
-  color: #374151;
+  color: var(--text-primary);
 }
 
 .course-section p {
-  color: #4b5563;
+  color: var(--text-secondary);
   font-size: 0.95rem;
 }
 
 .course-section ul {
   padding-left: 1.25rem;
-  color: #4b5563;
+  color: var(--text-secondary);
 }
 
 /* Training Provider */
@@ -514,7 +642,7 @@ form.course-result > div:not(.form-group) {
   flex-wrap: wrap;
   gap: 0.5rem 1.5rem;
   padding: 0.5rem 0;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--border-card);
   font-size: 0.9rem;
 }
 
@@ -523,12 +651,12 @@ form.course-result > div:not(.form-group) {
 }
 
 .contact-role {
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .contact-email,
 .contact-phone {
-  color: #3b82f6;
+  color: var(--text-link);
 }
 
 /* Course Runs Table */
@@ -545,25 +673,25 @@ table {
 th {
   text-align: left;
   padding: 0.75rem 0.5rem;
-  background: #f9fafb;
+  background: var(--bg-table-header);
   font-weight: 600;
-  color: #374151;
-  border-bottom: 2px solid #e5e7eb;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-card);
   white-space: nowrap;
 }
 
 td {
   padding: 0.75rem 0.5rem;
-  border-bottom: 1px solid #f3f4f6;
-  color: #4b5563;
+  border-bottom: 1px solid var(--border-card);
+  color: var(--text-secondary);
 }
 
 tbody tr:nth-child(even) {
-  background: #f9fafb;
+  background: var(--bg-table-row-even);
 }
 
 tbody tr:hover {
-  background: #f0f4ff;
+  background: var(--bg-table-hover);
 }
 
 .vacancy-badge {
@@ -597,7 +725,7 @@ tbody tr:hover {
 .tag-label {
   display: block;
   font-size: 0.8rem;
-  color: #6b7280;
+  color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -613,10 +741,10 @@ tbody tr:hover {
 .tag {
   display: inline-block;
   padding: 0.25rem 0.6rem;
-  background: #f3f4f6;
+  background: var(--bg-tag);
   border-radius: 4px;
   font-size: 0.85rem;
-  color: #374151;
+  color: var(--text-tag);
 }
 
 .modules-section ul {
@@ -626,13 +754,13 @@ tbody tr:hover {
 
 .modules-section li {
   margin-bottom: 0.35rem;
-  color: #4b5563;
+  color: var(--text-secondary);
 }
 
 /* Error, Loading, No Results */
 .error-alert {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--bg-error);
+  color: var(--text-error);
   padding: 1rem;
   border-radius: 8px;
   margin-bottom: 1rem;
@@ -642,17 +770,17 @@ tbody tr:hover {
 .loading {
   text-align: center;
   padding: 2rem;
-  color: #6b7280;
+  color: var(--text-muted);
   font-size: 1rem;
 }
 
 .no-results {
   text-align: center;
   padding: 2rem;
-  color: #6b7280;
-  background: #fff;
+  color: var(--text-muted);
+  background: var(--bg-card);
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-card);
 }
 
 /* Collapsible Course */
@@ -663,17 +791,17 @@ tbody tr:hover {
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  background: linear-gradient(135deg, #4f7cf7, #6b93fb);
+  background: var(--bg-collapsible);
   border: none;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-card);
   cursor: pointer;
   text-align: left;
   transition: background 0.15s;
 }
 
 .collapsible-header:hover {
-  background: linear-gradient(135deg, #4270e8, #5d85f5);
+  background: var(--bg-collapsible-hover);
 }
 
 .collapsible-title h3 {
@@ -709,8 +837,8 @@ tbody tr:hover {
 /* Collapsible JSON output */
 .json-collapsible {
   margin-top: 12px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-card);
+  border: 1px solid var(--border-json);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -719,10 +847,10 @@ tbody tr:hover {
   padding: 10px 16px;
   font-weight: 600;
   font-size: 0.9rem;
-  color: #374151;
+  color: var(--text-primary);
   cursor: pointer;
-  background: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--bg-json-summary);
+  border-bottom: 1px solid var(--border-json);
   user-select: none;
   list-style: none;
   display: flex;
@@ -738,7 +866,7 @@ tbody tr:hover {
   content: '\25B6';
   font-size: 0.6rem;
   transition: transform 0.2s;
-  color: #9ca3af;
+  color: var(--text-muted);
 }
 
 .json-collapsible[open] summary::before {
@@ -746,7 +874,7 @@ tbody tr:hover {
 }
 
 .json-collapsible[open] summary {
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-json);
 }
 
 .json-collapsible pre {
@@ -765,16 +893,16 @@ tbody tr:hover {
 .grant-fee-table th {
   text-align: left;
   padding: 10px 12px;
-  background: #f0f4ff;
+  background: var(--bg-table-header);
   font-weight: 600;
-  color: #1e40af;
-  border-bottom: 2px solid #dbeafe;
+  color: #60a5fa;
+  border-bottom: 2px solid var(--border-card);
 }
 
 .grant-fee-table td {
   padding: 10px 12px;
-  border-bottom: 1px solid #f3f4f6;
-  color: #374151;
+  border-bottom: 1px solid var(--border-card);
+  color: var(--text-primary);
 }
 
 .grant-fee-table .fee-amount {
@@ -784,28 +912,28 @@ tbody tr:hover {
 }
 
 .grant-fee-table .fee-before {
-  color: #374151;
+  color: var(--fee-before);
 }
 
 .grant-fee-table .fee-grant {
-  color: #059669;
+  color: var(--fee-grant);
 }
 
 .grant-fee-table .fee-after {
-  color: #1e40af;
+  color: var(--fee-after);
   font-size: 1rem;
 }
 
 .results-filter {
-  background: #fff;
+  background: var(--bg-card);
   padding: 1rem 1.25rem;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-card);
   margin-bottom: 1rem;
 }
 
 .results-summary {
-  color: #1e40af;
+  color: var(--text-results-summary);
   font-size: 0.95rem;
   font-weight: 500;
   margin-bottom: 0.75rem;
@@ -814,10 +942,12 @@ tbody tr:hover {
 .filter-input-group input {
   width: 100%;
   padding: 0.6rem 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   font-size: 0.95rem;
   transition: border-color 0.2s;
+  background: var(--bg-input);
+  color: var(--text-body);
 }
 
 .filter-input-group input:focus {
@@ -828,7 +958,7 @@ tbody tr:hover {
 
 /* Course Quality */
 .quality-respondents {
-  color: #6b7280;
+  color: var(--text-muted);
   font-size: 0.9rem;
   margin-bottom: 1rem;
 }
@@ -849,7 +979,7 @@ tbody tr:hover {
   width: 160px;
   font-size: 0.9rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
   flex-shrink: 0;
 }
 
@@ -861,14 +991,14 @@ tbody tr:hover {
 
 .quality-score {
   font-size: 0.85rem;
-  color: #6b7280;
+  color: var(--text-muted);
   margin-left: auto;
 }
 
 .quality-meta {
   margin-top: 1rem;
   font-size: 0.8rem;
-  color: #9ca3af;
+  color: var(--text-muted);
 }
 
 /* Session Attendance */
@@ -879,13 +1009,13 @@ tbody tr:hover {
 .attendance-session {
   margin-top: 1.5rem;
   padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border-card);
 }
 
 .attendance-session-title {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--text-primary);
   margin-bottom: 0.75rem;
 }
 
@@ -904,18 +1034,18 @@ tbody tr:hover {
 .attendance-table td {
   text-align: left;
   padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-card);
 }
 
 .attendance-table th {
   font-weight: 600;
-  color: #374151;
-  background: #f9fafb;
+  color: var(--text-primary);
+  background: var(--bg-table-header);
   white-space: nowrap;
 }
 
 .attendance-table td {
-  color: #4b5563;
+  color: var(--text-secondary);
 }
 
 .attendance-status {
