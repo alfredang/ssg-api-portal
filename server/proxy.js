@@ -104,6 +104,22 @@ router.use((req, res, next) => {
   certStore.run(certId, next);
 });
 
+// DEBUG: temporary endpoint to diagnose PEM issues on Vercel (remove after fix)
+router.get('/debug-cert', (req, res) => {
+  const raw = process.env['CERT_1_CERT'] || '';
+  const fixed = raw.replace(/\\n/g, '\n');
+  res.json({
+    rawLen: raw.length,
+    fixedLen: fixed.length,
+    hasLiteralBackslashN: raw.includes('\\n'),
+    hasRealNewlines: raw.includes('\n'),
+    first80raw: raw.substring(0, 80),
+    first80fixed: fixed.substring(0, 80),
+    startsCorrectly: fixed.startsWith('-----BEGIN CERTIFICATE-----'),
+    endsCorrectly: fixed.trimEnd().endsWith('-----END CERTIFICATE-----'),
+  });
+});
+
 // GET /api/certs endpoint
 router.get('/certs', (req, res) => {
   const certs = [];
