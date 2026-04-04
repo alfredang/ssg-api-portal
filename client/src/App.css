@@ -296,6 +296,24 @@ body {
   color: #fff;
 }
 
+.sidebar-footer {
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.7rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+.sidebar-footer a {
+  color: #9ca3af;
+  text-decoration: none;
+}
+
+.sidebar-footer a:hover {
+  color: #d1d5db;
+  text-decoration: underline;
+}
+
 /* Main Content */
 .main-content {
   flex: 1;

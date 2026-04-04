@@ -294,6 +294,9 @@ function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange, th
           {theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode'}
         </button>
       </div>
+      <div className="sidebar-footer">
+        Powered by <a href="https://www.tertiarycourses.com.sg/" target="_blank" rel="noopener noreferrer">Tertiary Infotech Academy Pte Ltd</a>
+      </div>
     </aside>
   );
 }
