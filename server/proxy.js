@@ -34,8 +34,11 @@ const certStore = new AsyncLocalStorage();
 const certsMap = new Map();
 for (let i = 1; i <= 3; i++) {
   const name = process.env[`CERT_${i}_NAME`];
-  const certPem = process.env[`CERT_${i}_CERT`];
-  const keyPem = process.env[`CERT_${i}_KEY`];
+  const certPemRaw = process.env[`CERT_${i}_CERT`];
+  const keyPemRaw = process.env[`CERT_${i}_KEY`];
+  // Normalise escaped newlines (Vercel stores multiline env vars with literal \n)
+  const certPem = certPemRaw ? certPemRaw.replace(/\\n/g, '\n') : undefined;
+  const keyPem = keyPemRaw ? keyPemRaw.replace(/\\n/g, '\n') : undefined;
   
   // Debug logging to identify missing variables
   console.log(`\n--- Checking certificate ${i} ---`);
