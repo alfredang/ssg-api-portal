@@ -9,3 +9,6 @@ __pycache__
 .claude
 PIVLoopDiagram.png
 .agents
+.vercel
+.env*.local
+client/.env
