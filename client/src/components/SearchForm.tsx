@@ -4,12 +4,14 @@ interface SearchFormProps {
   onSearch: (params: { refNo: string; uen: string; courseRunStartDate: string }) => void;
   loading: boolean;
   defaults?: Record<string, string>;
+  onSetDefaults?: (values: Record<string, string>) => void;
 }
 
-export default function SearchForm({ onSearch, loading, defaults = {} }: SearchFormProps) {
+export default function SearchForm({ onSearch, loading, defaults = {}, onSetDefaults }: SearchFormProps) {
   const [refNo, setRefNo] = useState(defaults.courseRefNo || 'TGS-2020505444');
   const [uen, setUen] = useState(defaults.uen || '201200696W');
-  const [courseRunStartDate, setCourseRunStartDate] = useState('');
+  const [courseRunStartDate, setCourseRunStartDate] = useState(defaults.courseRunStartDate || '');
+  const [saved, setSaved] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +58,20 @@ export default function SearchForm({ onSearch, loading, defaults = {} }: SearchF
         />
       </div>
       <div className="search-options">
-        <span />
+        {onSetDefaults && (
+          <button
+            type="button"
+            className="btn-set-default"
+            onClick={() => {
+              onSetDefaults({ courseRefNo: refNo.trim(), uen: uen.trim(), courseRunStartDate });
+              setSaved(true);
+              setTimeout(() => setSaved(false), 2000);
+            }}
+          >
+            {saved ? 'Defaults Saved!' : 'Set as Default'}
+          </button>
+        )}
+        {!onSetDefaults && <span />}
         <button type="submit" disabled={loading || !refNo.trim() || !uen.trim()}>
           {loading ? 'Loading...' : 'Lookup Course'}
         </button>

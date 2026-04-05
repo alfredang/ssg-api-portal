@@ -559,6 +559,20 @@ body {
   cursor: not-allowed;
 }
 
+.btn-set-default {
+  background: transparent !important;
+  color: var(--text-secondary, #888) !important;
+  border: 1px solid var(--border-color, #444) !important;
+  font-weight: 500 !important;
+  font-size: 0.85rem !important;
+}
+
+.btn-set-default:hover:not(:disabled) {
+  background: var(--bg-secondary, #1e293b) !important;
+  color: var(--text-primary, #fff) !important;
+  border-color: var(--text-secondary, #888) !important;
+}
+
 /* Compact form grid layout */
 form.course-result,
 .search-form {

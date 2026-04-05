@@ -323,6 +323,7 @@ interface DefaultEntry { key: string; label: string; category: string; value: st
 const INITIAL_DEFAULTS: DefaultEntry[] = [
   { key: 'uen', label: 'UEN', category: 'General', value: '201200696W' },
   { key: 'courseRefNo', label: 'Course Reference Number', category: 'General', value: 'TGS-2020505444' },
+  { key: 'courseRunStartDate', label: 'Course Run Start Date', category: 'Courses', value: '' },
   { key: 'nric', label: 'NRIC / ID Number', category: 'General', value: 'S9876543A' },
   { key: 'traineeId', label: 'Trainee ID', category: 'General', value: 'S0118316H' },
   { key: 'adminEmail', label: 'Admin Email', category: 'General', value: 'admin@tertiary.edu.sg' },
@@ -380,7 +381,16 @@ function App() {
   const d = (key: string) => defaults[key] ?? '';
   const setDefaults = (next: Record<string, string>) => {
     setDefaultsState(next);
+    setDraftDefaults(next);
     localStorage.setItem('ssg-api-defaults', JSON.stringify(next));
+  };
+  const handleSetDefaults = (values: Record<string, string>) => {
+    setDefaults({ ...defaults, ...values });
+  };
+  const [inlineSaved, setInlineSaved] = useState('');
+  const showInlineSaved = (formId: string) => {
+    setInlineSaved(formId);
+    setTimeout(() => setInlineSaved(''), 2000);
   };
   const [keyword, setKeyword] = useState('');
   
@@ -762,7 +772,7 @@ function App() {
         <>
           <h2 className="page-title">Course Lookup by Ref No</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>GET <code>/courses/directory/&#123;refNo&#125;</code> (v1.2). <AuthBadge method="cert+oauth" /></p>
-          <SearchForm onSearch={handleLookup} loading={loading} defaults={defaults} />
+          <SearchForm onSearch={handleLookup} loading={loading} defaults={defaults} onSetDefaults={handleSetDefaults} />
 
           {error && <div className="error-alert">{error}</div>}
           {loading && <div className="loading">Loading course details...</div>}
@@ -788,7 +798,7 @@ function App() {
         <>
           <h2 className="page-title">Course Search</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/courses/registry/search</code> (v8.0). <AuthBadge method="cert" /></p>
-          <CourseSearchForm onSearch={handleSearch} loading={loading} defaults={defaults} />
+          <CourseSearchForm onSearch={handleSearch} loading={loading} defaults={defaults} onSetDefaults={handleSetDefaults} />
 
           {error && <div className="error-alert">{error}</div>}
           {loading && <div className="loading">Loading course details...</div>}
@@ -841,18 +851,29 @@ function App() {
           >
             <div className="search-input-group">
               <label htmlFor="popTaggingCode">Tagging Code (optional)</label>
-              <input id="popTaggingCode" name="popTaggingCode" type="text" defaultValue="SFC" placeholder="e.g. SFC" disabled={popularCoursesApi.loading} />
+              <input id="popTaggingCode" name="popTaggingCode" type="text" defaultValue={d('popTaggingCode') || 'SFC'} placeholder="e.g. SFC" disabled={popularCoursesApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="popPageSize">Page Size</label>
-              <input id="popPageSize" name="popPageSize" type="number" defaultValue="20" min="1" max="100" disabled={popularCoursesApi.loading} />
+              <input id="popPageSize" name="popPageSize" type="number" defaultValue={d('popPageSize') || '20'} min="1" max="100" disabled={popularCoursesApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="popPage">Page (0-indexed)</label>
-              <input id="popPage" name="popPage" type="number" defaultValue="0" min="0" disabled={popularCoursesApi.loading} />
+              <input id="popPage" name="popPage" type="number" defaultValue={d('popPage') || '0'} min="0" disabled={popularCoursesApi.loading} />
             </div>
             <div className="search-options">
-              <span />
+              <button type="button" className="btn-set-default" onClick={(e) => {
+                const form = (e.target as HTMLElement).closest('form')!;
+                const fd = new FormData(form);
+                handleSetDefaults({
+                  popTaggingCode: fd.get('popTaggingCode') as string,
+                  popPageSize: fd.get('popPageSize') as string,
+                  popPage: fd.get('popPage') as string,
+                });
+                showInlineSaved('popular');
+              }}>
+                {inlineSaved === 'popular' ? 'Defaults Saved!' : 'Set as Default'}
+              </button>
               <button type="submit" disabled={popularCoursesApi.loading}>
                 {popularCoursesApi.loading ? 'Loading...' : 'Retrieve Popular Courses'}
               </button>
@@ -941,7 +962,14 @@ function App() {
               <label htmlFor="tpcIncludeExpired" style={{ margin: 0 }}>Include Expired Courses</label>
             </div>
             <div className="search-options">
-              <span />
+              <button type="button" className="btn-set-default" onClick={(e) => {
+                const form = (e.target as HTMLElement).closest('form')!;
+                const fd = new FormData(form);
+                handleSetDefaults({ uen: fd.get('tpcUen') as string });
+                showInlineSaved('tp-courses');
+              }}>
+                {inlineSaved === 'tp-courses' ? 'Defaults Saved!' : 'Set as Default'}
+              </button>
               <button type="submit" disabled={tpCoursesApi.loading || false}>
                 {tpCoursesApi.loading ? 'Loading...' : 'Retrieve Courses'}
               </button>
@@ -1258,7 +1286,14 @@ function App() {
               <input id="trainerPage" name="trainerPage" type="number" defaultValue="0" min="0" disabled={trainersApi.loading} />
             </div>
             <div className="search-options">
-              <span />
+              <button type="button" className="btn-set-default" onClick={(e) => {
+                const form = (e.target as HTMLElement).closest('form')!;
+                const fd = new FormData(form);
+                handleSetDefaults({ uen: fd.get('trainerUen') as string });
+                showInlineSaved('trainers');
+              }}>
+                {inlineSaved === 'trainers' ? 'Defaults Saved!' : 'Set as Default'}
+              </button>
               <button type="submit" disabled={trainersApi.loading}>
                 {trainersApi.loading ? 'Loading...' : 'Retrieve Trainers'}
               </button>
@@ -2454,11 +2489,19 @@ function App() {
           }}>
             <div className="form-group">
               <label htmlFor="gbCourses">Courses (one per line: UEN, CourseRefNo)</label>
-              <textarea id="gbCourses" name="courses" rows={3} defaultValue="201200696W, TGS-2020505444" disabled={grantBaselineApi.loading} style={{ width: '100%', fontFamily: 'monospace', padding: 8 }} />
+              <textarea id="gbCourses" name="courses" rows={3} defaultValue={defaults.grantBaselineCourses || '201200696W, TGS-2020505444'} disabled={grantBaselineApi.loading} style={{ width: '100%', fontFamily: 'monospace', padding: 8 }} />
             </div>
-            <div style={{ marginTop: 12 }}>
+            <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
               <button type="submit" disabled={grantBaselineApi.loading}>
                 {grantBaselineApi.loading ? 'Calculating...' : 'Calculate Baseline Grant'}
+              </button>
+              <button type="button" className="btn-set-default" onClick={(e) => {
+                const form = (e.target as HTMLElement).closest('form')!;
+                const fd = new FormData(form);
+                handleSetDefaults({ grantBaselineCourses: fd.get('courses') as string });
+                showInlineSaved('grant-baseline');
+              }}>
+                {inlineSaved === 'grant-baseline' ? 'Defaults Saved!' : 'Set as Default'}
               </button>
             </div>
           </form>
@@ -2620,9 +2663,21 @@ function App() {
               <label htmlFor="gpModStartDate">Modularised SCTP Bundle Course Start Date (optional)</label>
               <input id="gpModStartDate" name="modStartDate" type="text" placeholder="YYYY-MM-DD" disabled={grantPersonalisedApi.loading} />
             </div>
-            <div style={{ marginTop: 12 }}>
+            <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
               <button type="submit" disabled={grantPersonalisedApi.loading}>
                 {grantPersonalisedApi.loading ? 'Calculating...' : 'Calculate Personalised Grant'}
+              </button>
+              <button type="button" className="btn-set-default" onClick={(e) => {
+                const form = (e.target as HTMLElement).closest('form')!;
+                const fd = new FormData(form);
+                handleSetDefaults({
+                  uen: fd.get('tpUen') as string,
+                  courseRefNo: fd.get('courseRef') as string,
+                  traineeId: fd.get('traineeId') as string,
+                });
+                showInlineSaved('grant-personalised');
+              }}>
+                {inlineSaved === 'grant-personalised' ? 'Defaults Saved!' : 'Set as Default'}
               </button>
             </div>
           </form>

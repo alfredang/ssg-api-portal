@@ -10,6 +10,7 @@ interface CourseSearchFormProps {
   }) => void;
   loading: boolean;
   defaults?: Record<string, string>;
+  onSetDefaults?: (values: Record<string, string>) => void;
 }
 
 function getDefaultDateFrom() {
@@ -22,8 +23,9 @@ function getDefaultDateTo() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export default function CourseSearchForm({ onSearch, loading, defaults = {} }: CourseSearchFormProps) {
+export default function CourseSearchForm({ onSearch, loading, defaults = {}, onSetDefaults }: CourseSearchFormProps) {
   const [uen, setUen] = useState(defaults.uen || '201200696W');
+  const [saved, setSaved] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [dateFrom, setDateFrom] = useState(getDefaultDateFrom);
   const [dateTo, setDateTo] = useState(getDefaultDateTo);
@@ -108,7 +110,20 @@ export default function CourseSearchForm({ onSearch, loading, defaults = {} }: C
       </div>
 
       <div className="search-options">
-        <span />
+        {onSetDefaults && (
+          <button
+            type="button"
+            className="btn-set-default"
+            onClick={() => {
+              onSetDefaults({ uen: uen.trim(), pageSize: String(pageSize) });
+              setSaved(true);
+              setTimeout(() => setSaved(false), 2000);
+            }}
+          >
+            {saved ? 'Defaults Saved!' : 'Set as Default'}
+          </button>
+        )}
+        {!onSetDefaults && <span />}
         <button type="submit" disabled={loading || !uen.trim()}>
           {loading ? 'Searching...' : 'Search Courses'}
         </button>
