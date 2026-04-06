@@ -1022,6 +1022,8 @@ tbody tr:hover {
 .json-collapsible pre {
   margin: 0;
   border-radius: 0;
+  background: var(--bg-card-alt) !important;
+  color: var(--text-primary) !important;
 }
 
 /* Grant fee summary table */

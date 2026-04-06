@@ -982,7 +982,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13, background: '#f5f5f5', padding: 16, maxHeight: 600, overflow: 'auto' }}>
+                <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 13, padding: 16, maxHeight: 600, overflow: 'auto' }}>
                   {JSON.stringify(tpCoursesApi.data, null, 2)}
                 </pre>
               </details>
@@ -1480,7 +1480,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', fontSize: 13 }}>
                   {JSON.stringify(updateTrainerApi.data, null, 2)}
                 </pre>
               </details>
@@ -1812,7 +1812,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', fontSize: 13 }}>
                   {JSON.stringify(publishCourseRunApi.data, null, 2)}
                 </pre>
               </details>
@@ -2171,7 +2171,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', fontSize: 13 }}>
                   {JSON.stringify(editCourseRunApi.data, null, 2)}
                 </pre>
               </details>
@@ -2221,7 +2221,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', fontSize: 13 }}>
                   {JSON.stringify(courseRunByIdApi.data, null, 2)}
                 </pre>
               </details>
@@ -2309,7 +2309,7 @@ function App() {
               </div>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', fontSize: 13 }}>
                   {JSON.stringify(courseRunsByRefApi.data, null, 2)}
                 </pre>
               </details>
@@ -2461,7 +2461,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', fontSize: 13 }}>
                   {JSON.stringify(uploadAttendanceApi.data, null, 2)}
                 </pre>
               </details>
@@ -2561,7 +2561,7 @@ function App() {
                 <div className="course-result" style={{ marginTop: 16 }}>
                   <details className="json-collapsible">
                     <summary>JSON Response</summary>
-                    <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                    <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                       {JSON.stringify(grantBaselineApi.data, null, 2)}
                     </pre>
                   </details>
@@ -2687,7 +2687,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(grantPersonalisedApi.data, null, 2)}
                 </pre>
               </details>
@@ -2793,7 +2793,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(grantSearchApi.data, null, 2)}
                 </pre>
               </details>
@@ -2831,7 +2831,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(grantDetailsApi.data, null, 2)}
                 </pre>
               </details>
@@ -2859,7 +2859,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(grantCodesApi.data, null, 2)}
                 </pre>
               </details>
@@ -2901,7 +2901,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(sfClaimApi.data, null, 2)}
                 </pre>
               </details>
@@ -2947,7 +2947,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(sfCancelApi.data, null, 2)}
                 </pre>
               </details>
@@ -3019,7 +3019,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(sfUploadDocsApi.data, null, 2)}
                 </pre>
               </details>
@@ -3107,7 +3107,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(sfEncryptApi.data, null, 2)}
                 </pre>
               </details>
@@ -3147,7 +3147,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(sfDecryptApi.data, null, 2)}
                 </pre>
               </details>
@@ -3215,7 +3215,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolCreateApi.data, null, 2)}</pre>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolCreateApi.data, null, 2)}</pre>
               </details>
             </div>
           )}
@@ -3262,7 +3262,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolUpdateApi.data, null, 2)}</pre>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolUpdateApi.data, null, 2)}</pre>
               </details>
             </div>
           )}
@@ -3312,7 +3312,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolSearchApi.data, null, 2)}</pre>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolSearchApi.data, null, 2)}</pre>
               </details>
             </div>
           )}
@@ -3330,15 +3330,25 @@ function App() {
             const fd = new FormData(e.currentTarget);
             handleEnrolView(fd.get('refNo') as string);
           }}>
-            <div className="form-group"><label>Enrolment Reference Number</label><input name="refNo" type="text" defaultValue="ENR-2512-167877" disabled={enrolViewApi.loading} /></div>
-            <div style={{ marginTop: 12 }}><button type="submit" disabled={enrolViewApi.loading}>{enrolViewApi.loading ? 'Loading...' : 'View Enrolment'}</button></div>
+            <div className="form-group"><label>Enrolment Reference Number</label><input name="refNo" type="text" defaultValue={d('enrolRef') || 'ENR-2512-167877'} disabled={enrolViewApi.loading} /></div>
+            <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button type="submit" disabled={enrolViewApi.loading}>{enrolViewApi.loading ? 'Loading...' : 'View Enrolment'}</button>
+              <button type="button" className="btn-set-default" onClick={(e) => {
+                const form = (e.target as HTMLElement).closest('form')!;
+                const fd = new FormData(form);
+                handleSetDefaults({ enrolRef: fd.get('refNo') as string });
+                showInlineSaved('enrol-view');
+              }}>
+                {inlineSaved === 'enrol-view' ? 'Defaults Saved!' : 'Set as Default'}
+              </button>
+            </div>
           </form>
           {enrolViewApi.error && <div className="error-alert">{enrolViewApi.error}</div>}
           {enrolViewApi.data && (
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolViewApi.data, null, 2)}</pre>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolViewApi.data, null, 2)}</pre>
               </details>
             </div>
           )}
@@ -3367,7 +3377,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolFeeApi.data, null, 2)}</pre>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolFeeApi.data, null, 2)}</pre>
               </details>
             </div>
           )}
@@ -3388,7 +3398,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolCodesApi.data, null, 2)}</pre>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(enrolCodesApi.data, null, 2)}</pre>
               </details>
             </div>
           )}
@@ -3438,7 +3448,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessCreateApi.data, null, 2)}</pre>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessCreateApi.data, null, 2)}</pre>
               </details>
             </div>
           )}
@@ -3481,7 +3491,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessUpdateApi.data, null, 2)}</pre>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessUpdateApi.data, null, 2)}</pre>
               </details>
             </div>
           )}
@@ -3528,7 +3538,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessSearchApi.data, null, 2)}</pre>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessSearchApi.data, null, 2)}</pre>
               </details>
             </div>
           )}
@@ -3554,7 +3564,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessViewApi.data, null, 2)}</pre>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessViewApi.data, null, 2)}</pre>
               </details>
             </div>
           )}
@@ -3575,7 +3585,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessCodesApi.data, null, 2)}</pre>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>{JSON.stringify(assessCodesApi.data, null, 2)}</pre>
               </details>
             </div>
           )}
@@ -3612,7 +3622,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(spQualificationsApi.data, null, 2)}
                 </pre>
               </details>
@@ -3658,7 +3668,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(seaSkillExtractApi.data, null, 2)}
                 </pre>
               </details>
@@ -3704,7 +3714,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(seaSkillSearchApi.data, null, 2)}
                 </pre>
               </details>
@@ -3746,7 +3756,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(sfwJobRolesApi.data, null, 2)}
                 </pre>
               </details>
@@ -3812,7 +3822,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(sfwSkillsApi.data, null, 2)}
                 </pre>
               </details>
@@ -3854,7 +3864,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(sfwGscCodesApi.data, null, 2)}
                 </pre>
               </details>
@@ -3912,7 +3922,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(sfwCcsDetailsApi.data, null, 2)}
                 </pre>
               </details>
@@ -3954,7 +3964,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(sfwTscCodesApi.data, null, 2)}
                 </pre>
               </details>
@@ -3996,7 +4006,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(sfwTscCodesDetailsApi.data, null, 2)}
                 </pre>
               </details>
@@ -4054,7 +4064,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(sfwTscDetailsApi.data, null, 2)}
                 </pre>
               </details>
@@ -4140,7 +4150,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(sfwJobRolesSearchApi.data, null, 2)}
                 </pre>
               </details>
@@ -4182,7 +4192,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(sfwJobRoleProfileApi.data, null, 2)}
                 </pre>
               </details>
@@ -4224,7 +4234,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(sfwOccupationsApi.data, null, 2)}
                 </pre>
               </details>
@@ -4263,7 +4273,7 @@ function App() {
             <div className="course-result" style={{ marginTop: 16 }}>
               <details className="json-collapsible">
                 <summary>JSON Response</summary>
-                <pre style={{ background: '#f5f5f5', padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
+                <pre style={{ padding: 16, overflow: 'auto', maxHeight: 500, fontSize: 13 }}>
                   {JSON.stringify(sfwJobRoleCodesApi.data, null, 2)}
                 </pre>
               </details>
@@ -4343,7 +4353,7 @@ function App() {
             <>
               <div className="course-result" style={{ marginTop: 16 }}>
                 <h3>OpenSSL Command Used</h3>
-                <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13 }}>
+                <pre style={{ background: 'var(--bg-card-alt)', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13 }}>
                   {generateCertApi.data.command}
                 </pre>
               </div>
@@ -4357,7 +4367,7 @@ function App() {
                     URL.revokeObjectURL(url);
                   }}>Download cert.pem</button>
                 </div>
-                <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 300, fontSize: 13, marginTop: 8 }}>
+                <pre style={{ background: 'var(--bg-card-alt)', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 300, fontSize: 13, marginTop: 8 }}>
                   {generateCertApi.data.cert}
                 </pre>
               </div>
@@ -4371,7 +4381,7 @@ function App() {
                     URL.revokeObjectURL(url);
                   }}>Download key.pem</button>
                 </div>
-                <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 300, fontSize: 13, marginTop: 8 }}>
+                <pre style={{ background: 'var(--bg-card-alt)', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 300, fontSize: 13, marginTop: 8 }}>
                   {generateCertApi.data.key}
                 </pre>
               </div>
@@ -4409,7 +4419,7 @@ function App() {
             <>
               <div className="course-result" style={{ marginTop: 16 }}>
                 <h3>OpenSSL Commands Used</h3>
-                <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13 }}>
+                <pre style={{ background: 'var(--bg-card-alt)', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13 }}>
                   {generateKeypairApi.data.commands.join('\n')}
                 </pre>
               </div>
@@ -4423,7 +4433,7 @@ function App() {
                     URL.revokeObjectURL(url);
                   }}>Download key.pem</button>
                 </div>
-                <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 300, fontSize: 13, marginTop: 8 }}>
+                <pre style={{ background: 'var(--bg-card-alt)', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 300, fontSize: 13, marginTop: 8 }}>
                   {generateKeypairApi.data.privateKey}
                 </pre>
               </div>
@@ -4437,13 +4447,13 @@ function App() {
                     URL.revokeObjectURL(url);
                   }}>Download public.pem</button>
                 </div>
-                <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 200, fontSize: 13, marginTop: 8 }}>
+                <pre style={{ background: 'var(--bg-card-alt)', padding: 16, borderRadius: 8, overflow: 'auto', maxHeight: 200, fontSize: 13, marginTop: 8 }}>
                   {generateKeypairApi.data.publicKeyPem}
                 </pre>
               </div>
               <div className="course-result" style={{ marginTop: 16 }}>
                 <h3>Public Key (stripped — no headers/newlines)</h3>
-                <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13, wordBreak: 'break-all' }}>
+                <pre style={{ background: 'var(--bg-card-alt)', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13, wordBreak: 'break-all' }}>
                   {generateKeypairApi.data.publicKeyStripped}
                 </pre>
               </div>
@@ -4481,13 +4491,13 @@ function App() {
             <>
               <div className="course-result" style={{ marginTop: 16 }}>
                 <h3>OpenSSL Command Used</h3>
-                <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13 }}>
+                <pre style={{ background: 'var(--bg-card-alt)', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13 }}>
                   {encryptionKeyApi.data.command}
                 </pre>
               </div>
               <div className="course-result" style={{ marginTop: 16 }}>
                 <h3>Generated Key (base64)</h3>
-                <pre style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13, wordBreak: 'break-all' }}>
+                <pre style={{ background: 'var(--bg-card-alt)', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 13, wordBreak: 'break-all' }}>
                   {encryptionKeyApi.data.key}
                 </pre>
               </div>
