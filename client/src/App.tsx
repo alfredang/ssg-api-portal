@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { signOut } from 'firebase/auth';
-import { auth } from './firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
 import { useApi } from './hooks/useApi';
 import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications, postSkillExtract, postSkillSearch, getSkillsFrameworkJobs, getSkillsFrameworkSkills, getSkillsFrameworkGscCodes, getSkillsFrameworkTscCodes, getSkillsFrameworkTscCodesDetails, getSkillsFrameworkCcsDetails, getSkillsFrameworkTscDetails, getSkillsFrameworkJobRoles, getSkillsFrameworkJobRoleProfile, getSkillsFrameworkOccupations, getSkillsFrameworkJobRoleCodes, generateCertificate, generateKeypair, generateEncryptionKey, getTrainingProviderCourses } from './api/courseApi';
 import SearchForm from './components/SearchForm';
@@ -378,11 +379,32 @@ function App() {
     setActiveCertId(id);
     localStorage.setItem('ssg-active-cert', id);
   };
+  // Load defaults from Firestore on mount (overrides localStorage)
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+    const ref = doc(db, 'userDefaults', user.uid);
+    getDoc(ref).then((snap) => {
+      if (snap.exists()) {
+        const cloud = snap.data() as Record<string, string>;
+        const merged = { ...loadDefaults(), ...cloud };
+        setDefaultsState(merged);
+        setDraftDefaults(merged);
+        localStorage.setItem('ssg-api-defaults', JSON.stringify(merged));
+      }
+    }).catch(() => { /* offline — use localStorage */ });
+  }, []);
+
   const d = (key: string) => defaults[key] ?? '';
   const setDefaults = (next: Record<string, string>) => {
     setDefaultsState(next);
     setDraftDefaults(next);
     localStorage.setItem('ssg-api-defaults', JSON.stringify(next));
+    // Sync to Firestore
+    const user = auth.currentUser;
+    if (user) {
+      setDoc(doc(db, 'userDefaults', user.uid), next).catch(() => {});
+    }
   };
   const handleSetDefaults = (values: Record<string, string>) => {
     setDefaults({ ...defaults, ...values });
