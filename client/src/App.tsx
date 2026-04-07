@@ -2608,6 +2608,8 @@ function App() {
             const courseRef = fd.get('courseRef') as string;
             const nric = fd.get('nric') as string;
             const uen = fd.get('tpUen') as string;
+            const nricType = fd.get('nricType') as string;
+            const idTypeMap: Record<string, string> = { SC: 'NRIC', SP: 'NRIC', SO: 'FIN' };
             handleGrantPersonalised({
               courses: [{
                 trainingPartnerUen: uen,
@@ -2616,7 +2618,7 @@ function App() {
               applicant: {
                 sme: fd.get('sme') as string,
                 nric,
-                nricType: fd.get('nricType') as string,
+                nricType,
                 employerSponsored: fd.get('employerSponsored') as string,
               },
               course: {
@@ -2624,56 +2626,58 @@ function App() {
                 startDate: fd.get('startDate') as string,
               },
               trainee: {
-                idType: fd.get('idType') as string,
+                idType: idTypeMap[nricType] || 'NRIC',
                 id: nric,
                 dateOfBirth: fd.get('dob') as string,
                 sponsoringEmployerUen: uen,
-                modularisedSCTPBundleCourseStartDate: (fd.get('modStartDate') as string) || undefined,
               },
             });
           }}>
-            <h4 style={{ marginBottom: 8 }}>Course &amp; Training Partner</h4>
             <div className="form-group">
-              <label htmlFor="gpTpUen">Training Partner / Sponsoring Employer UEN</label>
+              <label htmlFor="gpTpUen">UEN</label>
               <input id="gpTpUen" name="tpUen" type="text" defaultValue={d('uen')} disabled={grantPersonalisedApi.loading} />
             </div>
             <div className="form-group">
-              <label htmlFor="gpCourseRef">Course Reference Number</label>
+              <label htmlFor="gpCourseRef">Course Ref Code *</label>
               <input id="gpCourseRef" name="courseRef" type="text" defaultValue={d('courseRefNo')} disabled={grantPersonalisedApi.loading} />
             </div>
-            <div className="form-group">
-              <label htmlFor="gpStartDate">Course Start Date</label>
-              <input id="gpStartDate" name="startDate" type="text" defaultValue="2020-05-15" placeholder="YYYY-MM-DD" disabled={grantPersonalisedApi.loading} />
+            <div className="search-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 1rem' }}>
+              <div className="form-group">
+                <label htmlFor="gpNric">NRIC</label>
+                <input id="gpNric" name="nric" type="text" defaultValue={d('traineeId')} disabled={grantPersonalisedApi.loading} />
+              </div>
+              <div className="form-group">
+                <label htmlFor="gpNricType">NRIC Type</label>
+                <select id="gpNricType" name="nricType" defaultValue="SC" disabled={grantPersonalisedApi.loading}>
+                  <option value="SC">Singapore Citizen (SC)</option>
+                  <option value="SP">Singapore PR (SP)</option>
+                  <option value="SO">Others (SO)</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="gpDob">Date of Birth</label>
+                <input id="gpDob" name="dob" type="date" defaultValue="1967-05-25" disabled={grantPersonalisedApi.loading} />
+              </div>
             </div>
-            <h4 style={{ marginTop: 16, marginBottom: 8 }}>Applicant / Trainee</h4>
-            <div className="form-group">
-              <label htmlFor="gpNric">NRIC / Trainee ID</label>
-              <input id="gpNric" name="nric" type="text" defaultValue={d('traineeId')} disabled={grantPersonalisedApi.loading} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="gpNricType">NRIC Type</label>
-              <input id="gpNricType" name="nricType" type="text" defaultValue="SP" disabled={grantPersonalisedApi.loading} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="gpIdType">ID Type</label>
-              <input id="gpIdType" name="idType" type="text" defaultValue="NRIC" disabled={grantPersonalisedApi.loading} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="gpDob">Date of Birth</label>
-              <input id="gpDob" name="dob" type="text" defaultValue="1980-05-15" placeholder="YYYY-MM-DD" disabled={grantPersonalisedApi.loading} />
-            </div>
-            <h4 style={{ marginTop: 16, marginBottom: 8 }}>Sponsorship</h4>
-            <div className="form-group">
-              <label htmlFor="gpSme">SME (Y/N)</label>
-              <input id="gpSme" name="sme" type="text" defaultValue="Y" disabled={grantPersonalisedApi.loading} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="gpEmployerSponsored">Employer Sponsored (Y/N)</label>
-              <input id="gpEmployerSponsored" name="employerSponsored" type="text" defaultValue="Y" disabled={grantPersonalisedApi.loading} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="gpModStartDate">Modularised SCTP Bundle Course Start Date (optional)</label>
-              <input id="gpModStartDate" name="modStartDate" type="text" placeholder="YYYY-MM-DD" disabled={grantPersonalisedApi.loading} />
+            <div className="search-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 1rem' }}>
+              <div className="form-group">
+                <label htmlFor="gpSme">SME?</label>
+                <select id="gpSme" name="sme" defaultValue="N" disabled={grantPersonalisedApi.loading}>
+                  <option value="Y">Yes</option>
+                  <option value="N">No</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="gpEmployerSponsored">Employer Sponsored?</label>
+                <select id="gpEmployerSponsored" name="employerSponsored" defaultValue="N" disabled={grantPersonalisedApi.loading}>
+                  <option value="Y">Yes</option>
+                  <option value="N">No</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="gpStartDate">Course Start Date</label>
+                <input id="gpStartDate" name="startDate" type="date" defaultValue="2026-05-02" disabled={grantPersonalisedApi.loading} />
+              </div>
             </div>
             <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
               <button type="submit" disabled={grantPersonalisedApi.loading}>
