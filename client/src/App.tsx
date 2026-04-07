@@ -2610,6 +2610,7 @@ function App() {
             const nric = fd.get('nric') as string;
             const uen = fd.get('tpUen') as string;
             const nricType = fd.get('nricType') as string;
+            const employerSponsored = fd.get('employerSponsored') as string;
             const idTypeMap: Record<string, string> = { SC: 'NRIC', SP: 'NRIC', SO: 'FIN' };
             handleGrantPersonalised({
               courses: [{
@@ -2620,7 +2621,7 @@ function App() {
                 sme: fd.get('sme') as string,
                 nric,
                 nricType,
-                employerSponsored: fd.get('employerSponsored') as string,
+                employerSponsored,
               },
               course: {
                 referenceNumber: courseRef,
@@ -2629,7 +2630,7 @@ function App() {
                 idType: idTypeMap[nricType] || 'NRIC',
                 id: nric,
                 dateOfBirth: fd.get('dob') as string,
-                sponsoringEmployerUen: uen,
+                sponsoringEmployerUen: employerSponsored === 'Y' ? uen : '',
               },
             });
           }}>

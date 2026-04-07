@@ -1262,10 +1262,28 @@ router.post('/grants/personalised', async (req, res) => {
       return res.json({ status: '200', data: parsed });
     }
 
+    // Try to decrypt error response too (SSG encrypts error responses)
     console.log(`Grant Calculator Personalised: certificate returned ${certResult.status}`);
+    let errorDetails = certResult.body;
+    try {
+      // The error body is JSON with an encrypted "error" field
+      const errJson = JSON.parse(certResult.body);
+      if (errJson.error) {
+        const decryptedError = aesDecrypt(errJson.error);
+        errorDetails = decryptedError;
+        const parsedError = JSON.parse(decryptedError);
+        return res.status(certResult.status || 400).json(parsedError);
+      }
+    } catch {
+      try {
+        // Try decrypting the whole body
+        const decrypted = aesDecrypt(certResult.body);
+        errorDetails = decrypted;
+      } catch { /* use raw */ }
+    }
     return res.status(certResult.status || 500).json({
       error: `SSG API error: ${certResult.status}`,
-      details: certResult.body ? certResult.body.substring(0, 500) : null,
+      details: errorDetails ? (typeof errorDetails === 'string' ? errorDetails.substring(0, 500) : errorDetails) : null,
     });
   } catch (err) {
     console.error('Grant Calculator Personalised error:', err.message);
