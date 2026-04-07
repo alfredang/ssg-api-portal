@@ -114,7 +114,7 @@ router.get('/certs', (req, res) => {
   }
   
   // Add OAuth option
-  certs.push({ id: 'oauth', name: 'TMS 2 (OAuth)' });
+  certs.push({ id: 'oauth', name: 'App 4 (OAuth)' });
   
   res.json(certs);
 });
