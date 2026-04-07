@@ -245,11 +245,11 @@ async function ssgApiGet(endpoint, queryParams = {}, { apiVersion = 'v1.2', base
 }
 
 // mTLS POST helper — returns { status, body } or throws on network error
-function certApiPost(apiPath, jsonBody, { apiVersion = 'v1.2', headers: extraHeaders = {} } = {}) {
+function certApiPost(apiPath, jsonBody, { apiVersion = 'v1.2', headers: extraHeaders = {}, raw = false } = {}) {
   const active = getActiveCert();
   if (!active) throw new Error('No certificate configured');
   const url = new URL(apiPath, certApiBase);
-  const requestBody = JSON.stringify(jsonBody);
+  const requestBody = raw ? jsonBody : JSON.stringify(jsonBody);
 
   return new Promise((resolve, reject) => {
     const reqOptions = {
@@ -1231,27 +1231,42 @@ router.post('/grants/baseline', async (req, res) => {
 });
 
 // POST /api/grants/personalised — Grant Calculator Personalised
-// mTLS Certificate with OAuth fallback
+// mTLS Certificate with AES encryption (request + response)
 router.post('/grants/personalised', async (req, res) => {
   try {
     const body = req.body;
     const apiPath = '/grantCalculators/individual/personalised';
 
-    // Try certificate first
-    const certResult = await certApiPost(apiPath, body, { apiVersion: 'v3.0' });
+    // Encrypt the payload with AES-256-CBC
+    const encryptedPayload = aesEncrypt(JSON.stringify(body));
+
+    // Send encrypted payload as raw string via certApiPost
+    const certResult = await certApiPost(apiPath, encryptedPayload, { apiVersion: 'v3.0', raw: true });
+
     if (certResult.status >= 200 && certResult.status < 300) {
+      // Decrypt the response
       let parsed;
-      try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
-      if (typeof parsed !== 'string') { return res.json(parsed); }
-      console.log('Cert returned non-JSON (200) — falling back to OAuth');
+      try {
+        const decrypted = aesDecrypt(certResult.body);
+        parsed = JSON.parse(decrypted);
+      } catch {
+        // If decryption fails, try parsing as plain JSON
+        try { parsed = JSON.parse(certResult.body); } catch { parsed = certResult.body; }
+      }
+
+      // Check for SSG error in decrypted response
+      if (parsed?.error && (parsed.error.code || parsed.error.message)) {
+        return res.status(Number(parsed.status) || 400).json(parsed);
+      }
+
+      return res.json({ status: '200', data: parsed });
     }
 
-    console.log(`Grant Calculator Personalised: certificate returned ${certResult.status} — falling back to OAuth`);
-
-    // Fall back to OAuth
-    const oauthResult = await ssgApiPost(apiPath, body, { apiVersion: 'v3.0' });
-    if (typeof oauthResult === 'string') { return res.status(502).json({ error: 'Non-JSON response from OAuth fallback', details: oauthResult.substring(0, 200) }); }
-    return res.json(oauthResult);
+    console.log(`Grant Calculator Personalised: certificate returned ${certResult.status}`);
+    return res.status(certResult.status || 500).json({
+      error: `SSG API error: ${certResult.status}`,
+      details: certResult.body ? certResult.body.substring(0, 500) : null,
+    });
   } catch (err) {
     console.error('Grant Calculator Personalised error:', err.message);
     res.status(err.status || 500).json({
