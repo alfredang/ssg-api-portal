@@ -2602,6 +2602,7 @@ function App() {
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
             POST <code>/grantCalculators/individual/personalised</code> (v3.0). <AuthBadge method="cert+oauth" />
           </p>
+          <p style={{ color: '#f59e0b', marginBottom: 16, fontSize: 13 }}>Note: This API only works with App 1 (Skilleto) certificate.</p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
@@ -2623,7 +2624,6 @@ function App() {
               },
               course: {
                 referenceNumber: courseRef,
-                startDate: fd.get('startDate') as string,
               },
               trainee: {
                 idType: idTypeMap[nricType] || 'NRIC',
@@ -2659,25 +2659,19 @@ function App() {
                 <input id="gpDob" name="dob" type="date" defaultValue="1967-05-25" disabled={grantPersonalisedApi.loading} />
               </div>
             </div>
-            <div className="search-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 1rem' }}>
-              <div className="form-group">
-                <label htmlFor="gpSme">SME?</label>
-                <select id="gpSme" name="sme" defaultValue="N" disabled={grantPersonalisedApi.loading}>
-                  <option value="Y">Yes</option>
-                  <option value="N">No</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="gpEmployerSponsored">Employer Sponsored?</label>
-                <select id="gpEmployerSponsored" name="employerSponsored" defaultValue="N" disabled={grantPersonalisedApi.loading}>
-                  <option value="Y">Yes</option>
-                  <option value="N">No</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="gpStartDate">Course Start Date</label>
-                <input id="gpStartDate" name="startDate" type="date" defaultValue="2026-05-02" disabled={grantPersonalisedApi.loading} />
-              </div>
+            <div className="form-group">
+              <label htmlFor="gpSme">SME?</label>
+              <select id="gpSme" name="sme" defaultValue="N" disabled={grantPersonalisedApi.loading}>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="gpEmployerSponsored">Employer Sponsored?</label>
+              <select id="gpEmployerSponsored" name="employerSponsored" defaultValue="N" disabled={grantPersonalisedApi.loading}>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+              </select>
             </div>
             <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
               <button type="submit" disabled={grantPersonalisedApi.loading}>
