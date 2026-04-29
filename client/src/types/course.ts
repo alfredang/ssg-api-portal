@@ -606,14 +606,13 @@ export interface GrantPersonalisedRequest {
   };
   course: {
     referenceNumber: string;
-    startDate: string;
+    startDate?: string;
   };
   trainee: {
     idType: string;
     id: string;
     dateOfBirth: string;
     sponsoringEmployerUen: string;
-    modularisedSCTPBundleCourseStartDate?: string;
   };
 }
 
