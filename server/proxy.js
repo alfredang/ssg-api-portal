@@ -2801,7 +2801,7 @@ router.post('/tools/generate-cert', async (req, res) => {
       { shortName: 'O', value: organization },
       { shortName: 'OU', value: organizationalUnit },
       { shortName: 'CN', value: commonName },
-      { name: 'emailAddress', value: emailAddress }
+      { name: 'emailAddress', value: emailAddress, valueTagClass: forge.asn1.Type.IA5STRING }
     ];
 
     cert.setSubject(attrs);
