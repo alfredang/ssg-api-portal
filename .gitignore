@@ -14,3 +14,19 @@ PIVLoopDiagram.png
 .vercel
 .env*.local
 client/.env
+
+# Per-user defaults (file-based store) — runtime data
+server/data/
+
+# Secrets / local certs — never commit
+server/.cert/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# OS / local working files
+.DS_Store
+**/.DS_Store
+tickets/
+conformance_tests/

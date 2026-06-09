@@ -146,6 +146,21 @@
   cursor: not-allowed;
 }
 
+.login-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #fff;
+  color: #1f2937;
+  border: 1px solid #d1d5db;
+}
+
+.login-google-btn:hover:not(:disabled) {
+  background: #f9fafb;
+  opacity: 1;
+}
+
 .login-error {
   background: var(--bg-error);
   color: var(--text-error);

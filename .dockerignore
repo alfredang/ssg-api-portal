@@ -1,0 +1,15 @@
+**/node_modules
+**/dist
+.git
+.env
+.env*
+client/.env
+.vercel
+.claude
+.agents
+*.png
+tickets
+known-api-issues.csv
+**/.DS_Store
+server/.cert
+server/data

@@ -613,6 +613,7 @@ export interface GrantPersonalisedRequest {
     id: string;
     dateOfBirth: string;
     sponsoringEmployerUen: string;
+    modularisedSCTPBundleCourseStartDate?: string;
   };
 }
 

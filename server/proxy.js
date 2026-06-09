@@ -48,11 +48,32 @@ function isValidPem(pem, type) {
   return body.length > 100;
 }
 
+// Read a certificate value from either a file (persistent storage, e.g. a
+// Coolify volume) or an environment variable. If CERT_<i>_<NAME>_FILE is set,
+// the PEM is read from that path; otherwise CERT_<i>_<NAME> is used directly.
+// Literal "\n" sequences are normalised to real newlines so multiline PEMs
+// pasted into a single-line env var field (Coolify, Vercel, etc.) still parse.
+function readCertSource(envName) {
+  const filePath = process.env[`${envName}_FILE`];
+  let value;
+  if (filePath) {
+    try {
+      value = fs.readFileSync(filePath, 'utf8');
+    } catch (err) {
+      console.warn(`⚠️  Could not read ${envName}_FILE (${filePath}): ${err.message}`);
+      return undefined;
+    }
+  } else {
+    value = process.env[envName];
+  }
+  return value ? value.replace(/\\n/g, '\n') : value;
+}
+
 const certsMap = new Map();
 for (let i = 1; i <= 3; i++) {
   const name = process.env[`CERT_${i}_NAME`];
-  const certPem = process.env[`CERT_${i}_CERT`];
-  const keyPem = process.env[`CERT_${i}_KEY`];
+  const certPem = readCertSource(`CERT_${i}_CERT`);
+  const keyPem = readCertSource(`CERT_${i}_KEY`);
 
   // Debug logging to identify missing variables
   console.log(`\n--- Checking certificate ${i} ---`);
@@ -75,8 +96,8 @@ for (let i = 1; i <= 3; i++) {
     continue;
   }
 
-  const encKey = process.env[`CERT_${i}_ENCRYPTION_KEY`];
-  const privateKey = process.env[`CERT_${i}_PRIVATE_KEY`] || null;
+  const encKey = readCertSource(`CERT_${i}_ENCRYPTION_KEY`);
+  const privateKey = readCertSource(`CERT_${i}_PRIVATE_KEY`) || null;
   console.log(`CERT_${i}_PRIVATE_KEY:`, privateKey ? `✓ Present (${privateKey.length} chars)` : '⚠️  Not set (optional — needed for digital signatures)');
 
   // Validate the encryption key before storing it. AES-256-CBC requires exactly 32 bytes.

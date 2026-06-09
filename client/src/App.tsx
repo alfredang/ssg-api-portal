@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
+import { logout } from './auth';
+import type { AuthUser } from './auth';
 import { useApi } from './hooks/useApi';
 import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications, postSkillExtract, postSkillSearch, getSkillsFrameworkJobs, getSkillsFrameworkSkills, getSkillsFrameworkGscCodes, getSkillsFrameworkTscCodes, getSkillsFrameworkTscCodesDetails, getSkillsFrameworkCcsDetails, getSkillsFrameworkTscDetails, getSkillsFrameworkJobRoles, getSkillsFrameworkJobRoleProfile, getSkillsFrameworkOccupations, getSkillsFrameworkJobRoleCodes, generateCertificate, generateKeypair, generateEncryptionKey, getTrainingProviderCourses } from './api/courseApi';
 import SearchForm from './components/SearchForm';
@@ -282,6 +284,11 @@ function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange }: 
           );
         })}
       </nav>
+      <div className="sidebar-actions">
+        <button className="sign-out-btn" onClick={() => logout()}>
+          Sign Out
+        </button>
+      </div>
     </aside>
   );
 }
@@ -327,7 +334,8 @@ function loadDefaults(): Record<string, string> {
   return map;
 }
 
-function App() {
+function App({ user }: { user: AuthUser }) {
+  void user; // available for future per-user UI (e.g. showing the signed-in account)
   const [activePage, setActivePage] = useState<Page>('course-lookup');
   const [defaults, setDefaultsState] = useState<Record<string, string>>(loadDefaults);
   const [draftDefaults, setDraftDefaults] = useState<Record<string, string>>(loadDefaults);
@@ -349,10 +357,33 @@ function App() {
     setActiveCertId(id);
     localStorage.setItem('ssg-active-cert', id);
   };
+
+  // Load defaults from the server (Postgres) on mount (overrides localStorage)
+  useEffect(() => {
+    fetch('/api/defaults', { credentials: 'include' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((cloud: Record<string, string> | null) => {
+        if (cloud && Object.keys(cloud).length > 0) {
+          const merged = { ...loadDefaults(), ...cloud };
+          setDefaultsState(merged);
+          setDraftDefaults(merged);
+          localStorage.setItem('ssg-api-defaults', JSON.stringify(merged));
+        }
+      })
+      .catch(() => { /* offline — use localStorage */ });
+  }, []);
+
   const d = (key: string) => defaults[key] ?? '';
   const setDefaults = (next: Record<string, string>) => {
     setDefaultsState(next);
     localStorage.setItem('ssg-api-defaults', JSON.stringify(next));
+    // Sync to the server (Postgres)
+    fetch('/api/defaults', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(next),
+    }).catch(() => {});
   };
   const [keyword, setKeyword] = useState('');
 
@@ -922,10 +953,10 @@ function App() {
 
           {tpCoursesApi.error && <div className="error-alert">{tpCoursesApi.error}</div>}
           {tpCoursesApi.loading && <div className="loading">Loading courses...</div>}
-          {tpCoursesApi.data?.data?.courses && (
+          {(tpCoursesApi.data as any)?.data?.courses && (
             <div className="course-result" style={{ marginTop: 16 }}>
               <div style={{ marginBottom: 12, color: '#666', fontSize: 14 }}>
-                Found {(tpCoursesApi.data as any).meta?.total ?? (tpCoursesApi.data.data.courses as any[]).length} course(s)
+                Found {(tpCoursesApi.data as any).meta?.total ?? ((tpCoursesApi.data as any).data.courses as any[]).length} course(s)
               </div>
               <table className="sessions-table">
                 <thead>
@@ -939,7 +970,7 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(tpCoursesApi.data.data.courses as any[]).map((course: any, idx: number) => (
+                  {((tpCoursesApi.data as any).data.courses as any[]).map((course: any, idx: number) => (
                     <tr key={course.referenceNumber || idx}>
                       <td>{idx + 1}</td>
                       <td>{course.referenceNumber || '-'}</td>

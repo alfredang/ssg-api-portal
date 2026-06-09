@@ -7,12 +7,12 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Express](https://img.shields.io/badge/Express-5-000000?logo=express&logoColor=white)](https://expressjs.com/)
 [![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
-[![Vercel](https://img.shields.io/badge/Vercel-Deployed-000000?logo=vercel&logoColor=white)](https://ssg-api-portal.vercel.app)
+[![Docker](https://img.shields.io/badge/Docker-Coolify-2496ED?logo=docker&logoColor=white)](https://coolify.io/)
 [![License](https://img.shields.io/badge/License-ISC-blue)](LICENSE)
 
 **A developer tool for exploring SkillsFuture Singapore (SSG-WSG) APIs**
 
-[Live Demo](https://ssg-api-portal.vercel.app) · [Report Bug](https://github.com/alfredang/ssg-api-portal/issues) · [Request Feature](https://github.com/alfredang/ssg-api-portal/issues)
+[Report Bug](https://github.com/alfredang/ssg-api-portal/issues) · [Request Feature](https://github.com/alfredang/ssg-api-portal/issues)
 
 </div>
 
@@ -52,9 +52,11 @@ SSG API Portal is a React web app for exploring the SSG-WSG (SkillsFuture Singap
 |----------|------------|
 | **Frontend** | React 19, TypeScript 5.9, Vite 7 |
 | **Backend** | Express 5, Node.js 22 |
-| **Authentication** | OAuth 2.0 (client credentials) + mTLS (client certificates) |
+| **Defaults Storage** | File-based JSON store (per-user form defaults) |
+| **App Auth** | Google OAuth (social login) via Passport + cookie sessions — disabled on localhost |
+| **SSG API Auth** | OAuth 2.0 (client credentials) + mTLS (client certificates) |
 | **APIs** | SSG-WSG Course, Grant, SF Credit, Enrolment, Assessment, Skills Passport, SEA, Skills Framework APIs |
-| **Deployment** | Vercel (serverless functions + static hosting) |
+| **Deployment** | Docker on Coolify (single container, no database) |
 | **HTTP Client** | Axios (frontend), native `https` (backend mTLS) |
 
 ## Architecture
@@ -89,12 +91,13 @@ SSG API Portal is a React web app for exploring the SSG-WSG (SkillsFuture Singap
 
 ```
 ssg-api-portal/
-├── api/
-│   └── index.js              # Vercel serverless entry point
 ├── server/
 │   ├── index.js              # Express app (entry point + export)
-│   ├── oauth.js              # OAuth token fetch + cache
-│   └── proxy.js              # API proxy routes (OAuth + mTLS)
+│   ├── oauth.js              # SSG OAuth token fetch + cache
+│   ├── proxy.js              # SSG API proxy routes (OAuth + mTLS)
+│   ├── store.js              # File-based per-user defaults store (JSON)
+│   ├── auth.js               # Google OAuth, cookie sessions, local bypass
+│   └── defaults.js           # Per-user defaults API (file-backed)
 ├── client/
 │   ├── index.html            # HTML entry point
 │   ├── vite.config.ts        # Vite configuration
@@ -115,7 +118,8 @@ ssg-api-portal/
 │       └── types/
 │           └── course.ts    # TypeScript interfaces
 ├── default-values.csv        # Default form values (UEN, Course Ref, etc.)
-├── vercel.json               # Vercel deployment config
+├── Dockerfile                # Multi-stage build for Coolify deployment
+├── .dockerignore
 ├── package.json              # Root dependencies
 └── .env.example              # Environment variable template
 ```
@@ -174,31 +178,65 @@ npm start
 
 Builds the React app and serves everything from Express on port 3001.
 
-## Deployment
+## Deployment (Coolify)
 
-### Vercel
+The app ships as a single Docker image: a multi-stage [Dockerfile](Dockerfile) builds the
+React client and serves it from the Express server alongside the API proxy.
 
-The app is configured for Vercel with serverless functions. The Express API runs as a serverless function and the React SPA is served as static files.
+1. **Create an Application** from this Git repo. Coolify auto-detects the `Dockerfile`.
+2. **Add a persistent volume** mounted at `/app/server/data` so per-user defaults
+   (a JSON file) survive redeploys. No database is required.
+3. **Set environment variables** (below), then deploy. The container listens on port `3001`.
+4. **Configure Google OAuth**: in the [Google Cloud Console](https://console.cloud.google.com/apis/credentials),
+   add `https://your-domain.com/auth/google/callback` as an Authorized redirect URI.
 
-```bash
-# Install Vercel CLI
-npm i -g vercel
+**Auth behavior:** localhost (`NODE_ENV` unset) requires **no login**; the remote
+deployment (`NODE_ENV=production`) requires **Google sign-in**. Override with `AUTH_DISABLED`.
 
-# Deploy
-vercel --prod
-```
+**Storage:** per-user form defaults are saved to a JSON file under `DATA_DIR`
+(default `/app/server/data`) — no Firestore, no database.
 
-**Required environment variables on Vercel:**
+**Required environment variables on Coolify:**
 
 | Variable | Description |
 |----------|-------------|
-| `SSG_CLIENT_ID` | OAuth client ID |
-| `SSG_CLIENT_SECRET` | OAuth client secret |
+| `NODE_ENV` | Set to `production` |
+| `DATA_DIR` | Defaults file location (default `/app/server/data`; back with a volume) |
+| `SESSION_SECRET` | Long random string for signing session cookies |
+| `GOOGLE_CLIENT_ID` | Google OAuth 2.0 client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth 2.0 client secret |
+| `GOOGLE_CALLBACK_URL` | `https://your-domain.com/auth/google/callback` |
+| `SSG_CLIENT_ID` | SSG OAuth client ID |
+| `SSG_CLIENT_SECRET` | SSG OAuth client secret |
 | `SSG_API_BASE_URL` | Public API base URL |
 | `SSG_CERT_API_BASE_URL` | Certificate API base URL |
-| `CERT_PEM_BASE64` | Base64-encoded client certificate |
-| `CERT_KEY_PEM_BASE64` | Base64-encoded private key |
-| `CERT_ENCRYPTION_KEY` | AES-256 encryption key |
+| `CERT_1_NAME` | Display name for certificate set 1 |
+| `CERT_1_CERT` / `CERT_1_KEY` / `CERT_1_ENCRYPTION_KEY` | Cert set 1 — inline PEM **or** use the `*_FILE` variants below |
+
+### Certificates & secrets (never published)
+
+The SSG mTLS client certificates and private keys are **secrets**. They are
+**never committed to git** — `.env`, `server/.cert/`, and all `*.pem` / `*.key`
+files are gitignored, the `.dockerignore` keeps them out of the image, and no
+HTTP endpoint serves cert/key material. Provide them at runtime one of two ways:
+
+**Option A — Coolify persistent storage (recommended).** Mount a Coolify volume
+(e.g. at `/app/server/.cert`), upload the PEM files there, and point each cert
+set at the files. PEM files keep real newlines, so there is no `\n`-escaping pain:
+
+```
+CERT_1_NAME=App 1 (Skilleto)
+CERT_1_CERT_FILE=/app/server/.cert/skilleto_cert.pem
+CERT_1_KEY_FILE=/app/server/.cert/skilleto_key.pem
+CERT_1_ENCRYPTION_KEY=<32-char-key>     # or CERT_1_ENCRYPTION_KEY_FILE
+```
+
+**Option B — environment variables.** Paste the full PEM into `CERT_1_CERT` /
+`CERT_1_KEY` as Coolify **secret** env vars. Multiline values with literal `\n`
+are normalised automatically. Mark them as secrets so they aren't shown in logs.
+
+Up to three cert sets are supported (`CERT_1_*`, `CERT_2_*`, `CERT_3_*`); each
+`*_FILE` path takes precedence over its inline value.
 
 ## API Reference
 
@@ -295,7 +333,7 @@ Contributions are welcome!
 - [SkillsFuture Singapore (SSG-WSG)](https://developer.ssg-wsg.gov.sg) for the API platform
 - [React](https://react.dev/) + [Vite](https://vite.dev/) for the frontend tooling
 - [Express](https://expressjs.com/) for the backend framework
-- [Vercel](https://vercel.com/) for hosting and deployment
+- [Coolify](https://coolify.io/) for self-hosted deployment
 
 ---
 
