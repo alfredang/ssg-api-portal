@@ -225,7 +225,10 @@ function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange }: 
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <h1>SSG API Portal</h1>
+        <div className="sidebar-brand">
+          <img src="/tertiary-logo.png" alt="Tertiary Infotech" className="sidebar-logo" />
+          <h1>SSG API Portal</h1>
+        </div>
         <p>Developer Explorer</p>
         {certs.length > 0 && (
           <div className="cert-switcher">
