@@ -14,6 +14,7 @@ PIVLoopDiagram.png
 .vercel
 .env*.local
 client/.env
+client/.env*
 
 # Per-user defaults (file-based store) — runtime data
 server/data/
@@ -28,5 +29,4 @@ server/.cert/
 # OS / local working files
 .DS_Store
 **/.DS_Store
-tickets/
-conformance_tests/
+~$*
