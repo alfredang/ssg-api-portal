@@ -238,6 +238,36 @@ are normalised automatically. Mark them as secrets so they aren't shown in logs.
 Up to three cert sets are supported (`CERT_1_*`, `CERT_2_*`, `CERT_3_*`); each
 `*_FILE` path takes precedence over its inline value.
 
+#### Populating all four "Certificate / OAuth" dropdown entries
+
+The dropdown is built at startup by `GET /api/certs`: one entry per cert set that
+loads successfully, plus a hardcoded `TMS 2 (OAuth)` option. So the four entries are:
+
+| Slot | Dropdown label | Source |
+|------|----------------|--------|
+| `CERT_1_*` | App 1 (Skilleto) | mTLS certificate |
+| `CERT_2_*` | TMS 1 | mTLS certificate |
+| `CERT_3_*` | TMS 3 | mTLS certificate |
+| — | TMS 2 (OAuth) | always present; uses `OAUTH_CLIENT_ID`/`OAUTH_CLIENT_SECRET`, no cert |
+
+If only two show, `CERT_2_*` / `CERT_3_*` were never loaded. To add them on Coolify,
+mirror `CERT_1` exactly — add a **File Mount** (Configuration → Persistent Storage)
+per PEM into `/app/server/.cert`, then the env vars:
+
+```
+CERT_2_NAME=TMS 1
+CERT_2_CERT_FILE=/app/server/.cert/app2_cert.pem
+CERT_2_KEY_FILE=/app/server/.cert/app2_key.pem
+CERT_2_ENCRYPTION_KEY_FILE=/app/server/.cert/app2_enc.key   # optional (AES endpoints)
+CERT_3_NAME=TMS 3
+CERT_3_CERT_FILE=/app/server/.cert/app3_cert.pem
+CERT_3_KEY_FILE=/app/server/.cert/app3_key.pem
+```
+
+Cert sets are read **only at process start** — you must **Redeploy** after changing
+them. Verify with `GET /api/certs` (should return four entries). Check the deploy
+log line `--- Checking certificate 2 ---` for the load result / skip reason.
+
 ## API Reference
 
 This app proxies requests to SSG-WSG production APIs with cert-first + OAuth fallback:
