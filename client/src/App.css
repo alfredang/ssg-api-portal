@@ -1649,3 +1649,135 @@ a.pub-api-row { text-decoration: none; box-sizing: border-box; }
   .pub-user { margin-left: auto; } .pub-user-name { display: none; }
 }
 .start-lang { display: flex; align-items: center; gap: 12px; margin: 0 0 22px; color: var(--muted); font-size: 14px; }
+
+/* ═════════ Responsive: tablet and phone ═════════ */
+.pub-menu, .pub-apis-btn, .console-bar { display: none; }
+.sidebar-wrap { display: contents; }
+.pub-searchbtn svg { display: none; }
+html { -webkit-text-size-adjust: 100%; }
+img, video { max-width: 100%; }
+.pub, .app { overflow-x: clip; }
+
+/* Header collapses to a menu button before the nav can wrap. */
+@media (max-width: 1100px) {
+  .pub-top { flex-wrap: wrap; gap: 10px; padding: 10px 16px; }
+  .pub-brand { margin-right: auto; }
+  .pub-brand img { height: 30px; }
+  .pub-menu { display: inline-flex; align-items: center; justify-content: center; order: 5; width: 40px; height: 40px; background: #fff; border: 1px solid #B3C0DD; border-radius: 10px; font-size: 18px; cursor: pointer; color: var(--ink); }
+  .pub-nav { display: none; order: 10; flex-basis: 100%; flex-direction: column; gap: 2px; padding: 6px 0 4px; border-top: 1px solid var(--line); overflow: visible; white-space: normal; }
+  .pub-nav.open { display: flex; }
+  .pub-nav a, .pub-nav button { padding: 12px 10px; font-size: 16px; border-radius: 10px; }
+  .pub-nav a.on { box-shadow: none; background: var(--soft); border-radius: 10px; }
+  .pub-searchbtn { order: 3; padding: 0; width: 40px; height: 40px; justify-content: center; gap: 0; }
+  .pub-searchbtn span, .pub-searchbtn kbd { display: none; }
+  .pub-searchbtn svg { display: block; color: var(--ink); }
+  .pub-user { order: 4; margin-left: 0; }
+  .pub-user-name { display: none; }
+  .pub-user .pub-btn { padding: 9px 14px; }
+}
+
+/* Docs: sidebar becomes a drawer opened from a bar under the header. */
+@media (max-width: 980px) {
+  .pub-apis-btn { display: flex; align-items: center; gap: 8px; order: 20; flex-basis: 100%; margin: 0 -16px -10px; padding: 11px 16px; background: var(--soft); border: none; border-top: 1px solid var(--line); color: var(--ink); font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; text-align: left; }
+  .docs { grid-template-columns: 1fr; }
+  .docs-side-wrap { display: none; border: none; }
+  .docs-side-wrap.open { display: block; position: fixed; inset: 0; z-index: 70; background: rgba(15, 28, 69, .45); }
+  .docs-side-wrap.open .docs-side { position: absolute; left: 0; top: 0; bottom: 0; width: min(330px, 88vw); max-height: none; background: #fff; padding: 18px 14px 28px; box-shadow: 8px 0 30px rgba(15, 28, 69, .25); }
+  .docs-side li a, .docs-group, .docs-top { padding-top: 9px; padding-bottom: 9px; }
+  .docs-main { padding: 20px 16px 40px; }
+  .api-cols { grid-template-columns: 1fr; gap: 8px; }
+  .api-col-code { position: static; }
+}
+
+@media (max-width: 700px) {
+  /* type and spacing */
+  .api-head h1, .home-hero h1, .tpg-step-title h1, .pub-form-wrap h1, .pub-hero h1 { font-size: 24px; }
+  .api-desc, .home-hero p { font-size: 15px; }
+  .home-base > div { width: 100%; box-sizing: border-box; }
+  .home-base code { flex: 1; overflow-x: auto; font-size: 13px; }
+  .home-starts, .home-products { grid-template-columns: 1fr; }
+  .pub-cta { flex-direction: column; align-items: flex-start; }
+  .pub-foot { padding: 16px; line-height: 1.9; }
+
+  /* API page */
+  .api-endpoint { flex-wrap: wrap; }
+  .api-endpoint code { flex-basis: 100%; order: 3; font-size: 13px; padding-top: 2px; }
+  .api-endpoint .spec-copy { margin-left: auto; }
+  .api-facts { flex-direction: column; gap: 4px; }
+  .spec-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .spec-table th, .spec-table td { white-space: nowrap; }
+  .spec-table td:last-child { white-space: normal; min-width: 180px; }
+  .spec-code pre { max-height: 70vh; padding: 44px 12px 12px; -webkit-overflow-scrolling: touch; }
+  .spec-code code { font-size: 12px; }
+  .code-panel-head { flex-direction: column; align-items: stretch; }
+  .code-panel-head .spec-tabset { display: flex; }
+  .code-panel-head .spec-tabset button { flex: 1; padding: 10px 8px; }
+  .start-lang { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .fillin-form { grid-template-columns: 1fr; }
+  .api-try { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .api-try .pub-btn { width: 100%; box-sizing: border-box; text-align: center; }
+  .api-pager { flex-direction: column; }
+  .api-pager a, .api-pager a.next { max-width: 100%; text-align: left; margin-left: 0; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .pub-api-row { grid-template-columns: 50px minmax(0, 1fr); padding: 12px 14px; }
+  .pub-api-row .pub-api-path, .pub-api-row .pub-api-ver { display: none; }
+  .start-steps > li { padding-left: 44px; }
+  .crumbs { font-size: 12.5px; }
+
+  /* palette */
+  .pal-back { padding: 8px 8px 0; align-items: flex-start; }
+  .pal { border-radius: 12px; }
+  .pal ul { max-height: 62vh; }
+  .pal li button { grid-template-columns: 48px minmax(0, 1fr); padding: 12px 10px; }
+  .pal li button code, .pal li button small { display: none; }
+  .pal-foot { display: none; }
+
+  /* TPG process */
+  .tpg-rail { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+  .tpg-rail li { flex: 0 0 150px; }
+  .tpg-map, .tpg-step { padding: 16px; }
+  .tpg-cards { grid-template-columns: 1fr; }
+  .tpg-card { flex-direction: row; }
+  .tpg-card-img { flex: 0 0 104px; height: auto; min-height: 118px; }
+  .tpg-card-icon { width: 34px; height: 34px; left: 8px; bottom: 8px; }
+  .tpg-step-head { gap: 12px; }
+  .tpg-step-icon { width: 48px; height: 48px; border-radius: 14px; }
+  .tpg-actions { width: 100%; }
+  .tpg-actions .pub-btn { flex: 1; }
+  .tpg-stepper li button { min-width: 40px; }
+  .tpg-page figcaption { gap: 8px 12px; }
+  .tpg-zoom { padding: 8px; }
+  .tpg-zoom img { max-width: none; width: 180%; }
+
+  /* subscription form */
+  .pub-form-wrap { padding: 16px; }
+  .pub-fs { padding: 14px; }
+  .pub-grid3 { grid-template-columns: 1fr; }
+  .pub-form-actions .pub-btn { width: 100%; box-sizing: border-box; text-align: center; }
+  .pub-fs input:not([type=radio]), .pub-fs textarea, .docs-filter, .pal input, .fillin-form input { font-size: 16px; } /* stops iOS zoom on focus */
+
+  .login-card { margin: 16px; padding: 24px 18px; }
+}
+
+/* Console: sidebar becomes a drawer. */
+@media (max-width: 900px) {
+  .app { display: block; }
+  .sidebar-wrap { display: none; }
+  .sidebar-wrap.open { display: block; position: fixed; inset: 0; z-index: 70; background: rgba(15, 28, 69, .45); }
+  .sidebar-wrap.open .sidebar { position: absolute; left: 0; top: 0; bottom: 0; width: min(320px, 88vw); box-shadow: 8px 0 30px rgba(15, 28, 69, .25); }
+  .console-bar { display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 30; margin: -1rem -1rem 1rem; padding: 10px 14px; background: #fff; border-bottom: 1px solid var(--hr-border); font-weight: 700; color: var(--hr-ink); }
+  .console-bar button { background: #fff; border: 1px solid var(--hr-input); border-radius: 10px; height: 40px; min-width: 40px; font-size: 18px; cursor: pointer; color: var(--hr-ink); font-family: inherit; }
+  .console-bar .console-bar-home { margin-left: auto; font-size: 13px; font-weight: 600; padding: 0 12px; color: var(--hr-primary); }
+  .main-content { padding: 1rem; overflow: visible; }
+  .main-content-inner { max-width: none; }
+  .search-form, form.course-result { grid-template-columns: 1fr !important; }
+  .main-content table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .main-content input, .main-content select, .main-content textarea { font-size: 16px; max-width: 100%; box-sizing: border-box; }
+  .main-content pre { overflow-x: auto; }
+  .page-title { font-size: 1.25rem; }
+  .nav-category-btn, .nav-subitem { padding-top: 11px; padding-bottom: 11px; }
+}
+/* Grid children must be allowed to shrink, or a long code line widens the page. */
+.api-cols > *, .docs > *, .spec, .code-panel, .spec-code { min-width: 0; }
+.docs-main { overflow-wrap: anywhere; }
+.spec-code, .spec-table { max-width: 100%; }
+@media (max-width: 980px) { .docs { grid-template-columns: minmax(0, 1fr); } .api-cols { grid-template-columns: minmax(0, 1fr); } }

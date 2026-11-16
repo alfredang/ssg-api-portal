@@ -364,6 +364,7 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
   const [defaults, setDefaultsState] = useState<Record<string, string>>(loadDefaults);
   const [draftDefaults, setDraftDefaults] = useState<Record<string, string>>(loadDefaults);
   const [defaultsSaved, setDefaultsSaved] = useState(false);
+  const [navOpen, setNavOpen] = useState(false); // console menu drawer on small screens
   const [certs, setCerts] = useState<CertOption[]>([]);
   const [activeCertId, setActiveCertId] = useState(getStoredSsgApp);
 
@@ -722,6 +723,7 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
 
   const handleNavigate = (page: Page) => {
     setActivePage(page);
+    setNavOpen(false);
     // Keep the URL shareable without re-triggering the router.
     window.history.replaceState(null, '', `#/console/${page}`);
     setKeyword('');
@@ -2697,7 +2699,7 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
         <>
           <h2 className="page-title">Search Grants</h2>
           <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>
-            POST <code>/tpg/grants/search</code> (v1.0). <AuthBadge method="cert+oauth" />
+            POST <code>/tpg/grants/search</code> (no version header). <AuthBadge method="cert+aes" />
           </p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
@@ -3269,7 +3271,7 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
       return (
         <>
           <h2 className="page-title">Search Enrolments</h2>
-          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/enrolments/search</code> (v3.0). <AuthBadge method="cert+oauth" /></p>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/enrolments/search</code> (no version header). <AuthBadge method="cert+aes" /></p>
           <form className="course-result" autoComplete="off" onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
@@ -4735,8 +4737,15 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
 
   return (
     <div className="app">
-      <Sidebar activePage={activePage} onNavigate={handleNavigate} certs={certs} activeCertId={activeCertId} onCertChange={handleCertChange} onHome={onHome} userLabel={user.name || user.email || undefined} />
+      <div className={`sidebar-wrap ${navOpen ? 'open' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) setNavOpen(false); }}>
+        <Sidebar activePage={activePage} onNavigate={handleNavigate} certs={certs} activeCertId={activeCertId} onCertChange={handleCertChange} onHome={onHome} userLabel={user.name || user.email || undefined} />
+      </div>
       <main className="main-content">
+        <div className="console-bar">
+          <button onClick={() => setNavOpen(true)} aria-label="Open console menu">☰</button>
+          <span>SSG API Console</span>
+          {onHome && <button className="console-bar-home" onClick={onHome}>API reference</button>}
+        </div>
         <div className="main-content-inner">
           {renderContent()}
         </div>

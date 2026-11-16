@@ -29,6 +29,11 @@ app.use('/api', requireAuth, proxyRoutes);
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/dist')));
   app.get('/{*path}', (req, res) => {
+    // A missing file (script, image, PDF) must be a 404, not the app shell:
+    // returning HTML for it breaks the page silently, e.g. during a rolling deploy.
+    if (path.extname(req.path)) return res.status(404).type('text/plain').send('Not found');
+    // The shell must always be re-fetched so it never points at a removed bundle.
+    res.set('Cache-Control', 'no-cache');
     res.sendFile(path.join(__dirname, '../client/dist/index.html'));
   });
 }

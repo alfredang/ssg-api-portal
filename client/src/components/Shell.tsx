@@ -88,6 +88,14 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
 
 export function TopBar({ user, active, onMenu }: { user: AuthUser | null; active: Section; onMenu?: () => void }) {
   const [palette, setPalette] = useState(false);
+  const [menu, setMenu] = useState(false);
+
+  // Close the mobile menu after navigating.
+  useEffect(() => {
+    const close = () => setMenu(false);
+    window.addEventListener('hashchange', close);
+    return () => window.removeEventListener('hashchange', close);
+  }, []);
 
   // "/" or Ctrl/Cmd-K opens search from anywhere outside a text field.
   useEffect(() => {
@@ -106,12 +114,11 @@ export function TopBar({ user, active, onMenu }: { user: AuthUser | null; active
 
   return (
     <header className="pub-top">
-      {onMenu && <button className="pub-menu" onClick={onMenu} aria-label="Open API menu">☰</button>}
       <a className="pub-brand" href="#/">
         <img src="/tertiary-logo.png" alt="Tertiary Infotech" />
         <span>SSG API Portal</span>
       </a>
-      <nav className="pub-nav" aria-label="Main">
+      <nav className={`pub-nav ${menu ? 'open' : ''}`} aria-label="Main">
         {link('docs', '/', 'API Reference')}
         {link('start', '/start', 'Getting started')}
         {link('tpg', '/tpg-process', 'TPG Process')}
@@ -119,6 +126,7 @@ export function TopBar({ user, active, onMenu }: { user: AuthUser | null; active
         <a href="#/console/course-lookup">API Console</a>
       </nav>
       <button className="pub-searchbtn" onClick={() => setPalette(true)} aria-label="Search APIs">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
         <span>Search APIs…</span><kbd>/</kbd>
       </button>
       <div className="pub-user">
@@ -131,7 +139,13 @@ export function TopBar({ user, active, onMenu }: { user: AuthUser | null; active
           <a className="pub-btn" href="#/console/course-lookup">Log in</a>
         )}
       </div>
+      <button className="pub-menu" onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu}>{menu ? '✕' : '☰'}</button>
       {palette && <CommandPalette onClose={() => setPalette(false)} />}
+      {onMenu && (
+        <button className="pub-apis-btn" onClick={onMenu}>
+          <span aria-hidden="true">☰</span> Browse all APIs
+        </button>
+      )}
     </header>
   );
 }
