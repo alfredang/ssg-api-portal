@@ -1,5 +1,19 @@
 # CLAUDE.md — Project Conventions for SSG API Portal
 
+## Site map and access (updated 2026-11-17)
+
+- `/` is the landing page (`client/src/components/Landing.tsx`); the API reference index is `/api-reference`.
+- Top menu order is fixed: Getting Started, API Reference, TPG Processes, API Subscription Form, Services, Contact.
+- Subscription form: SWDA currently asks for form **v1.12** (Sections 1-3). `client/public/subscription-form-template.docx`
+  is SWDA's form with `{{placeholders}}`; `client/src/subscriptionDocx.ts` fills it in the browser. When SWDA issues a
+  new version, rebuild the template from the new blank form and run `npx tsx scripts/test-form.mts out.docx 5`.
+  The template must contain none of our own company details.
+- Users: one admin (`ADMIN_EMAIL` in `server/users.js`), members managed in console > Users. No domain allow-list.
+  Sign-in by Google or emailed code. Mail account: console > Settings or env (`server/mailer.js`, `server/settings.js`).
+- Console menu sections and icons: `NAV_ITEMS` / `NAV_ICONS` in `client/src/App.tsx`. A catalogue entry's `page`
+  links it to a console page; `ConsoleSpec` shows that API's spec and code on the test page.
+- The server reads `dist/index.html` once at start: restart it after `npm run build`.
+
 ## API URL Policy
 
 - **Always use production URLs** for all API endpoints:

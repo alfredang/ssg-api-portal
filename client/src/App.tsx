@@ -1,4 +1,8 @@
 import LeadsPage from './components/LeadsPage';
+import { UsersPage, SettingsPage } from './components/AdminPages';
+import { ALL_APIS } from './catalog';
+import { RequestSpec, CodePanel } from './components/ApiSpec';
+import { MethodTag } from './components/Shell';
 import { useState, useMemo, useEffect } from 'react';
 import { logout } from './auth';
 import type { AuthUser } from './auth';
@@ -31,128 +35,133 @@ type Page = 'course-lookup' | 'course-search' | 'popular-courses' | 'tp-courses'
   | 'default-values'
   | 'api-issues'
   | 'api-references'
-  | 'leads';
+  | 'leads' | 'users' | 'settings';
 
 interface NavCategory {
   label: string;
+  /** Heading the category sits under in the menu. */
+  section: string;
+  /** Key into NAV_ICONS. */
+  icon: string;
   children?: { id: Page; label: string }[];
   id?: Page; // for categories with no children (leaf nodes)
 }
 
+// Console menu, in the order a class runs: find the course, run it, enrol and
+// fund the learners, assess them, then the skills data and the tools.
 const NAV_ITEMS: NavCategory[] = [
-  {
-    label: 'Courses',
-    children: [
-      { id: 'course-lookup', label: 'Lookup by Ref No' },
-      { id: 'course-search', label: 'Course Search' },
-      { id: 'popular-courses', label: 'Popular Courses' },
-      { id: 'tp-courses', label: 'Courses by TP UEN' },
-    ],
-  },
-  {
-    label: 'Course Feedback',
-    children: [
-      { id: 'course-quality', label: 'Retrieve Course Quality' },
-      { id: 'course-outcome', label: 'Retrieve Course Outcome' },
-    ],
-  },
-  {
-    label: 'Training Providers',
-    children: [
-      { id: 'course-sessions', label: 'Course Sessions' },
-      { id: 'session-attendance', label: 'Session Attendance' },
-      { id: 'upload-attendance', label: 'Upload Attendance' },
-      { id: 'trainer-details', label: 'Trainer Details' },
-      { id: 'update-trainer', label: 'Update/Delete Trainer' },
-      { id: 'publish-course-run', label: 'Publish Course Run' },
-      { id: 'edit-course-run', label: 'Update/Delete Course Run' },
-      { id: 'course-run-by-id', label: 'Course Run by ID' },
-      { id: 'course-runs-by-ref', label: 'Course Runs by Ref No' },
-    ],
-  },
-  {
-    label: 'Grant Calculator',
-    children: [
-      { id: 'grant-baseline', label: 'Baseline Scheme' },
-      { id: 'grant-personalised', label: 'Personalised' },
-      { id: 'grant-search', label: 'Search Grants' },
-      { id: 'grant-view', label: 'View Grant Details' },
-      { id: 'grant-codes', label: 'Grants Code Lookup' },
-    ],
-  },
-  {
-    label: 'SkillsFuture Credit Pay',
-    children: [
-      { id: 'sf-view-claim', label: 'View Claim Details' },
-      { id: 'sf-cancel-claim', label: 'Cancel Claim' },
-      { id: 'sf-upload-docs', label: 'Upload Supporting Docs' },
-      { id: 'sf-encrypt-request', label: 'Request Encryption' },
-      { id: 'sf-decrypt-request', label: 'Request Decryption' },
-    ],
-  },
-  {
-    label: 'Enrolments',
-    children: [
-      { id: 'enrol-create', label: 'Create Enrolment' },
-      { id: 'enrol-update', label: 'Update/Cancel Enrolment' },
-      { id: 'enrol-search', label: 'Search Enrolments' },
-      { id: 'enrol-view', label: 'View Enrolment' },
-      { id: 'enrol-fee-collection', label: 'Update Fee Collection' },
-      { id: 'enrol-codes', label: 'Enrolment Code Lookup' },
-    ],
-  },
-  {
-    label: 'Assessments',
-    children: [
-      { id: 'assess-create', label: 'Create Assessment' },
-      { id: 'assess-update', label: 'Update/Void Assessment' },
-      { id: 'assess-search', label: 'Search Assessments' },
-      { id: 'assess-view', label: 'View Assessment' },
-      { id: 'assess-codes', label: 'Assessment Code Lookup' },
-    ],
-  },
-  {
-    label: 'Skills Passport',
-    children: [
-      { id: 'sp-qualifications', label: 'Retrieve Qualification' },
-    ],
-  },
-  {
-    label: 'SEA',
-    children: [
-      { id: 'sea-skill-extract', label: 'Skill Extraction' },
-      { id: 'sea-skill-search', label: 'Skill Search' },
-    ],
-  },
-  {
-    label: 'Skills Framework',
-    children: [
-      { id: 'sfw-job-roles', label: 'Get Job Role Details' },
-      { id: 'sfw-skills', label: 'Get Skills Details' },
-      { id: 'sfw-gsc-codes', label: 'GSC Code Lookup' },
-      { id: 'sfw-ccs-details', label: 'CCS Details' },
-      { id: 'sfw-tsc-codes', label: 'TSC Code Lookup' },
-      { id: 'sfw-tsc-codes-details', label: 'TSC Code Details' },
-      { id: 'sfw-tsc-details', label: 'TSC Full Details' },
-      { id: 'sfw-job-roles-search', label: 'Search Job Roles' },
-      { id: 'sfw-job-role-profile', label: 'Job Role Profile' },
-      { id: 'sfw-occupations', label: 'List Occupations' },
-      { id: 'sfw-job-role-codes', label: 'Job Role Codes' },
-    ],
-  },
-  {
-    label: 'Tools',
-    children: [
-      { id: 'tools-generate-cert', label: 'Generate Certificate' },
-      { id: 'tools-generate-keypair', label: 'Generate Digital Signature ' },
-      { id: 'tools-encryption-key', label: 'Generate Encryption Key' },
-    ],
-  },
-  { label: 'Default Values', id: 'default-values' },
-  { label: 'Known API Issues', id: 'api-issues' },
-  { label: 'SSG API References', id: 'api-references' },
-  { label: 'Enquiries', id: 'leads' },
+  { section: 'Courses', icon: 'book', label: 'Course Directory', children: [
+    { id: 'course-lookup', label: 'Lookup by Ref No' },
+    { id: 'course-search', label: 'Course Search' },
+    { id: 'popular-courses', label: 'Popular Courses' },
+    { id: 'tp-courses', label: 'Courses by TP UEN' },
+  ] },
+  { section: 'Courses', icon: 'star', label: 'Course Feedback', children: [
+    { id: 'course-quality', label: 'Retrieve Course Quality' },
+    { id: 'course-outcome', label: 'Retrieve Course Outcome' },
+  ] },
+  { section: 'Course delivery', icon: 'calendar', label: 'Course Runs', children: [
+    { id: 'publish-course-run', label: 'Publish Course Run' },
+    { id: 'edit-course-run', label: 'Update/Delete Course Run' },
+    { id: 'course-run-by-id', label: 'Course Run by ID' },
+    { id: 'course-runs-by-ref', label: 'Course Runs by Ref No' },
+  ] },
+  { section: 'Course delivery', icon: 'check', label: 'Sessions & Attendance', children: [
+    { id: 'course-sessions', label: 'Course Sessions' },
+    { id: 'session-attendance', label: 'Session Attendance' },
+    { id: 'upload-attendance', label: 'Upload Attendance' },
+  ] },
+  { section: 'Course delivery', icon: 'user', label: 'Trainers', children: [
+    { id: 'trainer-details', label: 'Trainer Details' },
+    { id: 'update-trainer', label: 'Update/Delete Trainer' },
+  ] },
+  { section: 'Enrolment & funding', icon: 'users', label: 'Enrolments', children: [
+    { id: 'enrol-create', label: 'Create Enrolment' },
+    { id: 'enrol-update', label: 'Update/Cancel Enrolment' },
+    { id: 'enrol-search', label: 'Search Enrolments' },
+    { id: 'enrol-view', label: 'View Enrolment' },
+    { id: 'enrol-fee-collection', label: 'Update Fee Collection' },
+    { id: 'enrol-codes', label: 'Enrolment Code Lookup' },
+  ] },
+  { section: 'Enrolment & funding', icon: 'calc', label: 'Grant Calculator', children: [
+    { id: 'grant-baseline', label: 'Baseline Scheme' },
+    { id: 'grant-personalised', label: 'Personalised' },
+    { id: 'grant-search', label: 'Search Grants' },
+    { id: 'grant-view', label: 'View Grant Details' },
+    { id: 'grant-codes', label: 'Grants Code Lookup' },
+  ] },
+  { section: 'Enrolment & funding', icon: 'card', label: 'SkillsFuture Credit Pay', children: [
+    { id: 'sf-view-claim', label: 'View Claim Details' },
+    { id: 'sf-cancel-claim', label: 'Cancel Claim' },
+    { id: 'sf-upload-docs', label: 'Upload Supporting Docs' },
+    { id: 'sf-encrypt-request', label: 'Request Encryption' },
+    { id: 'sf-decrypt-request', label: 'Request Decryption' },
+  ] },
+  { section: 'Assessment & certification', icon: 'clipboard', label: 'Assessments', children: [
+    { id: 'assess-create', label: 'Create Assessment' },
+    { id: 'assess-update', label: 'Update/Void Assessment' },
+    { id: 'assess-search', label: 'Search Assessments' },
+    { id: 'assess-view', label: 'View Assessment' },
+    { id: 'assess-codes', label: 'Assessment Code Lookup' },
+  ] },
+  { section: 'Assessment & certification', icon: 'award', label: 'Skills Passport', children: [
+    { id: 'sp-qualifications', label: 'Retrieve Qualification' },
+  ] },
+  { section: 'Skills data', icon: 'layers', label: 'Skills Framework', children: [
+    { id: 'sfw-job-roles', label: 'Get Job Role Details' },
+    { id: 'sfw-skills', label: 'Get Skills Details' },
+    { id: 'sfw-gsc-codes', label: 'GSC Code Lookup' },
+    { id: 'sfw-ccs-details', label: 'CCS Details' },
+    { id: 'sfw-tsc-codes', label: 'TSC Code Lookup' },
+    { id: 'sfw-tsc-codes-details', label: 'TSC Code Details' },
+    { id: 'sfw-tsc-details', label: 'TSC Full Details' },
+    { id: 'sfw-job-roles-search', label: 'Search Job Roles' },
+    { id: 'sfw-job-role-profile', label: 'Job Role Profile' },
+    { id: 'sfw-occupations', label: 'List Occupations' },
+    { id: 'sfw-job-role-codes', label: 'Job Role Codes' },
+  ] },
+  { section: 'Skills data', icon: 'spark', label: 'Skills Extraction (SEA)', children: [
+    { id: 'sea-skill-extract', label: 'Skill Extraction' },
+    { id: 'sea-skill-search', label: 'Skill Search' },
+  ] },
+  { section: 'Setup & reference', icon: 'key', label: 'Certificates & Keys', children: [
+    { id: 'tools-generate-cert', label: 'Generate Certificate' },
+    { id: 'tools-generate-keypair', label: 'Generate Digital Signature' },
+    { id: 'tools-encryption-key', label: 'Generate Encryption Key' },
+  ] },
+  { section: 'Setup & reference', icon: 'sliders', label: 'Default Values', id: 'default-values' },
+  { section: 'Setup & reference', icon: 'alert', label: 'Known API Issues', id: 'api-issues' },
+  { section: 'Setup & reference', icon: 'link', label: 'SSG API References', id: 'api-references' },
+  { section: 'Admin', icon: 'inbox', label: 'Enquiries', id: 'leads' },
+  { section: 'Admin', icon: 'shield', label: 'Users', id: 'users' },
+  { section: 'Admin', icon: 'gear', label: 'Settings', id: 'settings' },
 ];
+
+// Menu icons, drawn as 24px line icons.
+const NAV_ICONS: Record<string, React.ReactNode> = {
+  book: <><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z" /><path d="M4 21a2 2 0 0 0 2 2h13v-4" /></>,
+  star: <path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" />,
+  calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></>,
+  check: <><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M8 12.5l3 3 5-6" /></>,
+  user: <><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6" /></>,
+  users: <><circle cx="9" cy="8" r="3.5" /><path d="M2 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5" /><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c2.4.6 4 2.3 4 5.2" /></>,
+  calc: <><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M8 7h8M8 12h2M12 12h4M8 16h2M12 16h4" /></>,
+  card: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20M6 15h4" /></>,
+  clipboard: <><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 4V3h6v1M8 11h8M8 15h5" /></>,
+  award: <><circle cx="12" cy="9" r="6" /><path d="M8.5 14l-1.5 7 5-3 5 3-1.5-7" /></>,
+  layers: <><path d="M12 3l9 5-9 5-9-5z" /><path d="M3 13l9 5 9-5M3 17.500l9 5 9-5" /></>,
+  spark: <path d="M12 3l1.8 5.200L19 10l-5.2 1.800L12 17l-1.8-5.200L5 10l5.2-1.800zM19 16l.8 2.200L22 19l-2.2.8L19 22l-.8-2.200L16 19l2.2-.8z" />,
+  key: <><circle cx="8" cy="15" r="4" /><path d="M11 12l9-9M16 7l3 3M14 9l2 2" /></>,
+  sliders: <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M16 4v4M10 10v4M18 16v4" />,
+  alert: <><path d="M12 3l10 18H2z" /><path d="M12 10v5M12 18h0" /></>,
+  link: <><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.700l-1 1" /><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.700l1-1" /></>,
+  inbox: <><path d="M3 13l3-8h12l3 8v6H3z" /><path d="M3 13h5l1 3h6l1-3h5" /></>,
+  shield: <><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /><path d="M9 12l2 2 4-4" /></>,
+  gear: <><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.900l2.1 2.100M17 17l2.1 2.100M19.1 4.900L17 7M7 17l-2.1 2.1" /></>,
+};
+function NavIcon({ name }: { name: string }) {
+  return <svg className="nav-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{NAV_ICONS[name]}</svg>;
+}
 
 const NAV_PAGE_IDS = new Set<string>(NAV_ITEMS.flatMap((c) => (c.children ? c.children.map((ch) => ch.id) : c.id ? [c.id] : [])));
 
@@ -206,7 +215,7 @@ function AuthBadge({ method }: { method: 'cert' | 'cert+oauth' | 'cert+aes' | 'n
 
 interface CertOption { id: string; name: string }
 
-function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange, onHome, userLabel }: {
+function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange, onHome, userLabel, isAdmin }: {
   activePage: Page;
   onNavigate: (page: Page) => void;
   certs: CertOption[];
@@ -214,15 +223,21 @@ function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange, on
   onCertChange: (id: string) => void;
   onHome?: () => void;
   userLabel?: string;
+  isAdmin?: boolean;
 }) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => {
     const cat = NAV_ITEMS.find((c) => c.children?.some((ch) => ch.id === activePage));
-    return new Set([cat?.label ?? 'Courses']);
+    return new Set([cat?.label ?? 'Course Directory']);
   });
+  // Collapsed = a narrow rail of icons. Remembered between visits.
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('console-nav-collapsed') === '1');
+  const setRail = (on: boolean) => { setCollapsed(on); localStorage.setItem('console-nav-collapsed', on ? '1' : '0'); };
   const [navQuery, setNavQuery] = useState('');
   const nq = navQuery.trim().toLowerCase();
   // Filter the menu as the user types; matching categories open automatically.
-  const navItems = !nq ? NAV_ITEMS : NAV_ITEMS
+  const ADMIN_ONLY = ['users', 'settings'];
+  const allowed = NAV_ITEMS.filter((c) => isAdmin || !c.id || !ADMIN_ONLY.includes(c.id));
+  const navItems = !nq ? allowed : allowed
     .map((cat) => cat.children
       ? { ...cat, children: cat.label.toLowerCase().includes(nq) ? cat.children : cat.children.filter((c) => c.label.toLowerCase().includes(nq)) }
       : cat)
@@ -241,7 +256,10 @@ function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange, on
     cat.children?.some((c) => c.id === activePage) ?? false;
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+      <button className="sidebar-collapse" onClick={() => setRail(!collapsed)} aria-label={collapsed ? 'Expand menu' : 'Collapse menu'} aria-expanded={!collapsed} title={collapsed ? 'Expand menu' : 'Collapse menu'}>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={collapsed ? 'M9 6l6 6-6 6' : 'M15 6l-6 6 6 6'} /></svg>
+      </button>
       <div className="sidebar-header">
         <div className="sidebar-brand">
           <img src="/tertiary-logo.png" alt="Tertiary Infotech" className="sidebar-logo" />
@@ -269,17 +287,28 @@ function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange, on
       </div>
       <nav className="sidebar-nav">
         {navItems.length === 0 && <div className="sidebar-empty">No API matches “{navQuery}”.</div>}
-        {navItems.map((cat) => {
+        {navItems.map((cat, idx) => {
+          const heading = idx === 0 || navItems[idx - 1].section !== cat.section
+            ? <div className="nav-section" key={`s-${cat.section}`}><span>{cat.section}</span></div> : null;
           if (cat.children) {
-            const isOpen = !!nq || expandedCategories.has(cat.label);
+            const isOpen = !collapsed && (!!nq || expandedCategories.has(cat.label));
             return (
               <div className="nav-category" key={cat.label}>
+                {heading}
                 <button
                   className={`nav-category-btn ${isChildActive(cat) ? 'active' : ''}`}
-                  onClick={() => toggleCategory(cat.label)}
+                  aria-expanded={isOpen}
+                  title={collapsed ? cat.label : undefined}
+                  onClick={() => {
+                    // From the icon rail: open the menu on this category.
+                    if (collapsed) { setRail(false); setExpandedCategories((prev) => new Set(prev).add(cat.label)); }
+                    else toggleCategory(cat.label);
+                  }}
                 >
-                  {cat.label}
-                  <span className={`nav-category-arrow ${isOpen ? 'open' : ''}`}>&#9660;</span>
+                  <NavIcon name={cat.icon} />
+                  <span className="nav-label">{cat.label}</span>
+                  <span className="nav-count">{cat.children.length}</span>
+                  <svg className={`nav-category-arrow ${isOpen ? 'open' : ''}`} viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
                 </button>
                 {isOpen && (
                   <div className="nav-subitems">
@@ -300,11 +329,15 @@ function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange, on
 
           return (
             <div className="nav-category" key={cat.label}>
+              {heading}
               <button
                 className={`nav-category-btn no-children ${activePage === cat.id ? 'active' : ''}`}
+                aria-current={activePage === cat.id ? 'page' : undefined}
+                title={collapsed ? cat.label : undefined}
                 onClick={() => cat.id && onNavigate(cat.id)}
               >
-                {cat.label}
+                <NavIcon name={cat.icon} />
+                <span className="nav-label">{cat.label}</span>
               </button>
             </div>
           );
@@ -312,11 +345,37 @@ function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange, on
       </nav>
       <div className="sidebar-actions">
         {userLabel && <div className="sidebar-user" title={userLabel}>{userLabel}</div>}
-        <button className="sign-out-btn" onClick={() => logout()}>
-          Sign Out
+        <button className="sign-out-btn" onClick={() => logout()} title="Sign out">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h10" /></svg>
+          <span className="nav-label">Sign Out</span>
         </button>
       </div>
     </aside>
+  );
+}
+
+/** The API spec and code examples for the page being tested, from the public reference. */
+function ConsoleSpec({ page }: { page: string }) {
+  const apis = ALL_APIS.filter((a) => a.page === page && a.auth !== 'local');
+  if (apis.length === 0) return null;
+  return (
+    <div className="console-spec">
+      {apis.map((a) => (
+        <details key={a.slug}>
+          <summary>
+            <MethodTag method={a.method} />
+            <code>{a.path}</code>
+            <span className="console-spec-ver">{/^v/.test(a.version) ? a.version : 'no version header'}</span>
+            <span className="console-spec-open">API spec and code</span>
+          </summary>
+          <div className="console-spec-body">
+            <p>{a.desc} <a href={`/docs/${a.slug}`} target="_blank" rel="noopener">Open the reference page ↗</a></p>
+            <RequestSpec api={a} />
+            <CodePanel api={a} />
+          </div>
+        </details>
+      ))}
+    </div>
   );
 }
 
@@ -367,6 +426,7 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
   const [defaults, setDefaultsState] = useState<Record<string, string>>(loadDefaults);
   const [draftDefaults, setDraftDefaults] = useState<Record<string, string>>(loadDefaults);
   const [defaultsSaved, setDefaultsSaved] = useState(false);
+  const isAdmin = user.role === 'admin';
   const [navOpen, setNavOpen] = useState(false); // console menu drawer on small screens
   const [certs, setCerts] = useState<CertOption[]>([]);
   const [activeCertId, setActiveCertId] = useState(getStoredSsgApp);
@@ -4694,6 +4754,8 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
     }
 
     if (activePage === 'leads') return <LeadsPage />;
+    if (activePage === 'users') return isAdmin ? <UsersPage /> : <p>Only the admin can manage users.</p>;
+    if (activePage === 'settings') return isAdmin ? <SettingsPage /> : <p>Only the admin can change settings.</p>;
 
     if (activePage === 'api-references') {
       return (
@@ -4743,7 +4805,7 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
   return (
     <div className="app">
       <div className={`sidebar-wrap ${navOpen ? 'open' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) setNavOpen(false); }}>
-        <Sidebar activePage={activePage} onNavigate={handleNavigate} certs={certs} activeCertId={activeCertId} onCertChange={handleCertChange} onHome={onHome} userLabel={user.name || user.email || undefined} />
+        <Sidebar activePage={activePage} onNavigate={handleNavigate} certs={certs} activeCertId={activeCertId} onCertChange={handleCertChange} onHome={onHome} userLabel={`${user.name || user.email || ''}${isAdmin ? ' · Admin' : ''}`} isAdmin={isAdmin} />
       </div>
       <main className="main-content">
         <div className="console-bar">
@@ -4752,6 +4814,7 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
           {onHome && <button className="console-bar-home" onClick={onHome}>API reference</button>}
         </div>
         <div className="main-content-inner">
+          <ConsoleSpec page={activePage} />
           {renderContent()}
           <p className="console-foot powered-by">Powered by <a href="https://www.tertiaryinfotech.com/" target="_blank" rel="noopener">Tertiary Infotech Academy Pte Ltd</a></p>
         </div>

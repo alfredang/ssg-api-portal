@@ -13,6 +13,8 @@ import { ContactPage, ServicesPage } from './components/Marketing'
 import { KeysGuide, SubscriptionGuide } from './components/Guides'
 import { startRouter, usePath, navigate } from './router'
 import { applySeo } from './seo'
+import ChatWidget from './components/ChatWidget'
+import Landing from './components/Landing'
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null as Error | null };
@@ -31,13 +33,14 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
 }
 
 type Route =
-  | { view: 'home' } | { view: 'start' } | { view: 'group'; id: string } | { view: 'api'; slug: string }
+  | { view: 'home' } | { view: 'reference' } | { view: 'start' } | { view: 'group'; id: string } | { view: 'api'; slug: string }
   | { view: 'form' } | { view: 'tpg'; slug?: string } | { view: 'services' } | { view: 'contact' }
   | { view: 'guide'; id: string } | { view: 'console'; page: string };
 
 function parseRoute(pathname: string): Route {
   const [head, arg] = pathname.replace(/^\/+|\/+$/g, '').split('/');
   if (head === 'start') return { view: 'start' };
+  if (head === 'api-reference') return { view: 'reference' };
   if (head === 'docs' && arg) return { view: 'api', slug: arg };
   if (head === 'category' && arg) return { view: 'group', id: arg };
   if (head === 'subscription-form') return { view: 'form' };
@@ -77,6 +80,9 @@ function AuthGate() {
       : <LoginPage onBack={() => navigate('/')} />;
   }
 
+  return <>{publicPage()}<ChatWidget /></>;
+
+  function publicPage() {
   switch (route.view) {
     case 'form': return <SubscriptionForm user={user} />;
     case 'tpg': return <TpgProcess user={user} slug={route.slug} />;
@@ -86,7 +92,9 @@ function AuthGate() {
     case 'services': return <ServicesPage user={user} />;
     case 'contact': return <ContactPage user={user} />;
     case 'guide': return route.id === 'api-subscription' ? <SubscriptionGuide user={user} /> : <KeysGuide user={user} />;
-    default: return <Home user={user} />;
+    case 'reference': return <Home user={user} />;
+    default: return <Landing user={user} />;
+  }
   }
 }
 

@@ -26,6 +26,9 @@ app.use('/api/defaults', defaultsRoutes);
 app.use(leads.publicRouter);
 app.use('/api/leads', leads.adminRouter);
 
+// Admin-only: backend users and settings.
+app.use('/api/admin', require('./admin'));
+
 // SSG API proxy routes (certificate/mTLS + OAuth fallback).
 // These call SSG with our App 1-4 credentials, so they require a signed-in
 // user. The public API catalogue is static and needs no API access.

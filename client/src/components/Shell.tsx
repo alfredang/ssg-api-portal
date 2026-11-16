@@ -11,7 +11,7 @@ import { navigate, usePath } from '../router';
 // command palette, and the docs layout with its persistent API sidebar.
 // Navigation is plain hash links, so every page has a shareable URL.
 
-export type Section = 'docs' | 'start' | 'tpg' | 'form' | 'services' | 'contact';
+export type Section = 'home' | 'docs' | 'start' | 'tpg' | 'form' | 'services' | 'contact';
 
 const go = (path: string) => navigate(path);
 
@@ -121,10 +121,10 @@ export function TopBar({ user, active, onMenu }: { user: AuthUser | null; active
         <span>SSG API Portal</span>
       </a>
       <nav className={`pub-nav ${menu ? 'open' : ''}`} aria-label="Main">
-        {link('docs', '/', 'API Reference')}
-        {link('start', '/start', 'Getting started')}
-        {link('tpg', '/tpg-process', 'TPG Process')}
-        {link('form', '/subscription-form', 'Subscription Form')}
+        {link('start', '/start', 'Getting Started')}
+        {link('docs', '/api-reference', 'API Reference')}
+        {link('tpg', '/tpg-process', 'TPG Processes')}
+        {link('form', '/subscription-form', 'API Subscription Form')}
         {link('services', '/ssg-api-services', 'Services')}
         {link('contact', '/contact', 'Contact')}
       </nav>
@@ -172,7 +172,7 @@ function DocsSidebar({ currentSlug, currentGroup, currentGuide, onNavigate }: { 
   return (
     <nav className="docs-side" aria-label="APIs">
       <input type="search" className="docs-filter" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter APIs…" aria-label="Filter APIs" />
-      <a className={`docs-top ${!currentSlug && !currentGroup && !currentGuide ? 'on' : ''}`} href="/" onClick={onNavigate}>All APIs</a>
+      <a className={`docs-top ${!currentSlug && !currentGroup && !currentGuide ? 'on' : ''}`} href="/api-reference" onClick={onNavigate}>All APIs</a>
       {terms.length === 0 && (
         <div className="docs-product">
           <div className="docs-product-name">Guides</div>
@@ -244,7 +244,7 @@ export function Footer() {
         </div>
         <nav aria-label="Reference">
           <b>Reference</b>
-          <a href="/">SSG API reference</a>
+          <a href="/api-reference">SSG API reference</a>
           <a href="/start">Getting started</a>
           <a href="/guides/create-keys">Create SSG API keys</a>
           <a href="/guides/api-subscription">API subscription process</a>

@@ -1,11 +1,15 @@
 // Enquiries from the public Contact and SSG API Services pages.
 //   POST /lead        public: validate, rate-limit, append to DATA_DIR/leads.jsonl,
-//                     and forward to LEAD_WEBHOOK_URL when set (e.g. a chat or CRM webhook)
+//                     email it to LEAD_EMAIL_TO (see mailer.js), and forward to
+//                     LEAD_WEBHOOK_URL when set (e.g. a chat or CRM webhook)
 //   GET  /api/leads   signed-in staff only: latest enquiries, newest first
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { requireAuth } = require('./auth');
+const { sendLeadEmail, sendLeadAutoreply, transportName } = require('./mailer');
+
+if (!transportName()) console.warn('[lead] no mail account configured: enquiries are stored but not emailed (console > Settings)');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const FILE = path.join(DATA_DIR, 'leads.jsonl');
@@ -48,6 +52,10 @@ publicRouter.post('/lead', async (req, res) => {
     return res.status(500).json({ error: 'Could not save your enquiry' });
   }
   console.log(`[lead] ${lead.source}: new enquiry stored`);
+  // Email the team. Not awaited: the visitor's confirmation does not depend on the mail provider.
+  // The notification and the acknowledgement are independent: one failing does not stop the other.
+  sendLeadEmail(lead).then((r) => console.log(r.sent ? `[lead] team notified via ${r.via} (${r.id})` : `[lead] team NOT notified: ${r.reason}`));
+  sendLeadAutoreply(lead).then((r) => console.log(r.sent ? `[lead] acknowledgement sent via ${r.via} (${r.id})` : `[lead] acknowledgement NOT sent: ${r.reason}`));
   if (process.env.LEAD_WEBHOOK_URL) {
     fetch(process.env.LEAD_WEBHOOK_URL, {
       method: 'POST',

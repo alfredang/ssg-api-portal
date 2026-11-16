@@ -3,12 +3,13 @@ import { ALL_APIS } from '../catalog';
 import type { AuthUser } from '../auth';
 import { TopBar, Footer } from './Shell';
 
-// Online version of "API Subscription Form for SSG-WSG APIs" (SSGAPI form).
-// The original Word file is served at /SSG-API-Subscription-Form.docx.
+// Online version of SWDA's "API Subscription Form for SWDA APIs" (v1.12,
+// Sections 1-3), the version SWDA asks for on subscription tickets. The answers
+// are written into SWDA's own Word form in the browser (subscriptionDocx.ts) and
+// downloaded as a .docx. Nothing typed here is sent to our server.
 
 interface ApiRow { name: string; use: string }
-
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>');
+const BLANK_FORM = '/SWDA-API-Subscription-Form-v1.12.docx';
 
 export default function SubscriptionForm({ user }: { user: AuthUser | null }) {
   const [f, setF] = useState({
@@ -18,59 +19,60 @@ export default function SubscriptionForm({ user }: { user: AuthUser | null }) {
     tmsName: '', tmsUen: '', tmsAbbrev: '', gateway: '',
   });
   const [rows, setRows] = useState<ApiRow[]>([{ name: '', use: '' }]);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const setRow = (i: number, patch: Partial<ApiRow>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
-  const downloadWord = () => {
-    const tick = (on: boolean) => (on ? '[ X ]' : '[&nbsp;&nbsp;]');
-    const row = (label: string, value: string) => `<tr><td width="38%"><b>${label}</b></td><td>${value || '&nbsp;'}</td></tr>`;
-    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>API Subscription Form</title>
-<style>body{font-family:Arial;font-size:11pt}table{border-collapse:collapse;width:100%;margin-bottom:14pt}td{border:1px solid #666;padding:6pt;vertical-align:top}h1{font-size:15pt}h2{font-size:12pt;background:#ddd;padding:4pt}</style></head><body>
-<h1>API Subscription Form for SSG-WSG APIs</h1>
-<h2>(1) Developer Portal Application Information (to be provided by Requester)</h2>
-<table>
-${row('Company’s Name', esc(f.company))}
-${row('Company’s UEN No.', esc(f.uen))}
-${row('Company’s Contact Person Details', `Name: ${esc(f.contactName)}<br/>Contact Number: ${esc(f.contactNumber)}<br/>Company Email Address: ${esc(f.contactEmail)}`)}
-${row('Developer Portal’s App Owner Name', esc(f.ownerName))}
-${row('Developer Portal’s App Owner Company Email Address', esc(f.ownerEmail))}
-${row('Developer Portal’s App Name', esc(f.appName))}
-</table>
-<h2>(2) Requester System Information (to be provided by Requester)</h2>
-<table>
-${row('Requester System Type', `${tick(f.systemType === 'TP')} External - Training Provider (TP)<br/>${tick(f.systemType === 'TMS')} External - Training Management System (TMS) Provider / 3rd Party Vendor`)}
-${row('Training Management System (TMS) Provider Details', `TMS Provider Company Name: ${esc(f.tmsName)}<br/>TMS Provider Company UEN No.: ${esc(f.tmsUen)}<br/>TMS Provider Naming Convention (Abbreviation): ${esc(f.tmsAbbrev)}`)}
-${row('(2a) Requester System Gateway', esc(f.gateway))}
-</table>
-<h2>(3) Requested API Information &amp; Background (to be provided by Requester)</h2>
-<table>
-${row('Requested SSG-WSG Data, Service(s), API(s)', rows.filter((r) => r.name).map((r) => esc(r.name)).join('<br/>'))}
-${row('Reason for requesting for the SSG-WSG Data / Service / API', rows.filter((r) => r.name).map((r) => `<b>API Name:</b> ${esc(r.name)}<br/><b>How the API will be used:</b><br/>${esc(r.use)}`).join('<br/><br/>'))}
-</table></body></html>`;
-    const blob = new Blob(['﻿', html], { type: 'application/msword' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `SSG-API-Subscription-Form${f.appName ? ' - ' + f.appName.replace(/[^\w -]/g, '') : ''}.doc`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+  const downloadWord = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const missingUse = rows.find((r) => r.name.trim() && !r.use.trim());
+    if (!rows.some((r) => r.name.trim())) { setMsg({ ok: false, text: 'Add at least one API you are requesting.' }); return; }
+    if (missingUse) { setMsg({ ok: false, text: `Describe how “${missingUse.name}” will be used. SWDA asks for a business use case for every API.` }); return; }
+    setBusy(true); setMsg(null);
+    try {
+      const [{ fillSubscriptionForm }, res] = await Promise.all([import('../subscriptionDocx'), fetch('/subscription-form-template.docx')]);
+      if (!res.ok) throw new Error(`Could not load the form (${res.status})`);
+      const docx = fillSubscriptionForm(new Uint8Array(await res.arrayBuffer()), { ...f, apis: rows });
+      const blob = new Blob([docx as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `SWDA_API Platform - API Subs Req Form (v1.12)${f.appName.trim() ? ' - ' + f.appName.trim().replace(/[^\w -]/g, '') : ''}.docx`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      setMsg({ ok: true, text: 'Downloaded. Open it in Word to check it, then attach it to your ticket.' });
+    } catch (err) {
+      setMsg({ ok: false, text: err instanceof Error ? err.message : 'Could not create the Word file' });
+    }
+    setBusy(false);
   };
 
   return (
     <div className="pub">
       <TopBar user={user} active="form" />
       <div className="pub-form-wrap">
-        <a className="pub-link" href="/">← API Reference</a>
-        <h1>API Subscription Form for SSG-WSG APIs</h1>
+        <a className="pub-link" href="/api-reference">← API Reference</a>
+        <h1>API Subscription Form for SWDA APIs</h1>
         <p className="pub-product-desc">
-          Fill this in to request access to an SSG API, download it as a Word document, and attach it to a ticket at{' '}
-          <a href="https://go.gov.sg/ssg-api-ticket" target="_blank" rel="noopener noreferrer">go.gov.sg/ssg-api-ticket</a>.
-          Use one form per Developer Portal app. Nothing you type here is sent to our server.
+          Fill in the form below and download it as a Word document: it is SWDA’s own form (v1.12, Sections 1 to 3) with your answers typed in,
+          ready to attach to your ticket. Nothing you type here is sent to our server.
         </p>
+
+        <ol className="sub-steps" aria-label="How to submit the form">
+          <li><b>Create the app</b><span>On the Developer Portal, name it <em>TMS provider abbreviation + company abbreviation</em>, for example “TMSV2 TIA”. One form per app.</span></li>
+          <li><b>Subscribe in the portal</b><span>Subscribe the app to each API. They show as Pending until SWDA approves.</span></li>
+          <li><b>Fill in and download</b><span>Give a business use case for every API: what it is, how your system calls it, and the outcome.</span></li>
+          <li><b>Raise a ticket</b><span>Attach the Word file at <a href="https://go.gov.sg/ssg-api-ticket" target="_blank" rel="noopener noreferrer">go.gov.sg/ssg-api-ticket</a>. Say whether you are a TMS provider, a TP with your own TMS, or a TP on a third-party TMS: SWDA asks every time.</span></li>
+          <li><b>Reply and test</b><span>Answer clarifications before the ticket’s auto-resolve date, then run the UAT conformance tests. Production access is given to the training provider, not the TMS provider.</span></li>
+        </ol>
+        <p className="sub-more">The full walk-through is in <a href="/guides/api-subscription">SSG API subscription process</a>.</p>
+
+        <form onSubmit={downloadWord}>
 
         <fieldset className="pub-fs">
           <legend>(1) Developer Portal Application Information</legend>
-          <label>Company’s Name<input value={f.company} onChange={set('company')} autoComplete="organization" /></label>
-          <label>Company’s UEN No.<input value={f.uen} onChange={set('uen')} /></label>
+          <label>Company’s Name<input required value={f.company} onChange={set('company')} autoComplete="organization" /></label>
+          <label>Company’s UEN No.<input required value={f.uen} onChange={set('uen')} /></label>
           <div className="pub-fs-hint">Contact person who will represent the company for queries and clarifications.</div>
           <div className="pub-grid3">
             <label>Name<input value={f.contactName} onChange={set('contactName')} autoComplete="name" /></label>
@@ -80,7 +82,7 @@ ${row('Reason for requesting for the SSG-WSG Data / Service / API', rows.filter(
           <div className="pub-grid3">
             <label>Developer Portal’s App Owner Name<input value={f.ownerName} onChange={set('ownerName')} /></label>
             <label>App Owner Company Email Address<input value={f.ownerEmail} onChange={set('ownerEmail')} type="email" /></label>
-            <label>Developer Portal’s App Name<input value={f.appName} onChange={set('appName')} placeholder="TMS provider naming convention" /></label>
+            <label>Developer Portal’s App Name<input required value={f.appName} onChange={set('appName')} placeholder="e.g. TMSV2 TIA" /></label>
           </div>
         </fieldset>
 
@@ -95,7 +97,7 @@ ${row('Reason for requesting for the SSG-WSG Data / Service / API', rows.filter(
             <label>TMS Provider Company UEN No.<input value={f.tmsUen} onChange={set('tmsUen')} /></label>
             <label>TMS Provider Naming Convention (Abbreviation)<input value={f.tmsAbbrev} onChange={set('tmsAbbrev')} /></label>
           </div>
-          <label>(2a) Requester System Gateway<input value={f.gateway} onChange={set('gateway')} /></label>
+          <label>(2a) Requester System Gateway <small>(optional)</small><input value={f.gateway} onChange={set('gateway')} /></label>
         </fieldset>
 
         <fieldset className="pub-fs">
@@ -112,16 +114,18 @@ ${row('Reason for requesting for the SSG-WSG Data / Service / API', rows.filter(
               <label>How the API will be used
                 <textarea rows={4} value={r.use} onChange={(e) => setRow(i, { use: e.target.value })} />
               </label>
-              {rows.length > 1 && <button className="pub-link" onClick={() => setRows(rows.filter((_, j) => j !== i))}>Remove</button>}
+              {rows.length > 1 && <button type="button" className="pub-link" onClick={() => setRows(rows.filter((_, j) => j !== i))}>Remove</button>}
             </div>
           ))}
-          <button className="pub-btn ghost" onClick={() => setRows([...rows, { name: '', use: '' }])}>+ Add another API</button>
+          <button type="button" className="pub-btn ghost" onClick={() => setRows([...rows, { name: '', use: '' }])}>+ Add another API</button>
         </fieldset>
 
         <div className="pub-form-actions">
-          <button className="pub-btn" onClick={downloadWord}>Download filled form (.doc)</button>
-          <a className="pub-btn ghost" href="/SSG-API-Subscription-Form.docx" download>Download blank form (.docx)</a>
+          <button type="submit" className="pub-btn" disabled={busy}>{busy ? 'Preparing…' : 'Download the filled form (Word .docx)'}</button>
+          <a className="pub-btn ghost" href={BLANK_FORM} download>Download the blank form</a>
         </div>
+        {msg && <p className={msg.ok ? 'sub-msg ok' : 'sub-msg err'} role="status">{msg.text}</p>}
+        </form>
       </div>
       <Footer />
     </div>

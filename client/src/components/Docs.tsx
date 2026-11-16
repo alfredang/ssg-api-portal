@@ -102,7 +102,7 @@ export function GroupPage({ user, groupId }: { user: AuthUser | null; groupId: s
   const apis = ALL_APIS.filter((a) => a.groupId === groupId);
   return (
     <DocsLayout user={user} currentGroup={groupId}>
-      <nav className="crumbs" aria-label="Breadcrumb"><a href="/">API Reference</a><span>›</span><span>{apis[0]?.product}</span></nav>
+      <nav className="crumbs" aria-label="Breadcrumb"><a href="/api-reference">API Reference</a><span>›</span><span>{apis[0]?.product}</span></nav>
       <div className="api-head">
         <h1>{group.name}</h1>
         {group.docs && <a href={group.docs} target="_blank" rel="noopener noreferrer">Official docs ↗</a>}
@@ -129,7 +129,7 @@ export function ApiPage({ user, slug }: { user: AuthUser | null; slug: string })
   return (
     <DocsLayout user={user} currentSlug={slug}>
       <nav className="crumbs" aria-label="Breadcrumb">
-        <a href="/">API Reference</a><span>›</span><span>{api.product}</span><span>›</span><a href={`/category/${api.groupId}`}>{api.group}</a>
+        <a href="/api-reference">API Reference</a><span>›</span><span>{api.product}</span><span>›</span><a href={`/category/${api.groupId}`}>{api.group}</a>
       </nav>
       <div className="api-head">
         <h1>{api.name}</h1>
@@ -192,7 +192,7 @@ export function ApiPage({ user, slug }: { user: AuthUser | null; slug: string })
 function NotFound({ user, what }: { user: AuthUser | null; what: string }) {
   return (
     <DocsLayout user={user}>
-      <div className="pub-empty">That {what} does not exist. <a href="/">Back to the API reference</a></div>
+      <div className="pub-empty">That {what} does not exist. <a href="/api-reference">Back to the API reference</a></div>
     </DocsLayout>
   );
 }

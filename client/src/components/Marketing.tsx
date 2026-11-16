@@ -174,13 +174,30 @@ ${CHECKLIST.map((s) => `<h2>${s.title}</h2><ul>${s.items.map((i) => `<li>&#9744;
 
 export function ServicesPage({ user }: { user: AuthUser | null }) {
   const liveApis = ALL_APIS.filter((a) => a.auth !== 'local').length;
+  const TMS_URL = 'https://lms-tms.tertiaryinfotech.com/';
+  const toForm = (e: React.MouseEvent) => { e.preventDefault(); document.getElementById('book-demo')?.scrollIntoView({ behavior: 'smooth' }); };
+  const features = [
+    { t: 'SSG API built in', d: 'Course runs, enrolments, attendance, assessments, grants and claims are sent to SSG through the API from the same screen your staff already work in.' },
+    { t: 'AI that does the paperwork', d: 'GenAI tools draft courseware, assessments and course SEO, and an AI assistant answers learners over WhatsApp or Telegram.' },
+    { t: 'LMS and TMS in one system', d: 'Course creation, scheduling, enrolment, e-learning, progress tracking, assessments and certificates, with dashboards for learners, trainers, admin and finance.' },
+    { t: 'Funding and finance', d: 'Grant calculator, claim tracking, personal and company invoices, billing history and QuickBooks integration.' },
+    { t: 'Made for Singapore', d: 'NRIC / FIN and UEN checks, WSQ and IBF courses, SkillsFuture funding rules and the TPGateway process built into the workflow.' },
+    { t: 'Automation', d: 'Scheduled jobs and webhooks handle trainer invitations, certificate generation and enrolment sync without anyone remembering to do them.' },
+  ];
+  const platforms = [
+    { t: 'Excel', d: 'Enrolment and attendance sheets that submit to SSG from a button.' },
+    { t: 'Google Sheets', d: 'Shared sheets with Apps Script that search, submit and sync.' },
+    { t: 'n8n', d: 'Workflows that call the SSG API on a schedule or a webhook.' },
+    { t: 'Python', d: 'Scripts and services for reports, bulk uploads and data checks.' },
+    { t: 'React / Next.js', d: 'Web apps and portals with the SSG calls behind your own screens.' },
+    { t: 'PHP and others', d: 'Existing systems in PHP, Node.js, .NET or Java, extended in place.' },
+  ];
   const services = [
-    { t: 'SSG API integration for your TMS or LMS', d: 'Course runs, enrolment, attendance, assessments, grants and claims wired into your own system, so staff stop keying the same record into TPGateway twice.' },
-    { t: 'API subscription and Developer Portal tickets', d: 'We prepare the subscription form and business use cases, raise the ticket, and follow it through to approval.' },
-    { t: 'Conformance testing', d: 'We run SSG’s UAT test scenarios for each API, record the evidence, and return the completed workbooks.' },
-    { t: 'Certificates, keys and encryption', d: 'mTLS certificates, AES-256 payload encryption and key rotation set up correctly and kept out of your source code.' },
-    { t: 'Rescue and upgrades', d: 'Calls suddenly returning 403 or “Api Version has expired”? We find the cause and move you to the working version.' },
-    { t: 'A ready-made AI LMS/TMS', d: 'Prefer not to build? Our AI-LMS-TMS already talks to the SSG APIs end to end.' },
+    { t: 'AI-powered TMS, ready to use', d: 'Our AI-LMS-TMS, set up for your organisation, with your courses, trainers and SSG app.' },
+    { t: 'Custom-built TMS', d: 'A TMS designed around how you run classes, with the SSG API integrated from day one. Yours to own.' },
+    { t: 'SSG API integration for your existing TMS or LMS', d: 'Keeping your current system? We wire the SSG APIs into it, so staff stop keying the same record into TPGateway twice.' },
+    { t: 'API subscription and conformance tests', d: 'We prepare the subscription form and business use cases, raise the ticket, run SSG’s UAT test scenarios and return the completed workbooks.' },
+    { t: 'Rescue and upgrades', d: 'Calls suddenly returning 403 or “Api Version has expired”? We find the cause, fix certificates and encryption, and move you to the working version.' },
   ];
   return (
     <div className="pub">
@@ -188,31 +205,54 @@ export function ServicesPage({ user }: { user: AuthUser | null }) {
       <main className="mk">
         <section className="mk-hero mk-hero-split">
           <div>
-            <span className="mk-kicker">SSG API integration services · Singapore</span>
-            <h1>Connect your TMS to the SSG API, without the trial and error.</h1>
-            <p>We integrate the SSG / SWDA APIs for training providers and TMS vendors: subscription, certificates, conformance tests and the code itself. The same team runs these APIs in production every day.</p>
+            <span className="mk-kicker">AI-powered TMS · SSG API integrated · Singapore</span>
+            <h1>An AI-powered TMS that already talks to the SSG API.</h1>
+            <p>Tertiary Infotech Academy builds and runs AI-LMS-TMS, a learning and training management system for Singapore training providers. Enrolments, attendance, assessments, grants and claims reach SSG through the API, so your team enters each record once.</p>
             <ul className="mk-proof">
-              <li><b>{liveApis}</b> SSG / SWDA APIs documented with working examples</li>
+              <li><b>{liveApis}</b> SSG / SWDA APIs documented on this site with working examples</li>
               <li><b>13</b> TPGateway steps mapped to the APIs that automate them</li>
-              <li><b>4</b> SSG apps run in production (certificate and OAuth)</li>
+              <li><b>1</b> system for learners, trainers, admin and finance</li>
             </ul>
             <div className="mk-quick">
-              <a className="pub-btn" href="#get-checklist" onClick={(e) => { e.preventDefault(); document.getElementById('get-checklist')?.scrollIntoView({ behavior: 'smooth' }); }}>Get the free checklist</a>
-              <a className="pub-btn ghost" href={COMPANY.site} target="_blank" rel="noopener">About Tertiary Infotech ↗</a>
+              <a className="pub-btn" href="#book-demo" onClick={toForm}>Book a free demo</a>
+              <a className="pub-btn ghost" href={TMS_URL} target="_blank" rel="noopener">See the live system ↗</a>
             </div>
           </div>
-          <aside className="mk-card mk-magnet" id="get-checklist">
-            <span className="mk-kicker">Free download</span>
-            <h2>SSG API Integration Checklist</h2>
-            <p className="mk-sub">The six stages from Developer Portal app to go-live, with the checks that catch the usual failures. Tell us where to reach you and download it straight away.</p>
-            <LeadForm source="ssg-api-services-checklist" compact cta="Get the checklist →">
+          <aside className="mk-card mk-magnet" id="book-demo">
+            <span className="mk-kicker">Free demo + checklist</span>
+            <h2>See the AI-powered TMS with your own course</h2>
+            <p className="mk-sub">Tell us where to reach you. We will show you a class going from enrolment to SSG claim, and you can download our SSG API Integration Checklist straight away.</p>
+            <LeadForm source="ai-tms-demo" compact cta="Book my demo →">
               {() => <button className="pub-btn" onClick={downloadChecklist}>Download the checklist (.doc)</button>}
             </LeadForm>
           </aside>
         </section>
 
         <section className="mk-section">
-          <h2>What we do</h2>
+          <h2>What the AI-powered TMS does</h2>
+          <div className="mk-grid">
+            {features.map((s) => <div key={s.t} className="mk-tile"><h3>{s.t}</h3><p>{s.d}</p></div>)}
+          </div>
+        </section>
+
+        <section className="mk-section">
+          <h2>From class to claim, without TPGateway re-keying</h2>
+          <ol className="mk-flow">
+            {[['Course run', 'Published to SSG'], ['Enrolment', 'Created with the grant'], ['Attendance', 'Uploaded per session'], ['Assessment', 'Results submitted'], ['Claim', 'Tracked to payout']].map(([t, d]) => <li key={t}><b>{t}</b><span>{d}</span></li>)}
+          </ol>
+          <p className="mk-flow-note">Each stage is an SSG API call made by the TMS. See the same stages on <a href="/tpg-process">TPG Processes</a>.</p>
+        </section>
+
+        <section className="mk-section">
+          <h2>SSG API on the platform you already use</h2>
+          <p className="mk-lead">Not every training provider needs a full TMS. We connect the SSG API to whatever your team works in, from a spreadsheet to a custom web app.</p>
+          <div className="mk-platforms">
+            {platforms.map((p) => <div key={p.t} className="mk-platform"><b>{p.t}</b><span>{p.d}</span></div>)}
+          </div>
+        </section>
+
+        <section className="mk-section">
+          <h2>AI-powered or custom-built: your TMS, your way</h2>
           <div className="mk-grid">
             {services.map((s) => <div key={s.t} className="mk-tile"><h3>{s.t}</h3><p>{s.d}</p></div>)}
           </div>
@@ -228,8 +268,8 @@ export function ServicesPage({ user }: { user: AuthUser | null }) {
         <section className="mk-section">
           <h2>How an engagement runs</h2>
           <ol className="mk-steps wide">
-            <li><b>Free 30-minute consultation.</b> You show us your system and what you need from SSG.</li>
-            <li><b>Scope and quote.</b> Which APIs, which app, what has to be subscribed and tested.</li>
+            <li><b>Free demo and consultation.</b> We show you the TMS, you show us how you run classes today.</li>
+            <li><b>Scope and quote.</b> Our TMS or your own, which APIs, what has to be subscribed and tested.</li>
             <li><b>Subscription and conformance.</b> We handle the tickets and UAT evidence with SSG.</li>
             <li><b>Build and go live.</b> Integration delivered, tested with a real class, handed over with documentation.</li>
           </ol>
@@ -241,7 +281,7 @@ export function ServicesPage({ user }: { user: AuthUser | null }) {
             <p>Everything we know about calling the APIs is in the free reference, with examples in curl, Python and JavaScript.</p>
           </div>
           <div className="mk-quick">
-            <a className="pub-btn ghost" href="/">Open the API reference</a>
+            <a className="pub-btn ghost" href="/api-reference">Open the API reference</a>
             <a className="pub-btn" href="/contact">Talk to us</a>
           </div>
         </section>

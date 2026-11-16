@@ -22,6 +22,7 @@ const LOCAL_USER = {
   provider: 'local',
   email: 'local@localhost',
   name: 'Local Dev',
+  role: 'admin', // localhost has no sign-in, so the local user can see every page
   avatarUrl: null,
 };
 
@@ -31,21 +32,12 @@ function authDisabled() {
   return process.env.NODE_ENV !== 'production';
 }
 
-// Who may sign in. The console calls SSG with our certificates, so a Google
-// account alone is not enough: the email must be on the allow-list.
-//   ALLOWED_EMAIL_DOMAINS  comma-separated domains (default: our own domains)
-//   ALLOWED_EMAILS         comma-separated extra addresses
-const list = (v) => (v || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
-const allowedDomains = list(process.env.ALLOWED_EMAIL_DOMAINS ?? 'tertiaryinfotech.com,tertiarycourses.com.sg');
-// Named staff always allowed, whatever ALLOWED_EMAIL_DOMAINS is set to.
-const STAFF_EMAILS = ['angss@tertiaryinfotech.com', 'danny@tertiaryinfotech.com', 'deepa@tertiaryinfotech.com'];
-const allowedEmails = [...STAFF_EMAILS, ...list(process.env.ALLOWED_EMAILS)];
-
-function emailAllowed(email) {
-  const e = (email || '').toLowerCase();
-  if (!e.includes('@')) return false;
-  return allowedEmails.includes(e) || allowedDomains.includes(e.split('@')[1]);
-}
+// Who may sign in: only an email on the users list (server/users.js). The one
+// admin manages that list in the console. A Google account alone is not enough.
+const crypto = require('crypto');
+const users = require('./users');
+const { sendOtpEmail, transportName } = require('./mailer');
+const emailAllowed = (email) => !!users.find(email);
 
 const googleConfigured =
   !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET;
@@ -53,7 +45,7 @@ const googleConfigured =
 // The authenticated user for this request, or null when login is required
 // but the visitor is not signed in.
 function getCurrentUser(req) {
-  if (req.user && (authDisabled() || emailAllowed(req.user.email))) return req.user;
+  if (req.user && (authDisabled() || emailAllowed(req.user.email))) return { ...req.user, role: users.roleOf(req.user.email) || 'member' };
   if (authDisabled()) return LOCAL_USER;
   return null;
 }
@@ -107,10 +99,11 @@ function configureAuth(app) {
         },
         (_accessToken, _refreshToken, profile, done) => {
           const email = profile.emails?.[0]?.value || null;
-          if (!emailAllowed(email)) {
-            console.warn(`[auth] sign-in refused for ${email || 'unknown'} (not on the allow-list)`);
+          if (!users.admit(email)) {
+            console.warn(`[auth] sign-in refused for ${email || 'unknown'} (not a user)`);
             return done(null, false);
           }
+          users.recordLogin(email);
           // No persistence — the profile lives in the session cookie.
           done(null, {
             id: `google:${profile.id}`,
@@ -152,6 +145,56 @@ function configureAuth(app) {
     (req, res) => res.redirect('/console')
   );
 
+  // ── One-time code sign-in (email OTP) ───────────────────────────
+  // For users on the list who prefer not to use Google. The code is 6 digits,
+  // lasts 10 minutes, works once, and allows 5 wrong tries. The reply is the
+  // same whether or not the email is a user, so the list cannot be probed.
+  const OTP_MINUTES = 10;
+  const otps = new Map();      // email -> { hash, exp, tries }
+  const asked = new Map();     // key -> [timestamps]
+  const tooMany = (key, max, windowMs) => {
+    const now = Date.now();
+    const recent = (asked.get(key) || []).filter((t) => now - t < windowMs);
+    recent.push(now); asked.set(key, recent);
+    if (asked.size > 5000) asked.clear();
+    return recent.length > max;
+  };
+  const hashCode = (email, code) => crypto.createHmac('sha256', process.env.SESSION_SECRET || 'dev-insecure-secret-change-me').update(`${email}:${code}`).digest('hex');
+
+  app.post('/auth/otp/request', async (req, res) => {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address' });
+    if (tooMany(`ip:${req.ip}`, 10, 3600_000) || tooMany(`em:${email}`, 3, 600_000)) {
+      return res.status(429).json({ error: 'Too many codes requested. Wait a few minutes and try again.' });
+    }
+    if (!transportName()) return res.status(503).json({ error: 'Email codes are not set up yet. Use Google sign-in.' });
+    if (users.admit(email)) {
+      const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+      otps.set(email, { hash: hashCode(email, code), exp: Date.now() + OTP_MINUTES * 60_000, tries: 0 });
+      const r = await sendOtpEmail(email, code, OTP_MINUTES);
+      if (!r.sent) { console.error(`[auth] sign-in code not sent: ${r.reason}`); return res.status(502).json({ error: 'Could not send the code. Use Google sign-in.' }); }
+    } else {
+      console.warn('[auth] sign-in code requested for an address that is not a user');
+    }
+    res.json({ ok: true, minutes: OTP_MINUTES });
+  });
+
+  app.post('/auth/otp/verify', (req, res) => {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const code = String(req.body?.code || '').replace(/\D/g, '');
+    const entry = otps.get(email);
+    const fail = () => res.status(401).json({ error: 'That code is not right or has expired. Request a new one.' });
+    if (!entry || Date.now() > entry.exp) { otps.delete(email); return fail(); }
+    if (++entry.tries > 5) { otps.delete(email); return fail(); }
+    const a = Buffer.from(entry.hash); const b = Buffer.from(hashCode(email, code));
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return fail();
+    otps.delete(email);
+    if (!users.admit(email)) return fail();
+    users.recordLogin(email);
+    const user = { id: `otp:${email}`, provider: 'otp', email, name: email.split('@')[0], avatarUrl: null };
+    req.login(user, (err) => (err ? res.status(500).json({ error: 'Could not sign in' }) : res.json({ ok: true })));
+  });
+
   app.get('/auth/logout', (req, res) => {
     req.logout?.(() => {});
     req.session = null;
@@ -166,4 +209,12 @@ function configureAuth(app) {
   });
 }
 
-module.exports = { configureAuth, requireAuth, getCurrentUser, authDisabled };
+// Gate for admin-only routes (users, settings). The role comes from the users
+// list on every request, never from the session cookie.
+function requireAdmin(req, res, next) {
+  if (authDisabled()) return next();
+  if (req.isAuthenticated?.() && users.isAdmin(req.user?.email)) return next();
+  res.status(req.isAuthenticated?.() ? 403 : 401).json({ error: 'Admin only' });
+}
+
+module.exports = { configureAuth, requireAuth, requireAdmin, getCurrentUser, authDisabled };

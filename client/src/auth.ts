@@ -8,6 +8,8 @@ export interface AuthUser {
   email: string | null;
   name: string | null;
   avatarUrl: string | null;
+  /** 'admin' (one person) or 'member'. Decided by the server on every request. */
+  role?: 'admin' | 'member';
 }
 
 export interface MeResponse {
@@ -30,3 +32,15 @@ export function loginWithGoogle(): void {
 export function logout(): void {
   window.location.href = '/auth/logout';
 }
+
+async function postJson(url: string, body: unknown) {
+  const res = await fetch(url, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
+
+/** Ask for a one-time sign-in code by email. */
+export const requestOtp = (email: string): Promise<{ ok: boolean; minutes: number }> => postJson('/auth/otp/request', { email });
+/** Sign in with the emailed code. */
+export const verifyOtp = (email: string, code: string): Promise<{ ok: boolean }> => postJson('/auth/otp/verify', { email, code });

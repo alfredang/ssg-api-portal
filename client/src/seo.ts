@@ -17,7 +17,9 @@ const clip = (s: string, n = 158) => (s.length <= n ? s : s.slice(0, n - 1).repl
 const CORE = 'SSG API, SWDA API, SkillsFuture API, SSG-WSG API, Training Partners Gateway';
 
 const STATIC: Seo[] = [
-  { path: '/', title: 'SSG API & SWDA API Reference: curl, Python, JavaScript examples', keywords: `${CORE}, SSG API documentation, SSG API examples, SSG API Python, SSG API curl`,
+  { path: '/', title: 'SSG API & SWDA API: getting started, API reference and TPG process', keywords: `${CORE}, SSG API documentation, SSG API examples, TPG process, SSG API getting started`,
+    description: 'SSG API and SWDA API for training providers: get started with certificates and OAuth, browse every API with curl, Python and JavaScript examples, and follow the TPG process step by step.' },
+  { path: '/api-reference', title: 'SSG API & SWDA API Reference: curl, Python, JavaScript examples', keywords: `${CORE}, SSG API reference, SSG API documentation, SSG API examples, SSG API Python, SSG API curl`,
     description: 'SSG API and SWDA API reference for training providers: every endpoint with its spec and working curl, Python and JavaScript examples. Enrolment, grants, course runs, assessments.' },
   { path: '/start', title: 'Getting started with the SSG API (SWDA API): certificate, OAuth, AES', keywords: `${CORE}, SSG API authentication, SSG API mTLS certificate, SSG API OAuth token, SSG API AES encryption`,
     description: 'How to call the SSG API / SWDA API: Developer Portal app, base URLs, mTLS certificate calls, OAuth token, AES-256 payload encryption and status codes, with code in curl, Python and JavaScript.' },
@@ -27,10 +29,10 @@ const STATIC: Seo[] = [
     description: 'The SSG API / SWDA API subscription process in eight stages: Developer Portal app, certificate, subscription form, ticket, clarifications, UAT conformance tests, production approval and go-live.' },
   { path: '/tpg-process', title: 'TPG Process: Training Partners Gateway steps for training providers', keywords: 'TPG process, TPGateway, Training Partners Gateway, TPG claim process, SWDA enrolment process, SWDA enrollment process, TPG course run, TPG attendance, SSG API',
     description: 'The TPG process step by step: course applications and runs, the SWDA enrolment process, attendance, assessments, grants, the TPG claim process, refunds and e-certificates, with the SSG APIs for each.' },
-  { path: '/subscription-form', title: 'SSG API Subscription Form: request access to SWDA APIs', keywords: `${CORE}, SSG API subscription form, SSG API access request, SSG Developer Portal ticket`,
-    description: 'Fill in the API Subscription Form for SSG-WSG / SWDA APIs online and export it as a Word file to attach to your Developer Portal ticket.' },
-  { path: '/ssg-api-services', title: 'SSG API Integration Services Singapore: SWDA API, TMS, conformance', keywords: `${CORE}, SSG API integration, SSG API developer Singapore, TMS integration SSG, SSG conformance test, SWDA API integration services`,
-    description: 'SSG API integration services in Singapore: we connect your TMS or LMS to the SWDA / SSG APIs, handle API subscription and conformance testing, and get enrolment, grants and claims working.' },
+  { path: '/subscription-form', title: 'SWDA / SSG API Subscription Form (v1.12): fill in and download as Word', keywords: `${CORE}, SSG API subscription form, SSG API access request, SSG Developer Portal ticket`,
+    description: 'Fill in the API Subscription Form for SWDA / SSG APIs (v1.12) online and download it as a Word document, ready to attach to your Developer Portal ticket.' },
+  { path: '/ssg-api-services', title: 'AI-Powered TMS with SSG API Integration, Singapore', keywords: `${CORE}, AI TMS Singapore, AI-powered training management system, TMS with SSG API integration, LMS TMS Singapore, SSG API integration services`,
+    description: 'An AI-powered TMS and LMS for Singapore training providers with SSG API integration built in: course runs, enrolment, attendance, assessments, grants and claims. Book a free demo.' },
   { path: '/contact', title: 'Contact us: SSG API and SWDA API integration help', keywords: `${CORE}, contact Tertiary Infotech Academy, SSG API consultant Singapore`,
     description: 'Talk to Tertiary Infotech Academy about SSG API / SWDA API integration, TMS and LMS development and TPGateway automation. Singapore-based; we reply within one business day.' },
 ];

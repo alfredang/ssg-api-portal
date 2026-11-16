@@ -1,4 +1,5 @@
-import { loginWithGoogle } from '../auth';
+import { useState } from 'react';
+import { loginWithGoogle, requestOtp, verifyOtp } from '../auth';
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
@@ -9,9 +10,33 @@ const GoogleIcon = () => (
   </svg>
 );
 
-/** Sign-in for the API Console: what you get on the left, Google sign-in on the right. */
+/** Sign-in for the API Console: what you get on the left; Google or an emailed code on the right. */
 export default function LoginPage({ onBack }: { onBack?: () => void }) {
   const failed = new URLSearchParams(window.location.search).get('login') === 'failed';
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [stage, setStage] = useState<'email' | 'code'>('email');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [note, setNote] = useState('');
+
+  const sendCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true); setError(''); setNote('');
+    try {
+      const r = await requestOtp(email.trim());
+      setStage('code'); setCode('');
+      setNote(`If ${email.trim()} is a user, a 6-digit code is on its way. It lasts ${r.minutes} minutes.`);
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not send the code'); }
+    setBusy(false);
+  };
+  const checkCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true); setError('');
+    try { await verifyOtp(email.trim(), code); window.location.reload(); }
+    catch (err) { setError(err instanceof Error ? err.message : 'Could not sign in'); setBusy(false); }
+  };
+
   return (
     <div className="signin">
       <section className="signin-pitch">
@@ -24,20 +49,41 @@ export default function LoginPage({ onBack }: { onBack?: () => void }) {
           <li><b>Saved defaults</b> for UEN, course and run, so forms fill themselves</li>
           <li><b>Known issues</b> and working API versions, kept current</li>
         </ul>
-        <p className="signin-note">For Tertiary Infotech staff. Everyone else: the <a href="/">API reference</a> and its examples are open to all, or <a href="/contact">talk to us</a> about an integration.</p>
+        <p className="signin-note">For Tertiary Infotech staff. Everyone else: the <a href="/api-reference">API reference</a> and its examples are open to all, or <a href="/contact">talk to us</a> about an integration.</p>
       </section>
 
       <section className="signin-panel">
         <div className="login-card">
           <div className="login-header">
             <h2>Sign in</h2>
-            <p>Use your Tertiary Infotech Google account</p>
+            <p>For Tertiary Infotech staff on the user list</p>
           </div>
-          {failed && <div className="login-error">Sign-in failed. Use a Tertiary Infotech account, or ask an admin to add your email.</div>}
+          {failed && <div className="login-error">Sign-in failed. That account is not a user of this portal; ask the admin to add you.</div>}
+
           <button type="button" className="login-btn login-google-btn" onClick={loginWithGoogle}>
             <GoogleIcon />
             Sign in with Google
           </button>
+
+          <div className="login-or"><span>or</span></div>
+
+          {stage === 'email' ? (
+            <form className="login-otp" onSubmit={sendCode}>
+              <label htmlFor="otp-email">Email me a sign-in code</label>
+              <input id="otp-email" type="email" required autoComplete="email" placeholder="you@tertiaryinfotech.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <button type="submit" className="login-btn" disabled={busy}>{busy ? 'Sending…' : 'Send code'}</button>
+            </form>
+          ) : (
+            <form className="login-otp" onSubmit={checkCode}>
+              <label htmlFor="otp-code">Enter the 6-digit code</label>
+              <input id="otp-code" className="otp-code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9 ]{6,7}" maxLength={7} required autoFocus placeholder="••••••" value={code} onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))} />
+              <button type="submit" className="login-btn" disabled={busy || code.length !== 6}>{busy ? 'Checking…' : 'Sign in'}</button>
+              <button type="button" className="login-back" onClick={() => { setStage('email'); setError(''); setNote(''); }}>Use a different email or resend</button>
+            </form>
+          )}
+          {note && !error && <p className="login-note" role="status">{note}</p>}
+          {error && <div className="login-error" role="alert">{error}</div>}
+
           {onBack && <button type="button" className="login-back" onClick={onBack}>← Back to the API reference</button>}
           <p className="login-powered powered-by">Powered by <a href="https://www.tertiaryinfotech.com/" target="_blank" rel="noopener">Tertiary Infotech Academy Pte Ltd</a></p>
         </div>
