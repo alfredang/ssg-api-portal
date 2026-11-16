@@ -3,12 +3,16 @@ import { CATALOG, ALL_APIS, AUTH_LABEL, BASE_URLS } from '../catalog';
 import type { ApiEntry, AuthMode } from '../catalog';
 import type { AuthUser } from '../auth';
 import { logout } from '../auth';
+import ApiSpec, { GettingStarted } from './ApiSpec';
 
 interface Props {
   user: AuthUser | null;
   onTry: (page: string) => void;
   onLogin: () => void;
   onOpenForm: () => void;
+  onTpg: () => void;
+  /** Catalogue group to scroll to on arrival (from the TPG Process page). */
+  focusGroup?: string;
 }
 
 const SSG_APPS = [
@@ -23,9 +27,9 @@ function matches(api: ApiEntry & { product: string; group: string }, terms: stri
   return terms.every((t) => hay.includes(t));
 }
 
-export function TopBar({ user, onLogin, active, onHome, onOpenForm, onConsole }: {
-  user: AuthUser | null; onLogin: () => void; active: 'discover' | 'form';
-  onHome: () => void; onOpenForm: () => void; onConsole: () => void;
+export function TopBar({ user, onLogin, active, onHome, onOpenForm, onConsole, onTpg }: {
+  user: AuthUser | null; onLogin: () => void; active: 'discover' | 'form' | 'tpg';
+  onHome: () => void; onOpenForm: () => void; onConsole: () => void; onTpg: () => void;
 }) {
   return (
     <header className="pub-top">
@@ -35,6 +39,7 @@ export function TopBar({ user, onLogin, active, onHome, onOpenForm, onConsole }:
       </button>
       <nav className="pub-nav">
         <button className={active === 'discover' ? 'on' : ''} onClick={onHome}>Discover APIs</button>
+        <button className={active === 'tpg' ? 'on' : ''} onClick={onTpg}>TPG Process</button>
         <button className={active === 'form' ? 'on' : ''} onClick={onOpenForm}>Subscription Form</button>
         <button onClick={onConsole}>API Console</button>
         <a href="https://developer.swda.gov.sg/webapp/api-discovery" target="_blank" rel="noopener noreferrer">SWDA Portal ↗</a>
@@ -53,7 +58,7 @@ export function TopBar({ user, onLogin, active, onHome, onOpenForm, onConsole }:
   );
 }
 
-export default function ApiDiscovery({ user, onTry, onLogin, onOpenForm }: Props) {
+export default function ApiDiscovery({ user, onTry, onLogin, onOpenForm, onTpg, focusGroup }: Props) {
   const [q, setQ] = useState('');
   const [method, setMethod] = useState<'ALL' | 'GET' | 'POST'>('ALL');
   const [auth, setAuth] = useState<'ALL' | AuthMode>('ALL');
@@ -72,6 +77,10 @@ export default function ApiDiscovery({ user, onTry, onLogin, onOpenForm }: Props
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  useEffect(() => {
+    if (focusGroup) document.getElementById(`g-${focusGroup}`)?.scrollIntoView({ block: 'start' });
+  }, [focusGroup]);
 
   const terms = useMemo(() => q.toLowerCase().split(/\s+/).filter(Boolean), [q]);
   const filtering = terms.length > 0 || method !== 'ALL' || auth !== 'ALL';
@@ -94,11 +103,11 @@ export default function ApiDiscovery({ user, onTry, onLogin, onOpenForm }: Props
 
   return (
     <div className="pub">
-      <TopBar user={user} onLogin={onLogin} active="discover" onHome={() => window.scrollTo({ top: 0, behavior: 'smooth' })} onOpenForm={onOpenForm} onConsole={() => onTry('course-lookup')} />
+      <TopBar user={user} onLogin={onLogin} active="discover" onHome={() => window.scrollTo({ top: 0, behavior: 'smooth' })} onOpenForm={onOpenForm} onConsole={() => onTry('course-lookup')} onTpg={onTpg} />
 
       <section className="pub-hero">
         <h1>Discover SSG APIs</h1>
-        <p>Search every SSG-WSG / SWDA API we integrate with — endpoint, version and authentication — then sign in to test it live with our App 1 – App 4 credentials.</p>
+        <p>Search every SSG-WSG / SWDA API we integrate with. Each one has its spec and a curl, Python and JavaScript demo. Sign in to test it live with our App 1 – App 4 credentials.</p>
         <div className="pub-search">
           <input
             ref={searchRef}
@@ -128,6 +137,7 @@ export default function ApiDiscovery({ user, onTry, onLogin, onOpenForm }: Props
 
       <div className="pub-body">
         <aside className="pub-side">
+          <div className="pub-side-product"><button className="pub-side-p" onClick={() => jump('p-start')}>Getting started</button></div>
           <div className="pub-side-title">Categories</div>
           {CATALOG.map((p) => {
             const vp = visible.find((v) => v.id === p.id);
@@ -156,6 +166,8 @@ export default function ApiDiscovery({ user, onTry, onLogin, onOpenForm }: Props
               No API matches “{q}”. <button className="pub-link" onClick={() => { setQ(''); setMethod('ALL'); setAuth('ALL'); }}>Clear filters</button>
             </div>
           )}
+
+          {!filtering && <GettingStarted />}
 
           {visible.map((p) => (
             <section key={p.id} id={`p-${p.id}`} className="pub-product">
@@ -188,7 +200,7 @@ export default function ApiDiscovery({ user, onTry, onLogin, onOpenForm }: Props
                               <dl>
                                 <dt>Endpoint</dt>
                                 <dd><code>{a.auth === 'local' ? a.path : `${a.method} ${BASE_URLS.cert}${a.path}`}</code></dd>
-                                {a.auth !== 'local' && (<><dt>Header</dt><dd><code>x-api-version: {a.version}</code></dd></>)}
+                                {a.auth !== 'local' && (<><dt>Header</dt><dd>{a.version === 'none' ? 'No x-api-version header (SSG rejects every version for this API)' : <code>x-api-version: {a.version}</code>}</dd></>)}
                                 <dt>Authentication</dt>
                                 <dd>
                                   {AUTH_LABEL[a.auth]}
@@ -197,6 +209,7 @@ export default function ApiDiscovery({ user, onTry, onLogin, onOpenForm }: Props
                                 </dd>
                                 {a.writes && (<><dt>Note</dt><dd className="pub-warn">Writes to SSG production data. Test with care.</dd></>)}
                               </dl>
+                              <ApiSpec api={a} />
                               <button className="pub-btn" onClick={() => onTry(a.page)}>
                                 {user ? 'Try it in the console →' : 'Log in to try it →'}
                               </button>
@@ -221,6 +234,13 @@ export default function ApiDiscovery({ user, onTry, onLogin, onOpenForm }: Props
                     <b>{a.id}</b><span>{a.name}</span><small>{a.auth}</small>
                   </div>
                 ))}
+              </div>
+              <div className="pub-cta" style={{ marginBottom: 12 }}>
+                <div>
+                  <h3>How the APIs fit the TPG process</h3>
+                  <p>See the 13 Training Partners Gateway steps, from course runs and enrolment to claims and certificates, with the APIs for each.</p>
+                </div>
+                <button className="pub-btn ghost" onClick={onTpg}>View TPG process</button>
               </div>
               <div className="pub-cta">
                 <div>

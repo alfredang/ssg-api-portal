@@ -816,7 +816,7 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
       return (
         <>
           <h2 className="page-title">Course Search</h2>
-          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/courses/registry/search</code> (v8.0). <AuthBadge method="cert" /></p>
+          <p style={{ color: '#666', marginBottom: 16, fontSize: 14 }}>POST <code>/tpg/courses/registry/search</code> (v2.0). <AuthBadge method="cert" /></p>
           <CourseSearchForm onSearch={handleSearch} loading={loading} defaults={defaults} />
 
           {error && <div className="error-alert">{error}</div>}
@@ -932,7 +932,7 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
         <>
           <h2 className="page-title">Courses by Training Provider UEN</h2>
           <p style={{ color: '#666', fontSize: 14, margin: '0 0 16px' }}>
-            GET <code>/tpg/courses/registry/search</code> (v8.0). <AuthBadge method="cert" />
+            GET <code>/tpg/courses/registry/search</code> (v2.0). <AuthBadge method="cert" />
           </p>
           <form
             className="search-form"
@@ -4652,9 +4652,9 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
 
           <CollapsibleSection title="Working APIs (10)">
             <table className="sessions-table"><thead><tr>{workingTh}</tr></thead><tbody>
-              <tr><td>Course Search (TPG Registry)</td><td>Certificate</td><td>POST</td><td>api.ssg-wsg.sg/tpg/courses/registry/search</td><td>v8.0</td><td style={ok}>200</td></tr>
-              <tr><td>Course Details (TPG Registry)</td><td>Certificate</td><td>GET</td><td>api.ssg-wsg.sg/tpg/courses/registry/details/&#123;refNo&#125;</td><td>v8.0</td><td style={ok}>200</td></tr>
-              <tr><td>Courses by TP UEN</td><td>Certificate</td><td>POST</td><td>api.ssg-wsg.sg/tpg/courses/registry/search (via UEN filter)</td><td>v8.0</td><td style={ok}>200</td></tr>
+              <tr><td>Course Search (TPG Registry)</td><td>Certificate</td><td>POST</td><td>api.ssg-wsg.sg/tpg/courses/registry/search</td><td>v2.0</td><td style={ok}>200</td></tr>
+              <tr><td>Course Details (TPG Registry)</td><td>Certificate</td><td>GET</td><td>api.ssg-wsg.sg/tpg/courses/registry/details/&#123;refNo&#125;</td><td>v2.0</td><td style={ok}>200</td></tr>
+              <tr><td>Courses by TP UEN</td><td>Certificate</td><td>POST</td><td>api.ssg-wsg.sg/tpg/courses/registry/search (via UEN filter)</td><td>v2.0</td><td style={ok}>200</td></tr>
               <tr><td>Course Lookup by Ref No</td><td>OAuth (fallback)</td><td>GET</td><td>public-api.ssg-wsg.sg/courses/directory/&#123;refNo&#125;</td><td>v1.2</td><td style={ok}>200</td></tr>
               <tr><td>Course Quality</td><td>OAuth (fallback)</td><td>GET</td><td>public-api.ssg-wsg.sg/courses/directory/&#123;refNo&#125;/quality</td><td>v2.0</td><td style={ok}>200</td></tr>
               <tr><td>Course Outcome</td><td>OAuth (fallback)</td><td>GET</td><td>public-api.ssg-wsg.sg/courses/directory/&#123;refNo&#125;/outcome</td><td>v2.0</td><td style={ok}>200</td></tr>

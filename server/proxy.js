@@ -207,6 +207,21 @@ router.use((req, res, next) => {
   certStore.run(ssgApp, next);
 });
 
+// TPG search APIs (enrolments, grants): since 2026 SSG answers "Api Version has
+// expired" when any x-api-version header is sent. The working format (same as
+// ai-lms-tms) is: no version header, body = raw base64 AES ciphertext, response
+// = base64 AES ciphertext. Returns { status, parsed } or null when the active
+// app has no certificate / encryption key.
+async function certEncryptedSearch(apiPath, body, extraHeaders = {}) {
+  const active = getActiveCert();
+  if (!active || !active.encryptionKey) return null;
+  const result = await certApiPost(apiPath, aesEncrypt(JSON.stringify(body)), { apiVersion: null, headers: extraHeaders });
+  let parsed = null;
+  try { parsed = JSON.parse(aesDecrypt(result.body.trim())); } catch { /* not ciphertext */ }
+  if (!parsed) { try { parsed = JSON.parse(result.body); } catch { parsed = null; } }
+  return { status: result.status, parsed, raw: result.body };
+}
+
 // GET /api/certs endpoint
 router.get('/certs', (req, res) => {
   const certs = [];
@@ -392,7 +407,8 @@ function certApiPost(apiPath, jsonBody, { apiVersion = 'v1.2', headers: extraHea
   const active = getActiveCert();
   if (!active) { console.log('certApiPost: no cert loaded — skipping cert call, will fall back to OAuth'); return Promise.resolve({ status: 503, body: '' }); }
   const url = new URL(apiPath, certApiBase);
-  const requestBody = JSON.stringify(jsonBody);
+  // A string body is sent as-is (used for raw AES ciphertext); objects are JSON-encoded.
+  const requestBody = typeof jsonBody === 'string' ? jsonBody : JSON.stringify(jsonBody);
 
   return new Promise((resolve, reject) => {
     const reqOptions = {
@@ -406,7 +422,8 @@ function certApiPost(apiPath, jsonBody, { apiVersion = 'v1.2', headers: extraHea
         'Accept': 'application/json',
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(requestBody),
-        'x-api-version': apiVersion,
+        // apiVersion: null omits the header (some TPG search APIs reject every version).
+        ...(apiVersion ? { 'x-api-version': apiVersion } : {}),
         ...extraHeaders,
       },
     };
@@ -1206,7 +1223,7 @@ router.get('/courses/details/:refNo', async (req, res) => {
         key: active.key,
         headers: {
           'Accept': 'application/json',
-          'x-api-version': 'v8.0',
+          'x-api-version': 'v2.0',
           'UEN': uen,
         },
       };
@@ -1275,7 +1292,7 @@ async function fetchCourseSearchPage(searchBody, uen) {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'x-api-version': 'v8.0',
+        'x-api-version': 'v2.0',
         ...(uen ? { 'UEN': uen } : {}),
       },
     };
@@ -1446,6 +1463,10 @@ router.post('/grants/search', async (req, res) => {
     const apiPath = '/tpg/grants/search';
 
     // Try certificate first
+    const direct = await certEncryptedSearch(apiPath, body, uen ? { 'Uen': uen } : {}).catch(() => null);
+    console.log(`Search Grants (encrypted, no version header): ${direct ? direct.status : 'skipped'}`);
+    if (direct && direct.status >= 200 && direct.status < 300 && direct.parsed) return res.json(direct.parsed);
+
     const certResult = await certApiPost(apiPath, body, {
       apiVersion: 'v1.0',
       headers: uen ? { 'Uen': uen } : {},
@@ -1838,6 +1859,10 @@ router.post('/enrolments/search', async (req, res) => {
   try {
     const body = req.body;
     const apiPath = '/tpg/enrolments/search';
+
+    const direct = await certEncryptedSearch(apiPath, body).catch(() => null);
+    console.log(`Search Enrolments (encrypted, no version header): ${direct ? direct.status : 'skipped'}`);
+    if (direct && direct.status >= 200 && direct.status < 300 && direct.parsed) return res.json(direct.parsed);
 
     console.log('Search Enrolments: attempting plain cert request...');
     let certResult = await certApiPost(apiPath, body, { apiVersion: 'v3.0' });

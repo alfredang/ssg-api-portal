@@ -245,7 +245,8 @@ Up to three cert sets are supported (`CERT_1_*`, `CERT_2_*`, `CERT_3_*`); each
 
 | Route | Who | What |
 |---|---|---|
-| `/#/` | Public | **Discover APIs** — searchable catalogue (name, path, version, method, auth), grouped like the SWDA Developer Portal. Press `/` to search. Data: `client/src/catalog.ts`. |
+| `/#/` | Public | **Discover APIs** — searchable catalogue (name, path, version, method, auth), grouped like the SWDA Developer Portal. Press `/` to search. Each API shows its request spec and curl / Python / JavaScript demos (certificate, OAuth and AES variants). Data: `client/src/catalog.ts` (endpoints) and `client/src/apiSpecs.ts` (parameters, example bodies, sample generator). |
+| `/#/tpg-process[/<step>]` | Public | **TPG Process** — visual journey map of the 13 Training Partners Gateway steps in 5 phases; each step opens its guide as page images with the related APIs. Guides: `client/public/tpg-process/*.pdf`; page images in `pages/<step>/<n>.jpg` (re-render with `pdftoppm -r 110 -jpeg`). |
 | `/#/subscription-form` | Public | Online **API Subscription Form for SSG-WSG APIs**; exports a filled Word file. Nothing is sent to the server. |
 | `/#/console/<page>` | Signed in | **API Console** — test each API live with App 1 – App 4. |
 

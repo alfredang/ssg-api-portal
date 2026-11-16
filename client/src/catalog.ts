@@ -48,10 +48,10 @@ export const CATALOG: ApiProduct[] = [
         docs: `${DOCS}/6kYpfJEWVb7NyYVVHvUmHi/group/2reSbYZjfhi3WWeLp4BlQ4`,
         apis: [
           { page: 'course-lookup', name: 'Course Lookup by Reference Number', method: 'GET', path: '/courses/directory/{refNo}', version: 'v1.2', auth: 'cert+oauth', desc: 'Retrieve one course by its TGS reference number.' },
-          { page: 'course-search', name: 'Course Search (TPG Registry)', method: 'POST', path: '/tpg/courses/registry/search', version: 'v8.0', auth: 'cert', desc: 'Search the TPG course registry by keyword, with paging.' },
-          { page: 'course-lookup', name: 'Course Details (TPG Registry)', method: 'GET', path: '/tpg/courses/registry/details/{refNo}', version: 'v8.0', auth: 'cert', desc: 'Full registry record of a course, including funding support.' },
+          { page: 'course-search', name: 'Course Search (TPG Registry)', method: 'POST', path: '/tpg/courses/registry/search', version: 'v2.0', auth: 'cert', desc: 'Search the TPG course registry by keyword, with paging.' },
+          { page: 'course-lookup', name: 'Course Details (TPG Registry)', method: 'GET', path: '/tpg/courses/registry/details/{refNo}', version: 'v2.0', auth: 'cert', desc: 'Full registry record of a course, including funding support.' },
           { page: 'popular-courses', name: 'Popular Courses', method: 'GET', path: '/courses/directory/popular', version: 'v1.2', auth: 'cert+oauth', desc: 'Courses most viewed on MySkillsFuture.' },
-          { page: 'tp-courses', name: 'Courses by Training Provider UEN', method: 'POST', path: '/tpg/courses/registry/search', version: 'v8.0', auth: 'cert', desc: 'List every course registered under a training provider UEN.' },
+          { page: 'tp-courses', name: 'Courses by Training Provider UEN', method: 'POST', path: '/tpg/courses/registry/search', version: 'v2.0', auth: 'cert', desc: 'List every course registered under a training provider UEN.' },
         ],
       },
       {
@@ -96,7 +96,7 @@ export const CATALOG: ApiProduct[] = [
         apis: [
           { page: 'grant-baseline', name: 'Grant Calculator — Baseline Scheme', method: 'POST', path: '/grantCalculators/individual', version: 'v1.0', auth: 'cert+oauth', desc: 'Baseline funding and nett fee for a course.' },
           { page: 'grant-personalised', name: 'Grant Calculator — Personalised', method: 'POST', path: '/grantCalculators/individual/personalised', version: 'v1.0', auth: 'cert+oauth', desc: 'Funding for a named trainee based on eligibility.' },
-          { page: 'grant-search', name: 'Search Grants', method: 'POST', path: '/tpg/grants/search', version: 'v1.0', auth: 'cert+oauth', desc: 'Search grant records by course, trainee or enrolment.' },
+          { page: 'grant-search', name: 'Search Grants', method: 'POST', path: '/tpg/grants/search', version: 'none', auth: 'cert+aes', desc: 'Search grant records by course, trainee or enrolment.' },
           { page: 'grant-view', name: 'View Grant Details', method: 'GET', path: '/tpg/grants/details/{grantRefNo}', version: 'v1', auth: 'cert+oauth', desc: 'One grant record by its reference number.' },
           { page: 'grant-codes', name: 'Grants Code Lookup', method: 'GET', path: '/tpg/codes/grants/fundingComponent', version: 'v1', auth: 'cert+oauth', desc: 'Funding component codes.' },
         ],
@@ -122,7 +122,7 @@ export const CATALOG: ApiProduct[] = [
         apis: [
           { page: 'enrol-create', name: 'Create Enrolment', method: 'POST', path: '/tpg/enrolments', version: 'v3.0', auth: 'cert+aes', desc: 'Enrol a trainee in a course run.', writes: true },
           { page: 'enrol-update', name: 'Update / Cancel Enrolment', method: 'POST', path: '/tpg/enrolments/details/{refNo}', version: 'v3.0', auth: 'cert+aes', desc: 'Update or cancel an enrolment record.', writes: true },
-          { page: 'enrol-search', name: 'Search Enrolments', method: 'POST', path: '/tpg/enrolments/search', version: 'v3.0', auth: 'cert+aes', desc: 'Search enrolments by course run, trainee or status.' },
+          { page: 'enrol-search', name: 'Search Enrolments', method: 'POST', path: '/tpg/enrolments/search', version: 'none', auth: 'cert+aes', desc: 'Search enrolments by course run, trainee or status.' },
           { page: 'enrol-view', name: 'View Enrolment', method: 'GET', path: '/tpg/enrolments/details/{refNo}', version: 'v3.0', auth: 'cert+oauth', desc: 'One enrolment record by its reference number.' },
           { page: 'enrol-fee-collection', name: 'Update Enrolment Fee Collection', method: 'POST', path: '/tpg/enrolments/feeCollections/{refNo}', version: 'v3.0', auth: 'cert+aes', desc: 'Update the fee collection status of an enrolment.', writes: true },
           { page: 'enrol-codes', name: 'Enrolment Code Lookup', method: 'GET', path: '/tpg/enrolments/codes', version: 'v1.0.0', auth: 'cert+oauth', desc: 'Sponsorship type and other enrolment codes.' },

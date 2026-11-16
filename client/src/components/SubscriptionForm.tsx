@@ -10,8 +10,8 @@ interface ApiRow { name: string; use: string }
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>');
 
-export default function SubscriptionForm({ user, onHome, onLogin, onConsole }: {
-  user: AuthUser | null; onHome: () => void; onLogin: () => void; onConsole: () => void;
+export default function SubscriptionForm({ user, onHome, onLogin, onConsole, onTpg }: {
+  user: AuthUser | null; onHome: () => void; onLogin: () => void; onConsole: () => void; onTpg: () => void;
 }) {
   const [f, setF] = useState({
     company: '', uen: '', contactName: '', contactNumber: '', contactEmail: '',
@@ -59,7 +59,7 @@ ${row('Reason for requesting for the SSG-WSG Data / Service / API', rows.filter(
 
   return (
     <div className="pub">
-      <TopBar user={user} onLogin={onLogin} active="form" onHome={onHome} onOpenForm={() => {}} onConsole={onConsole} />
+      <TopBar user={user} onLogin={onLogin} active="form" onHome={onHome} onOpenForm={() => {}} onConsole={onConsole} onTpg={onTpg} />
       <div className="pub-form-wrap">
         <button className="pub-link" onClick={onHome}>← Discover APIs</button>
         <h1>API Subscription Form for SSG-WSG APIs</h1>

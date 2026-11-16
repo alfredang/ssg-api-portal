@@ -105,13 +105,13 @@ The following issues have been encountered when calling SSG production APIs. Thi
 
 | Method | URL | API Version | Status | Error Message |
 |--------|-----|-------------|--------|---------------|
-| Certificate (mTLS) | `POST api.ssg-wsg.sg/tpg/courses/registry/search` | v8.0 | **200** | Works via certificate |
+| Certificate (mTLS) | `POST api.ssg-wsg.sg/tpg/courses/registry/search` | v2.0 | **200** | Works via certificate |
 
 #### Course Details (TPG Registry)
 
 | Method | URL | API Version | Status | Error Message |
 |--------|-----|-------------|--------|---------------|
-| Certificate (mTLS) | `GET api.ssg-wsg.sg/tpg/courses/registry/details/{refNo}` | v8.0 | **200** | Works via certificate |
+| Certificate (mTLS) | `GET api.ssg-wsg.sg/tpg/courses/registry/details/{refNo}` | v2.0 | **200** | Works via certificate |
 
 </details>
 
@@ -133,6 +133,12 @@ The following issues have been encountered when calling SSG production APIs. Thi
 | OAuth | `POST public-api.ssg-wsg.sg/trainingProviders/{uen}/trainers/{trainerId}` | v2.0 | **403** | `Access to this API has been disallowed` |
 
 </details>
+
+#### API versions checked live on 2026-11-16
+
+- `POST /tpg/courses/registry/search` and `GET /tpg/courses/registry/details/{refNo}`: **v2.0** (v8.0 now returns 403 "Api Version has expired").
+- `POST /tpg/enrolments/search` and `POST /tpg/grants/search`: send **no** `x-api-version` header, body = raw base64 AES ciphertext (`certEncryptedSearch()`); any version returns 403 "Api Version has expired". The filter must include `trainingPartner.uen` and `.code`; the grant filter key is `grants`.
+- The other enrolment / assessment write routes still send v3.0 / v1 and have NOT been re-verified (they change production data).
 
 ### Common Error Codes
 
