@@ -10,7 +10,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Coolify-2496ED?logo=docker&logoColor=white)](https://coolify.io/)
 [![License](https://img.shields.io/badge/License-ISC-blue)](LICENSE)
 
-**A developer tool for exploring SkillsFuture Singapore (SSG-WSG) APIs**
+**SSG API / SWDA API reference with curl, Python and JavaScript examples, TPG process guides, and a live API console**
 
 [Report Bug](https://github.com/alfredang/ssg-api-portal/issues) · [Request Feature](https://github.com/alfredang/ssg-api-portal/issues)
 
@@ -18,35 +18,30 @@
 
 ## Screenshot
 
-![SSG API Portal — Discover APIs](screenshot.png)
+![SSG API Portal — a TPG process guide rendered as HTML](screenshot.png)
 
 **Live:** https://ssgapi.tertiaryinfotech.com/
 
 ## About
 
-SSG API Portal is a React web app for exploring the SSG-WSG (SkillsFuture Singapore) APIs. It provides a clean interface for looking up course details by reference number, searching courses by UEN and keyword, and viewing training provider information — all powered by OAuth 2.0 and mTLS certificate authentication via an Express backend proxy.
+SSG API Portal is the public reference for the SkillsFuture Singapore (SSG-WSG / SWDA) APIs that Tertiary Infotech
+Academy integrates with, plus a signed-in console for testing them live. Anyone can read the reference; only
+allow-listed staff can run calls with the company's SSG apps.
 
 ### Key Features
 
 | Feature | Description |
 |---------|-------------|
-| **Course Lookup** | Search by course reference number |
-| **Course Search** | Search by UEN, keyword, and date range with filtering |
-| **Courses by TP UEN** | Retrieve all courses for a training provider by UEN |
-| **Course Details** | View course overview, objectives, cost, and duration |
-| **Course Feedback** | Retrieve course quality and outcome ratings |
-| **Training Providers** | Course sessions, attendance, publish/edit course runs, trainer management |
-| **Grant Calculator** | Baseline scheme, personalised grants, search and view grants |
-| **SkillsFuture Credit Pay** | View/cancel claims, upload docs, encrypt/decrypt requests |
-| **Enrolments** | Create, update, search, view enrolments and fee collections |
-| **Assessments** | Create, update/void, search, view assessments |
-| **Skills Passport** | Retrieve qualification codes |
-| **SEA** | Skill extraction and skill search APIs |
-| **Skills Framework** | Job role details and skills details lookup |
-| **Tools** | Generate certificates, RSA keypairs, and encryption keys |
-| **Default Values** | Centrally configure common fields (UEN, Course Ref, NRIC, etc.) that auto-populate all forms |
-| **Known API Issues** | Collapsible dashboard grouped by category with error counts and references |
-| **Dual Auth** | OAuth 2.0 for public APIs + mTLS certificates for registry APIs |
+| **API reference** | One page per API (55 entries): endpoint, version, auth, request table, example body, and runnable **curl / Python / JavaScript** examples with certificate, OAuth and AES variants |
+| **Search and navigation** | Sidebar with filter, `/` or `Ctrl/Cmd-K` search palette, breadcrumbs, previous / next |
+| **Getting started and guides** | Auth and AES walkthrough; creating the certificate and encryption keys on **macOS and Windows**; the **SSG API subscription process** |
+| **TPG process** | The 13 Training Partners Gateway steps as a journey map; every guide rendered as HTML with self-drawn visuals (process flow, buttons, schematic screens) |
+| **Subscription form** | The API Subscription Form for SSG-WSG APIs, filled in online and exported to Word |
+| **Services and contact** | SSG API integration services page with a checklist download, and a contact page; enquiries are stored for staff |
+| **API console (sign-in)** | Live test pages for courses, feedback, course runs, attendance, grants, SkillsFuture Credit Pay, enrolments, assessments, Skills Passport, SEA and Skills Framework, switchable between **App 1 – App 4** |
+| **Defaults and known issues** | Per-user default values that fill every form; a known-issues dashboard |
+| **SEO** | Real URLs, per-page titles and descriptions sent by the server, sitemap.xml, robots.txt |
+| **Mobile friendly** | Menu, API drawer and console drawer on small screens |
 
 ## Tech Stack
 
@@ -94,35 +89,46 @@ SSG API Portal is a React web app for exploring the SSG-WSG (SkillsFuture Singap
 ```
 ssg-api-portal/
 ├── server/
-│   ├── index.js              # Express app (entry point + export)
+│   ├── index.js              # Express app: auth, enquiries, SSG proxy, per-URL SEO tags, static files
+│   ├── auth.js               # Google OAuth, cookie sessions, email allow-list, local bypass
+│   ├── proxy.js              # SSG API proxy routes (mTLS certificate + OAuth fallback, AES)
 │   ├── oauth.js              # SSG OAuth token fetch + cache
-│   ├── proxy.js              # SSG API proxy routes (OAuth + mTLS)
-│   ├── store.js              # File-based per-user defaults store (JSON)
-│   ├── auth.js               # Google OAuth, cookie sessions, local bypass
-│   └── defaults.js           # Per-user defaults API (file-backed)
+│   ├── leads.js              # POST /lead (public enquiries), GET /api/leads (staff)
+│   ├── defaults.js           # Per-user defaults API
+│   └── store.js              # File-based defaults store (JSON)
 ├── client/
-│   ├── index.html            # HTML entry point
-│   ├── vite.config.ts        # Vite configuration
+│   ├── index.html            # HTML shell with the <!--seo--> block the server fills in
+│   ├── scripts/gen-seo.mts   # Build step: dist/seo.json, sitemap.xml, robots.txt
+│   ├── public/tpg-process/   # The original SSG TPGateway guides (PDF downloads)
 │   └── src/
-│       ├── App.tsx           # Main app orchestrator
-│       ├── App.css           # Application styles
-│       ├── api/
-│       │   └── courseApi.ts  # API client functions
-│       ├── components/
-│       │   ├── SearchForm.tsx         # Course lookup form
-│       │   ├── CourseSearchForm.tsx    # Course search form
-│       │   ├── CourseOverview.tsx      # Course details display
-│       │   ├── CourseMetadata.tsx      # Metadata tags
-│       │   ├── CourseRunsTable.tsx     # Course runs table
-│       │   └── TrainingProviderCard.tsx # Provider details
-│       ├── hooks/
-│       │   └── useApi.ts    # Generic API hook
-│       └── types/
-│           └── course.ts    # TypeScript interfaces
+│       ├── main.tsx          # Routes: public pages and the signed-in console
+│       ├── router.ts         # Path router (History API), legacy #/ redirects
+│       ├── seo.ts            # Title, description and keywords of every page
+│       ├── catalog.ts        # Every API: path, version, auth, verified / added dates
+│       ├── apiSpecs.ts       # Parameters, example bodies, curl / Python / JS generator
+│       ├── prefs.ts          # Remembered example language and fill-in values
+│       ├── tpgSteps.ts       # The 13 TPG steps and 5 phases
+│       ├── tpgTypes.ts       # Content model of a TPG guide
+│       ├── tpgGuidesA.ts     # Guides 1-6 as structured content
+│       ├── tpgGuidesB.ts     # Guides 7-13 as structured content
+│       ├── App.tsx           # The API console (signed-in)
+│       ├── App.css           # All styles (Tertiary HRMS light design tokens)
+│       ├── api/courseApi.ts  # Console API client (sends x-ssg-app)
+│       └── components/
+│           ├── Shell.tsx          # Top bar, search palette, API sidebar, footer
+│           ├── Docs.tsx           # Home, category, API and Getting started pages
+│           ├── ApiSpec.tsx        # Request spec, code panel, fill-in values
+│           ├── Guides.tsx         # Keys guide and subscription-process guide
+│           ├── TpgProcess.tsx     # TPG journey map and step page
+│           ├── TpgGuide.tsx       # Renders a guide: flow, steps, schematic screens
+│           ├── Marketing.tsx      # Contact page, services page, enquiry form
+│           ├── SubscriptionForm.tsx
+│           ├── LoginPage.tsx      # Two-column sign-in
+│           ├── LeadsPage.tsx      # Console: enquiries
+│           └── …                  # Console result cards and forms
 ├── default-values.csv        # Default form values (UEN, Course Ref, etc.)
 ├── Dockerfile                # Multi-stage build for Coolify deployment
-├── .dockerignore
-├── package.json              # Root dependencies
+├── package.json
 └── .env.example              # Environment variable template
 ```
 
@@ -187,8 +193,8 @@ The app ships as a single Docker image: a multi-stage [Dockerfile](Dockerfile) b
 React client and serves it from the Express server alongside the API proxy.
 
 1. **Create an Application** from this Git repo. Coolify auto-detects the `Dockerfile`.
-2. **Add a persistent volume** mounted at `/app/server/data` so per-user defaults
-   (a JSON file) survive redeploys. No database is required.
+2. **Add a persistent volume** mounted at `/app/server/data` so per-user defaults and
+   website enquiries (`leads.jsonl`) survive redeploys. No database is required.
 3. **Set environment variables** (below), then deploy. The container listens on port `3001`.
 4. **Configure Google OAuth**: in the [Google Cloud Console](https://console.cloud.google.com/apis/credentials),
    add `https://your-domain.com/auth/google/callback` as an Authorized redirect URI.
@@ -204,7 +210,9 @@ deployment (`NODE_ENV=production`) requires **Google sign-in**. Override with `A
 | Variable | Description |
 |----------|-------------|
 | `NODE_ENV` | Set to `production` |
-| `DATA_DIR` | Defaults file location (default `/app/server/data`; back with a volume) |
+| `DATA_DIR` | Defaults and enquiries location (default `/app/server/data`; back with a volume) |
+| `ALLOWED_EMAIL_DOMAINS` / `ALLOWED_EMAILS` | Who may sign in (optional; defaults to the company domains) |
+| `LEAD_WEBHOOK_URL` | Optional: post each new enquiry to a chat or CRM webhook |
 | `SESSION_SECRET` | Long random string for signing session cookies |
 | `GOOGLE_CLIENT_ID` | Google OAuth 2.0 client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth 2.0 client secret |
