@@ -2,7 +2,7 @@ import { CATALOG, ALL_APIS, AUTH_LABEL, BASE_URLS, findApi, findGroup } from '..
 import type { FlatApi } from '../catalog';
 import type { AuthUser } from '../auth';
 import { useLang } from '../prefs';
-import { DocsLayout, MethodTag } from './Shell';
+import { DocsLayout, MethodTag, LangSwitch } from './Shell';
 import { RequestSpec, CodePanel, CodeBlock, CopyButton } from './ApiSpec';
 import { TPG_STEPS } from './TpgProcess';
 
@@ -208,7 +208,8 @@ export function StartPage({ user }: { user: AuthUser | null }) {
   return (
     <DocsLayout user={user} section="start">
       <div className="api-head"><h1>Getting started</h1></div>
-      <p className="api-desc">Every SSG API is HTTPS + JSON. Between APIs only three things change: the path, the version header, and how you authenticate. Examples below follow the language chosen in the top bar.</p>
+      <p className="api-desc">Every SSG API is HTTPS + JSON. Between APIs only three things change: the path, the version header, and how you authenticate.</p>
+      <div className="start-lang"><span>Show examples in</span><LangSwitch /></div>
 
       <ol className="start-steps">
         <li>

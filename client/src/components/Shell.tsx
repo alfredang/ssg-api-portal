@@ -121,7 +121,6 @@ export function TopBar({ user, active, onMenu }: { user: AuthUser | null; active
       <button className="pub-searchbtn" onClick={() => setPalette(true)} aria-label="Search APIs">
         <span>Search APIs…</span><kbd>/</kbd>
       </button>
-      <LangSwitch compact />
       <div className="pub-user">
         {user ? (
           <>

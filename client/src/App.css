@@ -1648,3 +1648,4 @@ a.pub-api-row { text-decoration: none; box-sizing: border-box; }
   .pub-nav::-webkit-scrollbar { display: none; }
   .pub-user { margin-left: auto; } .pub-user-name { display: none; }
 }
+.start-lang { display: flex; align-items: center; gap: 12px; margin: 0 0 22px; color: var(--muted); font-size: 14px; }

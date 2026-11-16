@@ -254,7 +254,7 @@ Up to three cert sets are supported (`CERT_1_*`, `CERT_2_*`, `CERT_3_*`); each
 | `/#/console/<page>` | Signed in | **API Console**: test each API live with App 1 – App 4. |
 
 Navigation: a persistent sidebar lists every API with a filter; `/` or `Ctrl/Cmd-K` opens search; the
-example language is chosen once in the top bar and remembered; "Use my own values" swaps the sample
+example language is chosen on any API page (above the example) and remembered across pages; "Use my own values" swaps the sample
 UEN, course reference, run ID and certificate file names into every example (kept in the browser only).
 
 Docs data: `client/src/catalog.ts` (endpoints, versions, auth, `verified` dates) and
