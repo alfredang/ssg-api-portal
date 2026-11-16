@@ -245,21 +245,42 @@ Up to three cert sets are supported (`CERT_1_*`, `CERT_2_*`, `CERT_3_*`); each
 
 | Route | Who | What |
 |---|---|---|
-| `/#/` | Public | **API Reference** home: base URLs, three "start here" examples, products and categories. |
-| `/#/api/<slug>` | Public | **One page per API**: request spec on the left, a sticky curl / Python / JavaScript example on the right (Certificate / OAuth toggle, Copy, Download), verified badge, TPG steps, link to the console. |
-| `/#/apis/<group>` | Public | The APIs of one category. |
-| `/#/start` | Public | **Getting started**: app setup, base URLs, mTLS call, OAuth token, AES, status codes. |
-| `/#/tpg-process[/<step>]` | Public | **TPG Process**: journey map of the 13 TPGateway steps; each step opens its guide as page images. Guides: `client/public/tpg-process/*.pdf`, page images in `pages/<step>/<n>.jpg` (re-render with `pdftoppm -r 110 -jpeg`). |
-| `/#/subscription-form` | Public | Online **API Subscription Form for SSG-WSG APIs**; exports a filled Word file. Nothing is sent to the server. |
-| `/#/console/<page>` | Signed in | **API Console**: test each API live with App 1 – App 4. |
+| `/` | Public | **API Reference** home: base URLs, three "start here" examples, products and categories. |
+| `/docs/<slug>` | Public | **One page per API**: request spec on the left, a sticky curl / Python / JavaScript example on the right (Certificate / OAuth toggle, Copy, Download), New / Verified badges, TPG steps, link to the console. |
+| `/category/<group>` | Public | The APIs of one category. |
+| `/start` | Public | **Getting started**: app setup, base URLs, mTLS call, OAuth token, AES, status codes. |
+| `/guides/create-keys` | Public | **Create the certificate and encryption keys** on macOS and Windows. |
+| `/guides/api-subscription` | Public | **SSG API subscription process**, eight stages from Developer Portal app to production. |
+| `/tpg-process[/<slug>]` | Public | **TPG Process**: journey map of the 13 TPGateway steps; each step is rendered as HTML with self-drawn visuals (flow, buttons, schematic screens). Content: `client/src/tpgGuidesA.ts` / `tpgGuidesB.ts` (model in `tpgTypes.ts`, renderer `components/TpgGuide.tsx`); the original PDFs stay in `client/public/tpg-process/` as downloads. |
+| `/subscription-form` | Public | Online **API Subscription Form**; exports a filled Word file. Nothing is sent to the server. |
+| `/ssg-api-services` | Public | **Services / lead magnet** page: enquiry form unlocks the SSG API Integration Checklist download. |
+| `/contact` | Public | **Contact us**: address, phone, WhatsApp, email and an enquiry form. |
+| `/console/<page>` | Signed in | **API Console**: test each API live with App 1 – App 4; includes **Enquiries** (leads). |
 
-Navigation: a persistent sidebar lists every API with a filter; `/` or `Ctrl/Cmd-K` opens search; the
-example language is chosen on any API page (above the example) and remembered across pages; "Use my own values" swaps the sample
-UEN, course reference, run ID and certificate file names into every example (kept in the browser only).
+**Routing and SEO.** Real paths (History API, `client/src/router.ts`); old `#/…` links redirect in the browser and
+numbered TPG URLs 301 to their keyword URL. `client/src/seo.ts` is the single source of each page's title,
+description and keywords (targets: SSG API, SWDA API, TPG process, TPG claim process, SWDA enrolment process).
+`npm run build` runs `scripts/gen-seo.mts`, which writes `dist/seo.json`, `sitemap.xml` and `robots.txt`; the server
+injects the tags into the HTML per URL, and unknown paths return 404.
 
-Docs data: `client/src/catalog.ts` (endpoints, versions, auth, `verified` dates) and
-`client/src/apiSpecs.ts` (parameters, example bodies, sample generator). Set `verified` only after the
-exact generated request returned 200 from live SSG. Shell and pages: `components/Shell.tsx`, `Docs.tsx`, `ApiSpec.tsx`.
+**Enquiries.** `POST /lead` (public, honeypot + rate limit) appends to `DATA_DIR/leads.jsonl` and, if
+`LEAD_WEBHOOK_URL` is set, posts the enquiry there. Staff read them in the console under Enquiries
+(`GET /api/leads`, sign-in required). No email is sent by the app.
+
+**Sign-in.** Google accounts on `ALLOWED_EMAIL_DOMAINS` (default `tertiaryinfotech.com,tertiarycourses.com.sg`),
+the named staff in `STAFF_EMAILS` (`server/auth.js`) and any `ALLOWED_EMAILS`.
+
+**Monthly update check.** The Digital Workforce agent `ssg-api-watcher` runs on the 1st of each month and reports
+new, changed or retired SSG / SWDA APIs with ready-to-paste `catalog.ts` and `apiSpecs.ts` entries. It is read-only;
+apply and verify its proposals in a normal session.
+
+Navigation: a persistent sidebar lists every API and guide with a filter; `/` or `Ctrl/Cmd-K` opens search; the
+example language is chosen on any API page and remembered; "Use my own values" swaps the sample UEN, course
+reference, run ID and certificate file names into every example (kept in the browser only).
+
+Docs data: `client/src/catalog.ts` (endpoints, versions, auth, `verified` and `added` dates) and
+`client/src/apiSpecs.ts` (parameters, example bodies, sample generator). Set `verified` only after the exact
+generated request returned 200 from live SSG.
 
 Every `/api/*` route that calls SSG requires a signed-in user whose email is on the allow-list
 (`ALLOWED_EMAIL_DOMAINS`, default `tertiaryinfotech.com,tertiarycourses.com.sg`, plus `ALLOWED_EMAILS`).

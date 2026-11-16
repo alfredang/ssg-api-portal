@@ -37,7 +37,9 @@ function authDisabled() {
 //   ALLOWED_EMAILS         comma-separated extra addresses
 const list = (v) => (v || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
 const allowedDomains = list(process.env.ALLOWED_EMAIL_DOMAINS ?? 'tertiaryinfotech.com,tertiarycourses.com.sg');
-const allowedEmails = list(process.env.ALLOWED_EMAILS);
+// Named staff always allowed, whatever ALLOWED_EMAIL_DOMAINS is set to.
+const STAFF_EMAILS = ['angss@tertiaryinfotech.com', 'danny@tertiaryinfotech.com', 'deepa@tertiaryinfotech.com'];
+const allowedEmails = [...STAFF_EMAILS, ...list(process.env.ALLOWED_EMAILS)];
 
 function emailAllowed(email) {
   const e = (email || '').toLowerCase();
@@ -141,13 +143,13 @@ function configureAuth(app) {
     '/auth/google/callback',
     (req, res, next) => {
       if (!googleConfigured) return res.redirect('/');
-      passport.authenticate('google', { failureRedirect: '/?login=failed#/console' })(
+      passport.authenticate('google', { failureRedirect: '/console?login=failed' })(
         req,
         res,
         next
       );
     },
-    (req, res) => res.redirect('/')
+    (req, res) => res.redirect('/console')
   );
 
   app.get('/auth/logout', (req, res) => {

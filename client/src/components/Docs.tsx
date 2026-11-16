@@ -6,10 +6,20 @@ import { DocsLayout, MethodTag, LangSwitch } from './Shell';
 import { RequestSpec, CodePanel, CodeBlock, CopyButton } from './ApiSpec';
 import { TPG_STEPS } from './TpgProcess';
 
+// APIs without a console test page yet.
+const CONSOLE_PAGES = { has: (page: string) => page !== 'direct-applications' };
+
 const fmtDate = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' });
 
 export function StatusBadge({ api }: { api: FlatApi }) {
   if (api.auth === 'local') return <span className="badge neutral">Local tool</span>;
+  const isNew = api.added && (Date.now() - new Date(api.added + '-01').getTime()) < 366 * 864e5;
+  if (isNew) return (
+    <>
+      <span className="badge blue">New {new Date(api.added + '-01').toLocaleDateString('en-SG', { month: 'short', year: 'numeric' })}</span>
+      {api.verified && <span className="badge ok">Verified {fmtDate(api.verified)}</span>}
+    </>
+  );
   return api.verified
     ? <span className="badge ok" title="This exact request returned HTTP 200 from live SSG on that date.">Verified {fmtDate(api.verified)}</span>
     : <span className="badge neutral" title="The example follows the same tested template, but this API has not been called live from the portal.">Not yet verified</span>;
@@ -18,7 +28,7 @@ export function StatusBadge({ api }: { api: FlatApi }) {
 function ApiRow({ a }: { a: FlatApi }) {
   return (
     <li>
-      <a className="pub-api-row" href={`#/api/${a.slug}`}>
+      <a className="pub-api-row" href={`/docs/${a.slug}`}>
         <MethodTag method={a.method} />
         <span className="pub-api-name">{a.name}</span>
         <code className="pub-api-path">{a.path}</code>
@@ -49,7 +59,7 @@ export function Home({ user }: { user: AuthUser | null }) {
       <h2 className="home-h">Start here</h2>
       <div className="home-starts">
         {starts.map((s) => (
-          <a key={s.slug} className="home-start" href={`#/api/${s.slug}`}>
+          <a key={s.slug} className="home-start" href={`/docs/${s.slug}`}>
             <span className="badge blue">{s.tag}</span>
             <b>{s.title}</b>
             <span>{s.text}</span>
@@ -57,7 +67,7 @@ export function Home({ user }: { user: AuthUser | null }) {
           </a>
         ))}
       </div>
-      <p className="home-more">New to SSG APIs? Read <a href="#/start">Getting started</a> for authentication and encryption in five minutes.</p>
+      <p className="home-more">New to SSG APIs? Read <a href="/start">Getting started</a> for authentication and encryption in five minutes.</p>
 
       <h2 className="home-h">Browse by product</h2>
       <div className="home-products">
@@ -67,7 +77,7 @@ export function Home({ user }: { user: AuthUser | null }) {
             <p>{p.desc}</p>
             <ul>
               {p.groups.map((g) => (
-                <li key={g.id}><a href={`#/apis/${g.id}`}><span>{g.name}</span><span className="docs-count">{g.apis.length}</span></a></li>
+                <li key={g.id}><a href={`/category/${g.id}`}><span>{g.name}</span><span className="docs-count">{g.apis.length}</span></a></li>
               ))}
             </ul>
           </section>
@@ -79,7 +89,7 @@ export function Home({ user }: { user: AuthUser | null }) {
           <h3>How the APIs fit the TPG process</h3>
           <p>The 13 Training Partners Gateway steps, from course runs to certificates, with the APIs for each.</p>
         </div>
-        <a className="pub-btn ghost" href="#/tpg-process">View TPG process</a>
+        <a className="pub-btn ghost" href="/tpg-process">View TPG process</a>
       </div>
     </DocsLayout>
   );
@@ -92,7 +102,7 @@ export function GroupPage({ user, groupId }: { user: AuthUser | null; groupId: s
   const apis = ALL_APIS.filter((a) => a.groupId === groupId);
   return (
     <DocsLayout user={user} currentGroup={groupId}>
-      <nav className="crumbs" aria-label="Breadcrumb"><a href="#/">API Reference</a><span>›</span><span>{apis[0]?.product}</span></nav>
+      <nav className="crumbs" aria-label="Breadcrumb"><a href="/">API Reference</a><span>›</span><span>{apis[0]?.product}</span></nav>
       <div className="api-head">
         <h1>{group.name}</h1>
         {group.docs && <a href={group.docs} target="_blank" rel="noopener noreferrer">Official docs ↗</a>}
@@ -119,7 +129,7 @@ export function ApiPage({ user, slug }: { user: AuthUser | null; slug: string })
   return (
     <DocsLayout user={user} currentSlug={slug}>
       <nav className="crumbs" aria-label="Breadcrumb">
-        <a href="#/">API Reference</a><span>›</span><span>{api.product}</span><span>›</span><a href={`#/apis/${api.groupId}`}>{api.group}</a>
+        <a href="/">API Reference</a><span>›</span><span>{api.product}</span><span>›</span><a href={`/category/${api.groupId}`}>{api.group}</a>
       </nav>
       <div className="api-head">
         <h1>{api.name}</h1>
@@ -150,14 +160,15 @@ export function ApiPage({ user, slug }: { user: AuthUser | null; slug: string })
               <h2>Where it fits</h2>
               <div className="tpg-related">
                 <span>TPG process</span>
-                {steps.map((s) => <a key={s.id} className="chip" href={`#/tpg-process/${s.id}`}>Step {s.id}: {s.title}</a>)}
+                {steps.map((s) => <a key={s.id} className="chip" href={`/tpg-process/${s.slug}`}>Step {s.id}: {s.title}</a>)}
               </div>
             </div>
           )}
 
           <div className="api-try">
-            <a className="pub-btn" href={`#/console/${api.page}`}>{user ? 'Try it live in the console →' : 'Log in to try it live →'}</a>
-            <span>Runs the call with our App 1 – App 4 credentials.</span>
+            {CONSOLE_PAGES.has(api.page)
+              ? <><a className="pub-btn" href={`/console/${api.page}`}>{user ? 'Try it live in the console →' : 'Log in to try it live →'}</a><span>Runs the call with our App 1 – App 4 credentials.</span></>
+              : <span>Not in the API Console yet. Use the example on this page.</span>}
           </div>
         </div>
         <aside className="api-col-code" aria-label="Example"><CodePanel api={api} /></aside>
@@ -171,8 +182,8 @@ export function ApiPage({ user, slug }: { user: AuthUser | null; slug: string })
       )}
 
       <nav className="api-pager" aria-label="Previous and next API">
-        {prev ? <a href={`#/api/${prev.slug}`}><small>← Previous</small>{prev.name}</a> : <span />}
-        {next ? <a href={`#/api/${next.slug}`} className="next"><small>Next →</small>{next.name}</a> : <span />}
+        {prev ? <a href={`/docs/${prev.slug}`}><small>← Previous</small>{prev.name}</a> : <span />}
+        {next ? <a href={`/docs/${next.slug}`} className="next"><small>Next →</small>{next.name}</a> : <span />}
       </nav>
     </DocsLayout>
   );
@@ -181,7 +192,7 @@ export function ApiPage({ user, slug }: { user: AuthUser | null; slug: string })
 function NotFound({ user, what }: { user: AuthUser | null; what: string }) {
   return (
     <DocsLayout user={user}>
-      <div className="pub-empty">That {what} does not exist. <a href="#/">Back to the API reference</a></div>
+      <div className="pub-empty">That {what} does not exist. <a href="/">Back to the API reference</a></div>
     </DocsLayout>
   );
 }
@@ -206,7 +217,7 @@ export function StartPage({ user }: { user: AuthUser | null }) {
   }[lang];
 
   return (
-    <DocsLayout user={user} section="start">
+    <DocsLayout user={user} section="start" currentGuide="start">
       <div className="api-head"><h1>Getting started</h1></div>
       <p className="api-desc">Every SSG API is HTTPS + JSON. Between APIs only three things change: the path, the version header, and how you authenticate.</p>
       <div className="start-lang"><span>Show examples in</span><LangSwitch /></div>
@@ -214,7 +225,7 @@ export function StartPage({ user }: { user: AuthUser | null }) {
       <ol className="start-steps">
         <li>
           <h2>Get an app on the Developer Portal</h2>
-          <p>Create an app at the <a href="https://developer.swda.gov.sg/" target="_blank" rel="noopener noreferrer">SWDA Developer Portal</a>, upload a certificate (or note the client ID and secret), and subscribe it to the APIs you need. Subscribing takes a ticket and the <a href="#/subscription-form">subscription form</a>. Need a certificate or key? See the <a href="#/apis/tools">developer tools</a>.</p>
+          <p>Create an app at the <a href="https://developer.swda.gov.sg/" target="_blank" rel="noopener noreferrer">SWDA Developer Portal</a>, upload a certificate (or note the client ID and secret), and subscribe it to the APIs you need. Subscribing takes a ticket and the <a href="/subscription-form">subscription form</a>. Step-by-step: <a href="/guides/create-keys">create the certificate and keys on Mac or Windows</a> and the <a href="/guides/api-subscription">API subscription process</a>.</p>
         </li>
         <li>
           <h2>Pick the base URL for your auth method</h2>
@@ -258,7 +269,7 @@ export function StartPage({ user }: { user: AuthUser | null }) {
       </ol>
       <div className="pub-cta">
         <div><h3>Ready?</h3><p>Open an API for its spec and a complete example.</p></div>
-        <a className="pub-btn" href="#/api/course-search-tpg-registry">Open the first example</a>
+        <a className="pub-btn" href="/docs/course-search-tpg-registry">Open the first example</a>
       </div>
     </DocsLayout>
   );

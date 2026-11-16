@@ -11,6 +11,7 @@ export default defineConfig({
         target: `http://localhost:${serverPort}`,
         changeOrigin: true,
       },
+      '/lead': { target: `http://localhost:${serverPort}`, changeOrigin: true },
       '/auth': {
         target: 'http://localhost:3003',
         changeOrigin: true,

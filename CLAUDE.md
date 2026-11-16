@@ -138,6 +138,7 @@ The following issues have been encountered when calling SSG production APIs. Thi
 
 - `POST /tpg/courses/registry/search` and `GET /tpg/courses/registry/details/{refNo}`: **v2.0** (v8.0 now returns 403 "Api Version has expired").
 - `POST /tpg/enrolments/search` and `POST /tpg/grants/search`: send **no** `x-api-version` header, body = raw base64 AES ciphertext (`certEncryptedSearch()`); any version returns 403 "Api Version has expired". The filter must include `trainingPartner.uen` and `.code`; the grant filter key is `grants`.
+- `POST /courses/applications/trainingprovider/filter` (Retrieve Direct Course Applications, new Sep 2026): **v1.0**, certificate, plain JSON request, AES-encrypted response; 200 with App 2 (TMSV2 TIA) on 2026-11-17, 403 with App 1 (not subscribed). "No record" comes back as `{ "error": "<encrypted>" }`. Not in the console yet.
 - The other enrolment / assessment write routes still send v3.0 / v1 and have NOT been re-verified (they change production data).
 
 ### Common Error Codes

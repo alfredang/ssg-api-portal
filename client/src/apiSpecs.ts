@@ -16,6 +16,8 @@ export interface Spec {
   headers?: Field[];
   /** Example JSON body (plain, before AES encryption). */
   body?: unknown;
+  /** The request body is sent plain, but SSG returns the response AES-encrypted. */
+  encryptedResponse?: boolean;
   /** Extra note shown under the spec. */
   note?: string;
 }
@@ -50,6 +52,11 @@ export const SPECS: Record<string, Spec> = {
   'tp-courses': {
     body: { uen: UEN, keyword: '', page: 0, pageSize: 20, details: 'FULL', sortBy: { field: 'updatedDate', order: 'desc' }, course: { meta: { updatedDate: { from: '2019-01-01', to: '2026-12-31' } } } },
     note: 'Same registry search, with an empty keyword so every course of the UEN is returned.',
+  },
+  'direct-applications': {
+    encryptedResponse: true,
+    body: { uen: UEN, tpCode: `${UEN}-01`, page: 0, pageSize: 20 },
+    note: 'uen and tpCode are required. Optional filters: keyword, applicationId, applicationStatus, lastUpdateDate, runStartDate { from, to }, sortBy, sortOrder. The request body is plain JSON. A successful response is AES-encrypted text that decrypts to the usual envelope (data.courseApplications, meta.total). When nothing matches, SSG returns { "error": "<encrypted>" } instead, which decrypts to status 404 "No record found". Retrieval only: confirming or cancelling an application is still done on TPGateway.',
   },
   'course-sessions': {
     query: [
@@ -218,7 +225,8 @@ const pyLiteral = (v: unknown) => JSON.stringify(v, null, 4).replace(/\btrue\b/g
 
 export function codeSample(api: ApiEntry, lang: Lang, auth: AuthChoice): string {
   const spec = SPECS[api.page] ?? {};
-  const aes = api.auth === 'cert+aes' && auth === 'cert';
+  const aesReq = api.auth === 'cert+aes' && auth === 'cert';
+  const aes = aesReq || (!!spec.encryptedResponse && auth === 'cert');
   const base = auth === 'oauth' ? BASE_URLS.oauth : BASE_URLS.cert;
   const query = (spec.query ?? []).filter((f) => f.required || ['pageSize', 'page', 'includeExpired'].includes(f.name));
   const qs = query.length ? '?' + query.map((f) => `${f.name}=${encodeURIComponent(f.example)}`).join('&') : '';
@@ -234,7 +242,10 @@ export function codeSample(api: ApiEntry, lang: Lang, auth: AuthChoice): string 
     if (auth === 'oauth') {
       lines.push('# 1. Get an access token (valid about 30 minutes)', `TOKEN=$(curl -s -X POST ${BASE_URLS.oauth}/dp-oauth/oauth/token \\`, '  -u "$SSG_CLIENT_ID:$SSG_CLIENT_SECRET" \\', '  -d grant_type=client_credentials | jq -r .access_token)', '', '# 2. Call the API');
     }
-    if (aes) {
+    if (aes && !aesReq) {
+      lines.push('# The response is AES-256-CBC encrypted: key = base64 key from the Developer Portal, IV = "SSGAPIInitVector"', 'KEY_HEX=$(printf %s "$SSG_ENCRYPTION_KEY" | base64 -d | xxd -p -c 64)', 'IV_HEX=$(printf %s SSGAPIInitVector | xxd -p)', '');
+    }
+    if (aesReq) {
       lines.push('# 1. Encrypt the JSON body: AES-256-CBC, key = base64 key from the Developer Portal,', '#    IV = "SSGAPIInitVector", output base64', `cat > body.json <<'JSON'`, JSON.stringify(body, null, 2), 'JSON', 'KEY_HEX=$(printf %s "$SSG_ENCRYPTION_KEY" | base64 -d | xxd -p -c 64)', 'IV_HEX=$(printf %s SSGAPIInitVector | xxd -p)', 'openssl enc -aes-256-cbc -K "$KEY_HEX" -iv "$IV_HEX" -base64 -A -in body.json > body.enc', '', '# 2. Send it with the client certificate, then decrypt the reply');
     }
     lines.push(`curl -s -X ${api.method} "${url}${qs}" \\`);
@@ -243,7 +254,7 @@ export function codeSample(api: ApiEntry, lang: Lang, auth: AuthChoice): string 
     for (const [k, v] of headers) lines.push(`  -H "${k}: ${v}" \\`);
     if (hasBody) {
       lines.push('  -H "Content-Type: application/json" \\');
-      lines.push(aes ? '  --data-binary @body.enc \\' : `  -d '${indent(JSON.stringify(body, null, 2), 2)}' \\`);
+      lines.push(aesReq ? '  --data-binary @body.enc \\' : `  -d '${indent(JSON.stringify(body, null, 2), 2)}' \\`);
     }
     lines[lines.length - 1] = lines[lines.length - 1].replace(/ \\$/, '');
     if (aes) lines[lines.length - 1] += ' \\\n  | openssl enc -d -aes-256-cbc -K "$KEY_HEX" -iv "$IV_HEX" -base64 -A';
@@ -265,9 +276,9 @@ export function codeSample(api: ApiEntry, lang: Lang, auth: AuthChoice): string 
     if (query.length) L.push(`    params={${query.map((f) => `"${f.name}": "${f.example}"`).join(', ')}},`);
     const hs = headers.map(([k, v]) => `"${k}": "${v}"`);
     if (auth === 'oauth') hs.push('"Authorization": f"Bearer {token}"');
-    if (aes) hs.push('"Content-Type": "application/json"');
+    if (aesReq) hs.push('"Content-Type": "application/json"');
     if (hs.length) L.push(`    headers={${hs.join(', ')}},`);
-    if (hasBody) L.push(aes ? '    data=encrypt(body),' : '    json=body,');
+    if (hasBody) L.push(aesReq ? '    data=encrypt(body),' : '    json=body,');
     if (auth === 'cert') L.push('    cert=("ssg-app1-cert.pem", "ssg-app1-key.pem"),');
     L.push('    timeout=30,', ')', 'print(resp.status_code)', aes ? 'print(decrypt(resp.text))' : 'print(resp.json())');
     return L.join('\n');
@@ -300,7 +311,7 @@ export function codeSample(api: ApiEntry, lang: Lang, auth: AuthChoice): string 
   if (hasBody) jh.push("'Content-Type': 'application/json'");
   if (jh.length) J.push(`  headers: { ${jh.join(', ')} },`);
   J.push('}, (res) => {', "  let data = '';", "  res.on('data', (chunk) => (data += chunk));", `  res.on('end', () => console.log(res.statusCode, ${aes ? 'decrypt(data)' : 'JSON.parse(data)'}));`, '});', "req.on('error', console.error);");
-  if (hasBody) J.push(aes ? 'req.write(encrypt(body));' : 'req.write(JSON.stringify(body));');
+  if (hasBody) J.push(aesReq ? 'req.write(encrypt(body));' : 'req.write(JSON.stringify(body));');
   J.push('req.end();');
   return J.join('\n');
 }

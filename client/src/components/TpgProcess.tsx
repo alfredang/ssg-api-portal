@@ -1,23 +1,18 @@
-import { useEffect, useState } from 'react';
 import { CATALOG } from '../catalog';
 import type { AuthUser } from '../auth';
 import { TopBar, Footer } from './Shell';
+import TpgGuide from './TpgGuide';
+import { TPG_GUIDES } from '../tpgGuides';
+import { TPG_STEPS, TPG_PHASES, stepBySlug } from '../tpgSteps';
+import type { Step } from '../tpgSteps';
+
+export { TPG_STEPS, TPG_PHASES };
 
 // TPG (Training Partners Gateway) process: a visual journey map of the 13
 // steps a training provider follows, grouped into 5 phases. Each step opens
-// its quick-reference guide as page images (rendered from the PDFs in
-// /tpg-process/, see pages/<step>/<n>.jpg) with the SSG APIs that automate it.
-
-interface Step { id: number; title: string; file: string; desc: string; pages: number; phase: string; icon: string; groups: string[] }
-interface Phase { id: string; name: string; blurb: string; color: string; tint: string }
-
-export const TPG_PHASES: Phase[] = [
-  { id: 'setup', name: 'Set up', blurb: 'Get the course approved and scheduled', color: '#2F5BE6', tint: '#E3EAFC' },
-  { id: 'enrol', name: 'Enrol', blurb: 'Price the course and enrol trainees', color: '#0E8A6A', tint: '#DDF3EC' },
-  { id: 'deliver', name: 'Deliver', blurb: 'Run the class and assess', color: '#B45309', tint: '#FBEBD3' },
-  { id: 'fund', name: 'Fund', blurb: 'Grants, claims and money', color: '#7C3AED', tint: '#EBE3FC' },
-  { id: 'close', name: 'Close', blurb: 'Report outcomes and certify', color: '#BE185D', tint: '#FBE1EC' },
-];
+// its quick-reference guide rendered as HTML (content in tpgGuides*.ts, drawn
+// by TpgGuide.tsx) with the SSG APIs that automate it. No PDF pages or
+// screenshots are embedded; the original PDFs stay downloadable.
 
 // Icon paths: 24x24, stroke only.
 const ICONS: Record<string, string> = {
@@ -36,25 +31,8 @@ const ICONS: Record<string, string> = {
   award: 'M12 14a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM9 13l-2 8 5-3 5 3-2-8',
 };
 
-export const TPG_STEPS: Step[] = [
-  { id: 1, title: 'Course Dashboards', file: '1-course-dashboards.pdf', pages: 6, phase: 'setup', icon: 'dashboard', desc: 'See every course, run and task at a glance on TPGateway.', groups: ['courses'] },
-  { id: 2, title: 'Course Applications', file: '2-course-applications.pdf', pages: 7, phase: 'setup', icon: 'form', desc: 'Submit and manage course applications for approval.', groups: ['courses'] },
-  { id: 3, title: 'Course Runs', file: '3-course-runs.pdf', pages: 8, phase: 'setup', icon: 'calendar', desc: 'Add course runs with their sessions and trainers.', groups: ['training-providers'] },
-  { id: 4, title: 'Grant Calculator', file: '4-grant-calculator.pdf', pages: 3, phase: 'enrol', icon: 'calculator', desc: 'Estimate the grant and the nett fee a trainee pays.', groups: ['grant-calculator'] },
-  { id: 5, title: 'Trainee Enrolment', file: '5-trainee-enrolment.pdf', pages: 11, phase: 'enrol', icon: 'userPlus', desc: 'Enrol trainees into a course run, singly or in bulk.', groups: ['enrolments'] },
-  { id: 6, title: 'Attendance', file: '6-attendance.pdf', pages: 9, phase: 'deliver', icon: 'check', desc: 'Take and upload attendance for every session.', groups: ['training-providers'] },
-  { id: 7, title: 'Assessments', file: '7-assessments.pdf', pages: 9, phase: 'deliver', icon: 'clipboard', desc: 'Submit each trainee’s assessment result.', groups: ['assessments'] },
-  { id: 8, title: 'Grants', file: '8-grants.pdf', pages: 3, phase: 'fund', icon: 'bank', desc: 'Track the grants raised for your enrolments.', groups: ['grant-calculator'] },
-  { id: 9, title: 'Claims', file: '9-claims.pdf', pages: 5, phase: 'fund', icon: 'send', desc: 'Submit and follow up claims.', groups: ['sfc-pay'] },
-  { id: 10, title: 'Outcome Submission', file: '10-outcome-submission.pdf', pages: 5, phase: 'close', icon: 'target', desc: 'Report training outcomes and competency results.', groups: ['assessments', 'course-feedback'] },
-  { id: 11, title: 'Financial Transactions', file: '11-financial-transactions.pdf', pages: 2, phase: 'fund', icon: 'money', desc: 'View disbursements and other transactions.', groups: ['enrolments'] },
-  { id: 12, title: 'Refunds', file: '12-refunds.pdf', pages: 3, phase: 'fund', icon: 'refund', desc: 'Process refunds and adjustments.', groups: ['enrolments', 'sfc-pay'] },
-  { id: 13, title: 'Certificates', file: '13-certificates.pdf', pages: 3, phase: 'close', icon: 'award', desc: 'Generate and download e-certificates.', groups: ['assessments'] },
-];
-
 const GROUPS = CATALOG.flatMap((p) => p.groups);
 const phaseOf = (s: Step) => TPG_PHASES.find((p) => p.id === s.phase)!;
-const pageUrl = (s: Step, n: number) => `/tpg-process/pages/${s.id}/${n}.jpg`;
 
 function Icon({ name, size = 22 }: { name: string; size?: number }) {
   return (
@@ -64,25 +42,23 @@ function Icon({ name, size = 22 }: { name: string; size?: number }) {
   );
 }
 
-interface Props { user: AuthUser | null; step: number; onStep: (n: number) => void }
-
-export default function TpgProcess({ user, step, onStep }: Props) {
-  const current = TPG_STEPS.find((s) => s.id === step);
+export default function TpgProcess({ user, slug }: { user: AuthUser | null; slug?: string }) {
+  const current = slug ? stepBySlug(slug) : undefined;
   return (
     <div className="pub">
       <TopBar user={user} active="tpg" />
-      {current ? <StepView step={current} onStep={onStep} /> : <JourneyMap onStep={onStep} />}
+      {current ? <StepView key={current.id} step={current} /> : <JourneyMap />}
       <Footer />
     </div>
   );
 }
 
-function JourneyMap({ onStep }: { onStep: (n: number) => void }) {
+function JourneyMap() {
   return (
     <>
       <section className="pub-hero tpg-hero">
-        <h1>TPG Process</h1>
-        <p>How a course moves through the Training Partners Gateway: 13 steps in 5 phases. Pick a step to open its guide and the SSG APIs that automate it.</p>
+        <h1>TPG Process: Training Partners Gateway, step by step</h1>
+        <p>How a course moves through the Training Partners Gateway (TPGateway): 13 steps in 5 phases, from course runs and the SWDA enrolment process to the TPG claim process and e-certificates. Pick a step for its guide and the SSG / SWDA APIs that automate it.</p>
         <ol className="tpg-rail" aria-label="Phases">
           {TPG_PHASES.map((p, i) => (
             <li key={p.id} style={{ '--c': p.color, '--t': p.tint } as React.CSSProperties}>
@@ -104,18 +80,21 @@ function JourneyMap({ onStep }: { onStep: (n: number) => void }) {
             </header>
             <div className="tpg-cards">
               {TPG_STEPS.filter((s) => s.phase === p.id).map((s) => (
-                <button key={s.id} className="tpg-card" onClick={() => onStep(s.id)}>
-                  <span className="tpg-card-img">
-                    <img src={pageUrl(s, 1)} alt="" loading="lazy" />
-                    <span className="tpg-card-icon"><Icon name={s.icon} /></span>
+                <a key={s.id} className="tpg-card" href={`/tpg-process/${s.slug}`}>
+                  <span className="tpg-card-art">
+                    <span className="num" aria-hidden="true">{s.id}</span>
+                    <span className="big"><Icon name={s.icon} size={54} /></span>
                   </span>
                   <span className="tpg-card-body">
                     <span className="tpg-card-step">Step {s.id}</span>
                     <b>{s.title}</b>
                     <span className="tpg-card-desc">{s.desc}</span>
-                    <span className="tpg-card-meta">{s.pages} pages · {s.groups.reduce((n, g) => n + (GROUPS.find((x) => x.id === g)?.apis.length ?? 0), 0)} related APIs</span>
+                    <span className="tpg-card-topics">
+                      {(TPG_GUIDES[s.id]?.sections ?? []).slice(0, 4).map((sec) => <span key={sec.id}>{sec.title}</span>)}
+                    </span>
+                    <span className="tpg-card-meta">{TPG_GUIDES[s.id]?.sections.length ?? 0} topics · {s.groups.reduce((n, g) => n + (GROUPS.find((x) => x.id === g)?.apis.length ?? 0), 0)} related APIs</span>
                   </span>
-                </button>
+                </a>
               ))}
             </div>
           </section>
@@ -125,39 +104,27 @@ function JourneyMap({ onStep }: { onStep: (n: number) => void }) {
   );
 }
 
-function StepView({ step, onStep }: { step: Step; onStep: (n: number) => void }) {
-  const [page, setPage] = useState(1);
-  const [zoom, setZoom] = useState(false);
+function StepView({ step }: { step: Step }) {
   const phase = phaseOf(step);
   const related = step.groups.map((g) => GROUPS.find((x) => x.id === g)).filter((g): g is NonNullable<typeof g> => !!g);
   const pdf = `/tpg-process/${step.file}`;
-
-  useEffect(() => { setPage(1); setZoom(false); window.scrollTo(0, 0); }, [step.id]);
-
-  // ← → turn pages; at either end they move to the previous / next step.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setZoom(false);
-      if (e.key === 'ArrowRight') { if (page < step.pages) setPage(page + 1); else if (step.id < TPG_STEPS.length) onStep(step.id + 1); }
-      if (e.key === 'ArrowLeft') { if (page > 1) setPage(page - 1); else if (step.id > 1) onStep(step.id - 1); }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [page, step, onStep]);
+  const guide = TPG_GUIDES[step.id];
+  const prev = TPG_STEPS[step.id - 2];
+  const next = TPG_STEPS[step.id];
 
   return (
     <div className="tpg-step" style={{ '--c': phase.color, '--t': phase.tint } as React.CSSProperties}>
       <nav className="tpg-stepper" aria-label="Process steps">
-        <button className="tpg-all" onClick={() => onStep(0)}>← All steps</button>
+        <a className="tpg-all" href="/tpg-process">← All steps</a>
         <ol>
           {TPG_STEPS.map((s) => {
             const p = phaseOf(s);
             return (
               <li key={s.id} style={{ '--c': p.color, '--t': p.tint } as React.CSSProperties}>
-                <button className={s.id === step.id ? 'on' : ''} onClick={() => onStep(s.id)} title={`${s.id}. ${s.title}`} aria-current={s.id === step.id ? 'step' : undefined}>
+                <a className={s.id === step.id ? 'on' : ''} href={`/tpg-process/${s.slug}`} title={`${s.id}. ${s.title}`} aria-current={s.id === step.id ? 'step' : undefined}>
                   <Icon name={s.icon} size={16} />
                   <span>{s.id}</span>
-                </button>
+                </a>
               </li>
             );
           })}
@@ -168,55 +135,32 @@ function StepView({ step, onStep }: { step: Step; onStep: (n: number) => void })
         <span className="tpg-step-icon"><Icon name={step.icon} size={30} /></span>
         <div className="tpg-step-title">
           <div className="tpg-kicker">{phase.name} · Step {step.id} of {TPG_STEPS.length}</div>
-          <h1>{step.title}</h1>
+          <h1>{step.seoTitle.split(':')[0]}</h1>
           <p>{step.desc}</p>
         </div>
         <div className="tpg-actions">
-          <button className="pub-btn ghost" disabled={step.id === 1} onClick={() => onStep(step.id - 1)}>← Step {step.id - 1}</button>
-          <button className="pub-btn" disabled={step.id === TPG_STEPS.length} onClick={() => onStep(step.id + 1)}>Step {step.id + 1} →</button>
+          {prev && <a className="pub-btn ghost" href={`/tpg-process/${prev.slug}`}>← Step {prev.id}</a>}
+          {next && <a className="pub-btn" href={`/tpg-process/${next.slug}`}>Step {next.id} →</a>}
         </div>
       </header>
 
       {related.length > 0 && (
         <div className="tpg-related">
-          <span>APIs for this step</span>
+          <span>SSG / SWDA APIs for this step</span>
           {related.map((g) => (
-            <a key={g.id} className="chip" href={`#/apis/${g.id}`}>{g.name} <small>{g.apis.length}</small></a>
+            <a key={g.id} className="chip" href={`/category/${g.id}`}>{g.name} <small>{g.apis.length}</small></a>
           ))}
         </div>
       )}
 
-      <div className="tpg-gallery">
-        <ol className="tpg-thumbs" aria-label="Guide pages">
-          {Array.from({ length: step.pages }, (_, i) => i + 1).map((n) => (
-            <li key={n}>
-              <button className={n === page ? 'on' : ''} onClick={() => setPage(n)} aria-label={`Page ${n}`} aria-current={n === page ? 'page' : undefined}>
-                <img src={pageUrl(step, n)} alt="" loading="lazy" />
-                <span>{n}</span>
-              </button>
-            </li>
-          ))}
-        </ol>
-        <figure className="tpg-page">
-          <button className="tpg-page-img" onClick={() => setZoom(true)} aria-label="Enlarge page">
-            <img src={pageUrl(step, page)} alt={`${step.title} guide, page ${page} of ${step.pages}`} />
-          </button>
-          <figcaption>
-            <button className="pub-btn ghost" disabled={page === 1} onClick={() => setPage(page - 1)}>←</button>
-            <span>Page {page} of {step.pages}</span>
-            <button className="pub-btn ghost" disabled={page === step.pages} onClick={() => setPage(page + 1)}>→</button>
-            <a href={pdf} download>Download PDF</a>
-            <a href={pdf} target="_blank" rel="noopener noreferrer">Open PDF ↗</a>
-          </figcaption>
-        </figure>
-      </div>
+      {guide
+        ? <TpgGuide guide={guide} pdf={pdf} />
+        : <p className="pub-empty">This guide is not available as a page yet. <a href={pdf} target="_blank" rel="noopener noreferrer">Open the SSG guide (PDF)</a>.</p>}
 
-      {zoom && (
-        <div className="tpg-zoom" role="dialog" aria-label="Enlarged page" onClick={() => setZoom(false)}>
-          <img src={pageUrl(step, page)} alt={`${step.title} guide, page ${page}`} />
-          <button aria-label="Close">×</button>
-        </div>
-      )}
+      <nav className="api-pager" aria-label="Previous and next step">
+        {prev ? <a href={`/tpg-process/${prev.slug}`}><small>← Step {prev.id}</small>{prev.title}</a> : <span />}
+        {next ? <a href={`/tpg-process/${next.slug}`} className="next"><small>Step {next.id} →</small>{next.title}</a> : <span />}
+      </nav>
     </div>
   );
 }

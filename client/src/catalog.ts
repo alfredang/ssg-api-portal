@@ -16,6 +16,8 @@ export interface ApiEntry {
   desc: string;
   /** true when the call changes data on SSG (create / update / cancel / upload). */
   writes?: boolean;
+  /** Month (YYYY-MM) SSG released this API; shown as a "New" badge for about a year. */
+  added?: string;
   /** ISO date this exact request was last seen returning 200 from live SSG. */
   verified?: string;
 }
@@ -64,6 +66,15 @@ export const CATALOG: ApiProduct[] = [
         apis: [
           { page: 'course-quality', name: 'Retrieve Course Quality', method: 'GET', path: '/courses/directory/{refNo}/quality', version: 'v2.0', auth: 'cert+oauth', desc: 'Quality survey ratings for a course.' },
           { page: 'course-outcome', name: 'Retrieve Course Outcome', method: 'GET', path: '/courses/directory/{refNo}/outcome', version: 'v2.0', auth: 'cert+oauth', desc: 'Outcome survey results for a course.' },
+        ],
+      },
+      {
+        id: 'direct-applications',
+        name: 'Direct Applications',
+        desc: 'Course applications that learners submit directly on MySkillsFuture, for the training provider to process.',
+        docs: 'https://developer.swda.gov.sg/webapp/api-discovery',
+        apis: [
+          { page: 'direct-applications', name: 'Retrieve Direct Course Applications', method: 'POST', path: '/courses/applications/trainingprovider/filter', version: 'v1.0', auth: 'cert', desc: 'List the direct course applications received by a training provider, filtered by status, course run date or keyword. New in September 2026.', verified: '2026-11-17', added: '2026-09' },
         ],
       },
       {

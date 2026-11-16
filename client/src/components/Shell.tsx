@@ -5,14 +5,15 @@ import type { FlatApi } from '../catalog';
 import type { AuthUser } from '../auth';
 import { logout } from '../auth';
 import { useLang, LANGS } from '../prefs';
+import { navigate, usePath } from '../router';
 
 // Shell shared by every public page: top bar (nav, language switch, search),
 // command palette, and the docs layout with its persistent API sidebar.
 // Navigation is plain hash links, so every page has a shareable URL.
 
-export type Section = 'docs' | 'start' | 'tpg' | 'form';
+export type Section = 'docs' | 'start' | 'tpg' | 'form' | 'services' | 'contact';
 
-const go = (hash: string) => { window.location.hash = hash; };
+const go = (path: string) => navigate(path);
 
 export function matchApi(a: FlatApi, terms: string[]) {
   const hay = `${a.name} ${a.path} ${a.method} ${a.version} ${a.desc} ${a.group} ${a.product} ${AUTH_LABEL[a.auth]}`.toLowerCase();
@@ -42,13 +43,17 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
   const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
   const pages = [
     { label: 'Getting started', hint: 'Base URLs, authentication, AES', hash: '/start' },
+    { label: 'Create certificate and encryption keys', hint: 'Mac and Windows', hash: '/guides/create-keys' },
+    { label: 'SSG API subscription process', hint: 'App to production access', hash: '/guides/api-subscription' },
+    { label: 'SSG API integration services', hint: 'We do it for you', hash: '/ssg-api-services' },
+    { label: 'Contact us', hint: 'Demo, quote, questions', hash: '/contact' },
     { label: 'TPG Process', hint: '13 TPGateway steps', hash: '/tpg-process' },
     { label: 'Subscription Form', hint: 'Request access to an API', hash: '/subscription-form' },
     { label: 'API Console', hint: 'Test live (sign-in)', hash: '/console/course-lookup' },
   ].filter((p) => terms.every((t) => `${p.label} ${p.hint}`.toLowerCase().includes(t)));
   const apis = ALL_APIS.filter((a) => matchApi(a, terms)).slice(0, 30);
   type Item = { key: string; hash: string; api?: FlatApi; page?: { label: string; hint: string } };
-  const items: Item[] = [...apis.map((a) => ({ key: a.slug, hash: `/api/${a.slug}`, api: a })), ...pages.map((p) => ({ key: p.hash, hash: p.hash, page: p }))];
+  const items: Item[] = [...apis.map((a) => ({ key: a.slug, hash: `/docs/${a.slug}`, api: a })), ...pages.map((p) => ({ key: p.hash, hash: p.hash, page: p }))];
 
   useEffect(() => { setSel(0); }, [q]);
   useEffect(() => { listRef.current?.querySelector('.on')?.scrollIntoView({ block: 'nearest' }); }, [sel]);
@@ -91,11 +96,8 @@ export function TopBar({ user, active, onMenu }: { user: AuthUser | null; active
   const [menu, setMenu] = useState(false);
 
   // Close the mobile menu after navigating.
-  useEffect(() => {
-    const close = () => setMenu(false);
-    window.addEventListener('hashchange', close);
-    return () => window.removeEventListener('hashchange', close);
-  }, []);
+  const path = usePath();
+  useEffect(() => { setMenu(false); }, [path]);
 
   // "/" or Ctrl/Cmd-K opens search from anywhere outside a text field.
   useEffect(() => {
@@ -109,12 +111,12 @@ export function TopBar({ user, active, onMenu }: { user: AuthUser | null; active
   }, []);
 
   const link = (section: Section, hash: string, label: string) => (
-    <a href={`#${hash}`} className={active === section ? 'on' : ''} aria-current={active === section ? 'page' : undefined}>{label}</a>
+    <a href={hash} className={active === section ? 'on' : ''} aria-current={active === section ? 'page' : undefined}>{label}</a>
   );
 
   return (
     <header className="pub-top">
-      <a className="pub-brand" href="#/">
+      <a className="pub-brand" href="/">
         <img src="/tertiary-logo.png" alt="Tertiary Infotech" />
         <span>SSG API Portal</span>
       </a>
@@ -123,7 +125,8 @@ export function TopBar({ user, active, onMenu }: { user: AuthUser | null; active
         {link('start', '/start', 'Getting started')}
         {link('tpg', '/tpg-process', 'TPG Process')}
         {link('form', '/subscription-form', 'Subscription Form')}
-        <a href="#/console/course-lookup">API Console</a>
+        {link('services', '/ssg-api-services', 'Services')}
+        {link('contact', '/contact', 'Contact')}
       </nav>
       <button className="pub-searchbtn" onClick={() => setPalette(true)} aria-label="Search APIs">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
@@ -132,11 +135,11 @@ export function TopBar({ user, active, onMenu }: { user: AuthUser | null; active
       <div className="pub-user">
         {user ? (
           <>
-            <span className="pub-user-name">{user.name || user.email}</span>
+            <a className="pub-btn" href="/console/course-lookup">API Console</a>
             <button className="pub-btn ghost" onClick={() => logout()}>Sign out</button>
           </>
         ) : (
-          <a className="pub-btn" href="#/console/course-lookup">Log in</a>
+          <a className="pub-btn" href="/console/course-lookup">API Console</a>
         )}
       </div>
       <button className="pub-menu" onClick={() => setMenu(!menu)} aria-label="Menu" aria-expanded={menu}>{menu ? '✕' : '☰'}</button>
@@ -151,7 +154,7 @@ export function TopBar({ user, active, onMenu }: { user: AuthUser | null; active
 }
 
 /** Left navigation listing every API by category, with a filter. */
-function DocsSidebar({ currentSlug, currentGroup, onNavigate }: { currentSlug?: string; currentGroup?: string; onNavigate: () => void }) {
+function DocsSidebar({ currentSlug, currentGroup, currentGuide, onNavigate }: { currentSlug?: string; currentGroup?: string; currentGuide?: string; onNavigate: () => void }) {
   const [q, setQ] = useState('');
   const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
   const activeGroup = currentGroup ?? ALL_APIS.find((a) => a.slug === currentSlug)?.groupId;
@@ -169,7 +172,17 @@ function DocsSidebar({ currentSlug, currentGroup, onNavigate }: { currentSlug?: 
   return (
     <nav className="docs-side" aria-label="APIs">
       <input type="search" className="docs-filter" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter APIs…" aria-label="Filter APIs" />
-      <a className={`docs-top ${!currentSlug && !currentGroup ? 'on' : ''}`} href="#/" onClick={onNavigate}>All APIs</a>
+      <a className={`docs-top ${!currentSlug && !currentGroup && !currentGuide ? 'on' : ''}`} href="/" onClick={onNavigate}>All APIs</a>
+      {terms.length === 0 && (
+        <div className="docs-product">
+          <div className="docs-product-name">Guides</div>
+          <ul className="docs-guides">
+            <li><a href="/start" className={currentGuide === 'start' ? 'on' : ''} onClick={onNavigate}>Getting started</a></li>
+            <li><a href="/guides/create-keys" className={currentGuide === 'create-keys' ? 'on' : ''} onClick={onNavigate}>Create certificate and keys</a></li>
+            <li><a href="/guides/api-subscription" className={currentGuide === 'api-subscription' ? 'on' : ''} onClick={onNavigate}>API subscription process</a></li>
+          </ul>
+        </div>
+      )}
       {tree.length === 0 && <div className="docs-none">No API matches “{q}”.</div>}
       {tree.map((p) => (
         <div key={p.id} className="docs-product">
@@ -185,7 +198,7 @@ function DocsSidebar({ currentSlug, currentGroup, onNavigate }: { currentSlug?: 
                   <ul>
                     {g.apis.map((a) => (
                       <li key={a.slug}>
-                        <a href={`#/api/${a.slug}`} className={a.slug === currentSlug ? 'on' : ''} aria-current={a.slug === currentSlug ? 'page' : undefined} onClick={onNavigate}>
+                        <a href={`/docs/${a.slug}`} className={a.slug === currentSlug ? 'on' : ''} aria-current={a.slug === currentSlug ? 'page' : undefined} onClick={onNavigate}>
                           <span className={`docs-dot ${a.method.toLowerCase()}`}>{a.method === 'GET' ? 'GET' : 'POST'}</span>
                           <span>{a.name}</span>
                         </a>
@@ -203,8 +216,8 @@ function DocsSidebar({ currentSlug, currentGroup, onNavigate }: { currentSlug?: 
 }
 
 /** Top bar + API sidebar + content. Used by the reference pages. */
-export function DocsLayout({ user, section = 'docs', currentSlug, currentGroup, children }: {
-  user: AuthUser | null; section?: Section; currentSlug?: string; currentGroup?: string; children: ReactNode;
+export function DocsLayout({ user, section = 'docs', currentSlug, currentGroup, currentGuide, children }: {
+  user: AuthUser | null; section?: Section; currentSlug?: string; currentGroup?: string; currentGuide?: string; children: ReactNode;
 }) {
   const [drawer, setDrawer] = useState(false);
   return (
@@ -212,7 +225,7 @@ export function DocsLayout({ user, section = 'docs', currentSlug, currentGroup, 
       <TopBar user={user} active={section} onMenu={() => setDrawer(true)} />
       <div className="docs">
         <div className={`docs-side-wrap ${drawer ? 'open' : ''}`} onClick={(e) => { if (e.target === e.currentTarget) setDrawer(false); }}>
-          <DocsSidebar currentSlug={currentSlug} currentGroup={currentGroup} onNavigate={() => setDrawer(false)} />
+          <DocsSidebar currentSlug={currentSlug} currentGroup={currentGroup} currentGuide={currentGuide} onNavigate={() => setDrawer(false)} />
         </div>
         <main className="docs-main">{children}</main>
       </div>
@@ -223,11 +236,43 @@ export function DocsLayout({ user, section = 'docs', currentSlug, currentGroup, 
 
 export function Footer() {
   return (
-    <footer className="pub-foot">
-      <span className="powered-by">Powered by <a href="https://www.tertiaryinfotech.com/" target="_blank" rel="noopener">Tertiary Infotech Academy Pte Ltd</a></span> ·{' '}
-      <a href="https://developer.swda.gov.sg/webapp/api-discovery" target="_blank" rel="noopener noreferrer">SWDA Developer Portal</a> ·{' '}
-      <a href="https://status.api.ssg-wsg.sg/" target="_blank" rel="noopener noreferrer">SSG API status</a> ·{' '}
-      <a href="https://go.gov.sg/ssg-api-ticket" target="_blank" rel="noopener noreferrer">Raise an SSG ticket</a>
+    <footer className="site-foot">
+      <div className="site-foot-in">
+        <div className="site-foot-brand">
+          <a href="/" className="pub-brand"><img src="/tertiary-logo.png" alt="" /><span>SSG API Portal</span></a>
+          <p>SSG API and SWDA API reference, TPG process guides and integration help for Singapore training providers.</p>
+        </div>
+        <nav aria-label="Reference">
+          <b>Reference</b>
+          <a href="/">SSG API reference</a>
+          <a href="/start">Getting started</a>
+          <a href="/guides/create-keys">Create SSG API keys</a>
+          <a href="/guides/api-subscription">API subscription process</a>
+          <a href="/category/enrolments">Enrolment API</a>
+          <a href="/category/grant-calculator">Grant API</a>
+          <a href="/category/training-providers">Course run API</a>
+        </nav>
+        <nav aria-label="TPG process">
+          <b>TPG process</b>
+          <a href="/tpg-process">All 13 steps</a>
+          <a href="/tpg-process/trainee-enrolment">SWDA enrolment process</a>
+          <a href="/tpg-process/claims">TPG claim process</a>
+          <a href="/tpg-process/course-runs">TPG course runs</a>
+          <a href="/subscription-form">API subscription form</a>
+        </nav>
+        <nav aria-label="Company">
+          <b>Company</b>
+          <a href="/ssg-api-services">SSG API integration services</a>
+          <a href="/contact">Contact us</a>
+          <a href="https://www.tertiaryinfotech.com/" target="_blank" rel="noopener">Tertiary Infotech Academy ↗</a>
+          <a href="https://developer.swda.gov.sg/webapp/api-discovery" target="_blank" rel="noopener noreferrer">SWDA Developer Portal ↗</a>
+          <a href="https://status.api.ssg-wsg.sg/" target="_blank" rel="noopener noreferrer">SSG API status ↗</a>
+        </nav>
+      </div>
+      <div className="site-foot-bar">
+        <p className="powered-by">Powered by <a href="https://www.tertiaryinfotech.com/" target="_blank" rel="noopener">Tertiary Infotech Academy Pte Ltd</a></p>
+        <p>© {new Date().getFullYear()} Tertiary Infotech Academy Pte Ltd · UEN 201200696W · Not an official SSG / SWDA website</p>
+      </div>
     </footer>
   );
 }

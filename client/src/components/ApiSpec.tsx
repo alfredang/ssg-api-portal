@@ -66,7 +66,7 @@ export function RequestSpec({ api }: { api: ApiEntry }) {
           <p className="spec-note">
             {api.auth === 'cert+aes'
               ? 'Build this JSON, then AES-256-CBC encrypt it and send the base64 text as the body. The response comes back encrypted the same way.'
-              : 'JSON, sent as is.'}
+              : spec.encryptedResponse ? 'JSON, sent as is. The response comes back AES-256-CBC encrypted.' : 'JSON, sent as is.'}
           </p>
           {spec.body !== undefined && <CodeBlock code={v(JSON.stringify(spec.body, null, 2))} />}
         </>
@@ -106,7 +106,7 @@ export function CodePanel({ api }: { api: ApiEntry & { slug?: string } }) {
         <p className="spec-note">
           {useAuth === 'oauth'
             ? <>OAuth: <code>{BASE_URLS.oauth}</code>, Bearer token, no certificate. Set <code>SSG_CLIENT_ID</code> and <code>SSG_CLIENT_SECRET</code>.</>
-            : <>Certificate: <code>{BASE_URLS.cert}</code>, using the certificate and key registered for your app{api.auth === 'cert+aes' ? <>. Set <code>SSG_ENCRYPTION_KEY</code> to its encryption key</> : ''}.</>}
+            : <>Certificate: <code>{BASE_URLS.cert}</code>, using the certificate and key registered for your app{api.auth === 'cert+aes' || (SPECS[api.page] ?? {}).encryptedResponse ? <>. Set <code>SSG_ENCRYPTION_KEY</code> to its encryption key</> : ''}.</>}
         </p>
       )}
       <FillIn />

@@ -59,7 +59,7 @@ ${row('Reason for requesting for the SSG-WSG Data / Service / API', rows.filter(
     <div className="pub">
       <TopBar user={user} active="form" />
       <div className="pub-form-wrap">
-        <a className="pub-link" href="#/">← API Reference</a>
+        <a className="pub-link" href="/">← API Reference</a>
         <h1>API Subscription Form for SSG-WSG APIs</h1>
         <p className="pub-product-desc">
           Fill this in to request access to an SSG API, download it as a Word document, and attach it to a ticket at{' '}

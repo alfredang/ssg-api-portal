@@ -1,3 +1,4 @@
+import LeadsPage from './components/LeadsPage';
 import { useState, useMemo, useEffect } from 'react';
 import { logout } from './auth';
 import type { AuthUser } from './auth';
@@ -29,7 +30,8 @@ type Page = 'course-lookup' | 'course-search' | 'popular-courses' | 'tp-courses'
   | 'tools-generate-cert' | 'tools-generate-keypair' | 'tools-encryption-key'
   | 'default-values'
   | 'api-issues'
-  | 'api-references';
+  | 'api-references'
+  | 'leads';
 
 interface NavCategory {
   label: string;
@@ -149,6 +151,7 @@ const NAV_ITEMS: NavCategory[] = [
   { label: 'Default Values', id: 'default-values' },
   { label: 'Known API Issues', id: 'api-issues' },
   { label: 'SSG API References', id: 'api-references' },
+  { label: 'Enquiries', id: 'leads' },
 ];
 
 const NAV_PAGE_IDS = new Set<string>(NAV_ITEMS.flatMap((c) => (c.children ? c.children.map((ch) => ch.id) : c.id ? [c.id] : [])));
@@ -725,7 +728,7 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
     setActivePage(page);
     setNavOpen(false);
     // Keep the URL shareable without re-triggering the router.
-    window.history.replaceState(null, '', `#/console/${page}`);
+    window.history.replaceState(null, '', `/console/${page}`);
     setKeyword('');
     lookupApi.reset();
     searchApi.reset();
@@ -4690,6 +4693,8 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
       );
     }
 
+    if (activePage === 'leads') return <LeadsPage />;
+
     if (activePage === 'api-references') {
       return (
         <>
@@ -4748,6 +4753,7 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
         </div>
         <div className="main-content-inner">
           {renderContent()}
+          <p className="console-foot powered-by">Powered by <a href="https://www.tertiaryinfotech.com/" target="_blank" rel="noopener">Tertiary Infotech Academy Pte Ltd</a></p>
         </div>
       </main>
     </div>
