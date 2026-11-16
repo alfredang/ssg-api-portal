@@ -18,7 +18,7 @@
 
 ## Screenshot
 
-![SSG API Portal — a TPG process guide rendered as HTML](screenshot.png)
+![SSG API Portal — home page](screenshot.png)
 
 **Live:** https://ssgapi.tertiaryinfotech.com/
 
