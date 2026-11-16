@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ALL_APIS } from '../catalog';
 import type { AuthUser } from '../auth';
-import { TopBar } from './ApiDiscovery';
+import { TopBar, Footer } from './Shell';
 
 // Online version of "API Subscription Form for SSG-WSG APIs" (SSGAPI form).
 // The original Word file is served at /SSG-API-Subscription-Form.docx.
@@ -10,9 +10,7 @@ interface ApiRow { name: string; use: string }
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>');
 
-export default function SubscriptionForm({ user, onHome, onLogin, onConsole, onTpg }: {
-  user: AuthUser | null; onHome: () => void; onLogin: () => void; onConsole: () => void; onTpg: () => void;
-}) {
+export default function SubscriptionForm({ user }: { user: AuthUser | null }) {
   const [f, setF] = useState({
     company: '', uen: '', contactName: '', contactNumber: '', contactEmail: '',
     ownerName: '', ownerEmail: '', appName: '',
@@ -59,9 +57,9 @@ ${row('Reason for requesting for the SSG-WSG Data / Service / API', rows.filter(
 
   return (
     <div className="pub">
-      <TopBar user={user} onLogin={onLogin} active="form" onHome={onHome} onOpenForm={() => {}} onConsole={onConsole} onTpg={onTpg} />
+      <TopBar user={user} active="form" />
       <div className="pub-form-wrap">
-        <button className="pub-link" onClick={onHome}>← Discover APIs</button>
+        <a className="pub-link" href="#/">← API Reference</a>
         <h1>API Subscription Form for SSG-WSG APIs</h1>
         <p className="pub-product-desc">
           Fill this in to request access to an SSG API, download it as a Word document, and attach it to a ticket at{' '}
@@ -125,6 +123,7 @@ ${row('Reason for requesting for the SSG-WSG Data / Service / API', rows.filter(
           <a className="pub-btn ghost" href="/SSG-API-Subscription-Form.docx" download>Download blank form (.docx)</a>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

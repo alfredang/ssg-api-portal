@@ -245,10 +245,21 @@ Up to three cert sets are supported (`CERT_1_*`, `CERT_2_*`, `CERT_3_*`); each
 
 | Route | Who | What |
 |---|---|---|
-| `/#/` | Public | **Discover APIs** — searchable catalogue (name, path, version, method, auth), grouped like the SWDA Developer Portal. Press `/` to search. Each API shows its request spec and curl / Python / JavaScript demos (certificate, OAuth and AES variants). Data: `client/src/catalog.ts` (endpoints) and `client/src/apiSpecs.ts` (parameters, example bodies, sample generator). |
-| `/#/tpg-process[/<step>]` | Public | **TPG Process** — visual journey map of the 13 Training Partners Gateway steps in 5 phases; each step opens its guide as page images with the related APIs. Guides: `client/public/tpg-process/*.pdf`; page images in `pages/<step>/<n>.jpg` (re-render with `pdftoppm -r 110 -jpeg`). |
+| `/#/` | Public | **API Reference** home: base URLs, three "start here" examples, products and categories. |
+| `/#/api/<slug>` | Public | **One page per API**: request spec on the left, a sticky curl / Python / JavaScript example on the right (Certificate / OAuth toggle, Copy, Download), verified badge, TPG steps, link to the console. |
+| `/#/apis/<group>` | Public | The APIs of one category. |
+| `/#/start` | Public | **Getting started**: app setup, base URLs, mTLS call, OAuth token, AES, status codes. |
+| `/#/tpg-process[/<step>]` | Public | **TPG Process**: journey map of the 13 TPGateway steps; each step opens its guide as page images. Guides: `client/public/tpg-process/*.pdf`, page images in `pages/<step>/<n>.jpg` (re-render with `pdftoppm -r 110 -jpeg`). |
 | `/#/subscription-form` | Public | Online **API Subscription Form for SSG-WSG APIs**; exports a filled Word file. Nothing is sent to the server. |
-| `/#/console/<page>` | Signed in | **API Console** — test each API live with App 1 – App 4. |
+| `/#/console/<page>` | Signed in | **API Console**: test each API live with App 1 – App 4. |
+
+Navigation: a persistent sidebar lists every API with a filter; `/` or `Ctrl/Cmd-K` opens search; the
+example language is chosen once in the top bar and remembered; "Use my own values" swaps the sample
+UEN, course reference, run ID and certificate file names into every example (kept in the browser only).
+
+Docs data: `client/src/catalog.ts` (endpoints, versions, auth, `verified` dates) and
+`client/src/apiSpecs.ts` (parameters, example bodies, sample generator). Set `verified` only after the
+exact generated request returned 200 from live SSG. Shell and pages: `components/Shell.tsx`, `Docs.tsx`, `ApiSpec.tsx`.
 
 Every `/api/*` route that calls SSG requires a signed-in user whose email is on the allow-list
 (`ALLOWED_EMAIL_DOMAINS`, default `tertiaryinfotech.com,tertiarycourses.com.sg`, plus `ALLOWED_EMAILS`).

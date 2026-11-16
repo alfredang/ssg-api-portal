@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CATALOG } from '../catalog';
 import type { AuthUser } from '../auth';
-import { TopBar } from './ApiDiscovery';
+import { TopBar, Footer } from './Shell';
 
 // TPG (Training Partners Gateway) process: a visual journey map of the 13
 // steps a training provider follows, grouped into 5 phases. Each step opens
@@ -64,17 +64,15 @@ function Icon({ name, size = 22 }: { name: string; size?: number }) {
   );
 }
 
-interface Props {
-  user: AuthUser | null; step: number; onStep: (n: number) => void;
-  onHome: () => void; onLogin: () => void; onOpenForm: () => void; onConsole: () => void; onGroup: (groupId: string) => void;
-}
+interface Props { user: AuthUser | null; step: number; onStep: (n: number) => void }
 
-export default function TpgProcess({ user, step, onStep, onHome, onLogin, onOpenForm, onConsole, onGroup }: Props) {
+export default function TpgProcess({ user, step, onStep }: Props) {
   const current = TPG_STEPS.find((s) => s.id === step);
   return (
     <div className="pub">
-      <TopBar user={user} onLogin={onLogin} active="tpg" onHome={onHome} onOpenForm={onOpenForm} onConsole={onConsole} onTpg={() => onStep(0)} />
-      {current ? <StepView step={current} onStep={onStep} onGroup={onGroup} /> : <JourneyMap onStep={onStep} />}
+      <TopBar user={user} active="tpg" />
+      {current ? <StepView step={current} onStep={onStep} /> : <JourneyMap onStep={onStep} />}
+      <Footer />
     </div>
   );
 }
@@ -127,7 +125,7 @@ function JourneyMap({ onStep }: { onStep: (n: number) => void }) {
   );
 }
 
-function StepView({ step, onStep, onGroup }: { step: Step; onStep: (n: number) => void; onGroup: (g: string) => void }) {
+function StepView({ step, onStep }: { step: Step; onStep: (n: number) => void }) {
   const [page, setPage] = useState(1);
   const [zoom, setZoom] = useState(false);
   const phase = phaseOf(step);
@@ -183,7 +181,7 @@ function StepView({ step, onStep, onGroup }: { step: Step; onStep: (n: number) =
         <div className="tpg-related">
           <span>APIs for this step</span>
           {related.map((g) => (
-            <button key={g.id} onClick={() => onGroup(g.id)}>{g.name} <small>{g.apis.length}</small></button>
+            <a key={g.id} className="chip" href={`#/apis/${g.id}`}>{g.name} <small>{g.apis.length}</small></a>
           ))}
         </div>
       )}

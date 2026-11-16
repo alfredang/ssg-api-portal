@@ -6,7 +6,7 @@ import type { AuthUser } from './auth'
 import './index.css'
 import App from './App.tsx'
 import LoginPage from './components/LoginPage'
-import ApiDiscovery from './components/ApiDiscovery'
+import { Home, GroupPage, ApiPage, StartPage } from './components/Docs'
 import SubscriptionForm from './components/SubscriptionForm'
 import TpgProcess from './components/TpgProcess'
 
@@ -26,19 +26,23 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   }
 }
 
-type Route = { view: 'discover'; group?: string } | { view: 'form' } | { view: 'tpg'; step: number } | { view: 'console'; page: string };
+type Route =
+  | { view: 'home' } | { view: 'start' } | { view: 'group'; id: string } | { view: 'api'; slug: string }
+  | { view: 'form' } | { view: 'tpg'; step: number } | { view: 'console'; page: string };
 
 function parseRoute(): Route {
-  const h = window.location.hash.replace(/^#\/?/, '');
-  if (h === 'subscription-form') return { view: 'form' };
-  if (h.startsWith('tpg-process')) return { view: 'tpg', step: Number(h.split('/')[1]) || 0 };
-  if (h.startsWith('apis/')) return { view: 'discover', group: h.split('/')[1] };
-  if (h.startsWith('console')) return { view: 'console', page: h.split('/')[1] || 'course-lookup' };
-  return { view: 'discover' };
+  const [head, arg] = window.location.hash.replace(/^#\/?/, '').split('/');
+  if (head === 'start') return { view: 'start' };
+  if (head === 'api' && arg) return { view: 'api', slug: arg };
+  if (head === 'apis' && arg) return { view: 'group', id: arg };
+  if (head === 'subscription-form') return { view: 'form' };
+  if (head === 'tpg-process') return { view: 'tpg', step: Number(arg) || 0 };
+  if (head === 'console') return { view: 'console', page: arg || 'course-lookup' };
+  return { view: 'home' };
 }
 
-// Public pages: API catalogue + subscription form. The console (which calls
-// SSG with our App 1-4 credentials) needs a signed-in user.
+// Public pages: API reference, getting started, TPG process, subscription form.
+// The console (which calls SSG with our App 1-4 credentials) needs a signed-in user.
 function AuthGate() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,33 +53,29 @@ function AuthGate() {
       .then((res) => setUser(res?.user ?? null))
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
-    const onHash = () => setRoute(parseRoute());
+    const onHash = () => { setRoute(parseRoute()); window.scrollTo(0, 0); };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  const go = (hash: string) => { window.location.hash = hash; window.scrollTo(0, 0); };
-  const goHome = () => go('/');
-  const goForm = () => go('/subscription-form');
-  const goTpg = () => go('/tpg-process');
-  const goConsole = (page: string) => go(`/console/${page}`);
+  const go = (hash: string) => { window.location.hash = hash; };
 
   if (loading) {
-    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: '#9ca3af' }}>Loading...</div>;
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: '#56678F' }}>Loading...</div>;
   }
 
-  if (route.view === 'console') {
-    return user
-      ? <App key="console" user={user} initialPage={route.page} onHome={goHome} />
-      : <LoginPage onBack={goHome} />;
+  switch (route.view) {
+    case 'console':
+      return user
+        ? <App key="console" user={user} initialPage={route.page} onHome={() => go('/')} />
+        : <LoginPage onBack={() => go('/')} />;
+    case 'form': return <SubscriptionForm user={user} />;
+    case 'tpg': return <TpgProcess user={user} step={route.step} onStep={(n) => go(n ? `/tpg-process/${n}` : '/tpg-process')} />;
+    case 'start': return <StartPage user={user} />;
+    case 'group': return <GroupPage user={user} groupId={route.id} />;
+    case 'api': return <ApiPage key={route.slug} user={user} slug={route.slug} />;
+    default: return <Home user={user} />;
   }
-  if (route.view === 'form') {
-    return <SubscriptionForm user={user} onHome={goHome} onLogin={() => goConsole('course-lookup')} onConsole={() => goConsole('course-lookup')} onTpg={goTpg} />;
-  }
-  if (route.view === 'tpg') {
-    return <TpgProcess user={user} step={route.step} onStep={(n) => { window.location.hash = n ? `/tpg-process/${n}` : '/tpg-process'; }} onHome={goHome} onLogin={() => goConsole('course-lookup')} onOpenForm={goForm} onConsole={() => goConsole('course-lookup')} onGroup={(g) => go(`/apis/${g}`)} />;
-  }
-  return <ApiDiscovery user={user} onTry={goConsole} onLogin={() => goConsole('course-lookup')} onOpenForm={goForm} onTpg={goTpg} focusGroup={route.group} />;
 }
 
 createRoot(document.getElementById('root')!).render(

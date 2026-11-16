@@ -90,9 +90,9 @@ export const SPECS: Record<string, Spec> = {
         runs: [{
           sequenceNumber: 0, registrationDates: { opening: 20261201, closing: 20261215 }, courseDates: { start: 20261220, end: 20261221 },
           scheduleInfoType: { code: '01', description: 'Description' }, scheduleInfo: 'Sat / Sun, 9am to 6pm',
-          venue: { block: '112A', street: 'Street name', floor: '15', unit: '001', building: 'Building', postalCode: '123456', room: '24', wheelChairAccess: true },
+          venue: { block: '112A', street: 'Street name', floor: '15', unit: '001', building: 'Building', postalCode: '049315', room: '24', wheelChairAccess: true },
           intakeSize: 20, courseAdminEmail: 'admin@example.com', modeOfTraining: '1', courseVacancy: { code: 'A', description: 'Available' },
-          sessions: [{ startDate: '20261220', endDate: '20261220', startTime: '09:00', endTime: '18:00', modeOfTraining: '1', venue: { block: '112A', street: 'Street name', floor: '15', unit: '001', postalCode: '123456', room: '24' } }],
+          sessions: [{ startDate: '20261220', endDate: '20261220', startTime: '09:00', endTime: '18:00', modeOfTraining: '1', venue: { block: '112A', street: 'Street name', floor: '15', unit: '001', postalCode: '049315', room: '24' } }],
           linkCourseRunTrainer: [{ trainer: { trainerType: { code: '1', description: 'Existing' }, indexNumber: 0, id: 'TRNR-0001', name: 'Tan Ah Kow', email: 'trainer@example.com', inTrainingProviderProfile: true } }],
         }],
       },
@@ -176,6 +176,22 @@ export const SPECS: Record<string, Spec> = {
 };
 
 export type Lang = 'curl' | 'python' | 'javascript';
+
+/** Reader's own values, substituted into every example (see prefs.ts). */
+export interface Vars { uen: string; refNo: string; runId: string; cert: string; key: string }
+export const DEFAULT_VARS: Vars = { uen: UEN, refNo: REF, runId: '123456', cert: 'ssg-app1-cert.pem', key: 'ssg-app1-key.pem' };
+
+/** Swap the placeholder values in a generated example for the reader's own. */
+export function applyVars(text: string, v: Vars): string {
+  const pairs: [string, string][] = [
+    [DEFAULT_VARS.cert, v.cert || DEFAULT_VARS.cert], [DEFAULT_VARS.key, v.key || DEFAULT_VARS.key],
+    [DEFAULT_VARS.refNo, v.refNo || DEFAULT_VARS.refNo], [DEFAULT_VARS.uen, v.uen || DEFAULT_VARS.uen],
+    [DEFAULT_VARS.runId, v.runId || DEFAULT_VARS.runId],
+  ];
+  return pairs.reduce((t, [from, to]) => (from === to ? t : t.split(from).join(to)), text);
+}
+
+export const FILE_EXT: Record<Lang, string> = { curl: 'sh', python: 'py', javascript: 'mjs' };
 export type AuthChoice = 'cert' | 'oauth';
 
 /** Auth methods an API can be called with (first = default). */
