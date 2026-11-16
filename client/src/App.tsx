@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { logout } from './auth';
 import type { AuthUser } from './auth';
 import { useApi } from './hooks/useApi';
-import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications, postSkillExtract, postSkillSearch, getSkillsFrameworkJobs, getSkillsFrameworkSkills, getSkillsFrameworkGscCodes, getSkillsFrameworkTscCodes, getSkillsFrameworkTscCodesDetails, getSkillsFrameworkCcsDetails, getSkillsFrameworkTscDetails, getSkillsFrameworkJobRoles, getSkillsFrameworkJobRoleProfile, getSkillsFrameworkOccupations, getSkillsFrameworkJobRoleCodes, generateCertificate, generateKeypair, generateEncryptionKey, getTrainingProviderCourses } from './api/courseApi';
+import { getCourseDetails, searchCourses, getCourseQuality, getCourseOutcome, getSessionAttendance, getCourseSessions, uploadSessionAttendance, getTrainers, updateTrainer, getPopularCourses, publishCourseRun, editCourseRun, getCourseRunById, getCourseRunsByRef, getGrantBaseline, getGrantPersonalised, searchGrants, getGrantDetails, getGrantCodes, getSfClaimDetails, cancelSfClaim, uploadSfSupportingDocs, encryptSfClaimRequest, decryptSfClaimRequest, createEnrolment, updateCancelEnrolment, searchEnrolments, viewEnrolment, updateFeeCollection, getEnrolmentCodes, createAssessment, updateVoidAssessment, searchAssessments, viewAssessment, getAssessmentCodes, getQualifications, postSkillExtract, postSkillSearch, getSkillsFrameworkJobs, getSkillsFrameworkSkills, getSkillsFrameworkGscCodes, getSkillsFrameworkTscCodes, getSkillsFrameworkTscCodesDetails, getSkillsFrameworkCcsDetails, getSkillsFrameworkTscDetails, getSkillsFrameworkJobRoles, getSkillsFrameworkJobRoleProfile, getSkillsFrameworkOccupations, getSkillsFrameworkJobRoleCodes, generateCertificate, generateKeypair, generateEncryptionKey, getTrainingProviderCourses, getStoredSsgApp, SSG_APP_STORAGE_KEY } from './api/courseApi';
 import SearchForm from './components/SearchForm';
 import CourseSearchForm from './components/CourseSearchForm';
 import CourseOverview from './components/CourseOverview';
@@ -151,6 +151,8 @@ const NAV_ITEMS: NavCategory[] = [
   { label: 'SSG API References', id: 'api-references' },
 ];
 
+const NAV_PAGE_IDS = new Set<string>(NAV_ITEMS.flatMap((c) => (c.children ? c.children.map((ch) => ch.id) : c.id ? [c.id] : [])));
+
 function CollapsibleCourse({ course, defaultOpen }: { course: Course; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen ?? false);
 
@@ -201,14 +203,27 @@ function AuthBadge({ method }: { method: 'cert' | 'cert+oauth' | 'cert+aes' | 'n
 
 interface CertOption { id: string; name: string }
 
-function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange }: {
+function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange, onHome, userLabel }: {
   activePage: Page;
   onNavigate: (page: Page) => void;
   certs: CertOption[];
   activeCertId: string;
   onCertChange: (id: string) => void;
+  onHome?: () => void;
+  userLabel?: string;
 }) {
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['Courses']));
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => {
+    const cat = NAV_ITEMS.find((c) => c.children?.some((ch) => ch.id === activePage));
+    return new Set([cat?.label ?? 'Courses']);
+  });
+  const [navQuery, setNavQuery] = useState('');
+  const nq = navQuery.trim().toLowerCase();
+  // Filter the menu as the user types; matching categories open automatically.
+  const navItems = !nq ? NAV_ITEMS : NAV_ITEMS
+    .map((cat) => cat.children
+      ? { ...cat, children: cat.label.toLowerCase().includes(nq) ? cat.children : cat.children.filter((c) => c.label.toLowerCase().includes(nq)) }
+      : cat)
+    .filter((cat) => cat.children ? cat.children.length > 0 : cat.label.toLowerCase().includes(nq));
 
   const toggleCategory = (label: string) => {
     setExpandedCategories((prev) => {
@@ -229,10 +244,11 @@ function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange }: 
           <img src="/tertiary-logo.png" alt="Tertiary Infotech" className="sidebar-logo" />
           <h1>SSG API Portal</h1>
         </div>
-        <p>Developer Explorer</p>
+        <p>API Console</p>
+        {onHome && <button className="sidebar-home" onClick={onHome}>← API catalogue</button>}
         {certs.length > 0 && (
           <div className="cert-switcher">
-            <label htmlFor="cert-select">Certificate / Oauth</label>
+            <label htmlFor="cert-select">SSG App</label>
             <select
               id="cert-select"
               value={activeCertId}
@@ -245,10 +261,14 @@ function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange }: 
           </div>
         )}
       </div>
+      <div className="sidebar-search">
+        <input type="search" value={navQuery} onChange={(e) => setNavQuery(e.target.value)} placeholder="Filter APIs…" aria-label="Filter APIs" />
+      </div>
       <nav className="sidebar-nav">
-        {NAV_ITEMS.map((cat) => {
+        {navItems.length === 0 && <div className="sidebar-empty">No API matches “{navQuery}”.</div>}
+        {navItems.map((cat) => {
           if (cat.children) {
-            const isOpen = expandedCategories.has(cat.label);
+            const isOpen = !!nq || expandedCategories.has(cat.label);
             return (
               <div className="nav-category" key={cat.label}>
                 <button
@@ -288,6 +308,7 @@ function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange }: 
         })}
       </nav>
       <div className="sidebar-actions">
+        {userLabel && <div className="sidebar-user" title={userLabel}>{userLabel}</div>}
         <button className="sign-out-btn" onClick={() => logout()}>
           Sign Out
         </button>
@@ -337,28 +358,28 @@ function loadDefaults(): Record<string, string> {
   return map;
 }
 
-function App({ user }: { user: AuthUser }) {
-  void user; // available for future per-user UI (e.g. showing the signed-in account)
-  const [activePage, setActivePage] = useState<Page>('course-lookup');
+function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: string; onHome?: () => void }) {
+  const [activePage, setActivePage] = useState<Page>(() =>
+    initialPage && NAV_PAGE_IDS.has(initialPage) ? (initialPage as Page) : 'course-lookup');
   const [defaults, setDefaultsState] = useState<Record<string, string>>(loadDefaults);
   const [draftDefaults, setDraftDefaults] = useState<Record<string, string>>(loadDefaults);
   const [defaultsSaved, setDefaultsSaved] = useState(false);
   const [certs, setCerts] = useState<CertOption[]>([]);
-  const [activeCertId, setActiveCertId] = useState(() => localStorage.getItem('ssg-active-cert') || '1');
+  const [activeCertId, setActiveCertId] = useState(getStoredSsgApp);
 
   useEffect(() => {
     fetch('/api/certs').then(r => r.json()).then((list: CertOption[]) => {
       setCerts(list);
       if (list.length > 0 && !list.find(c => c.id === activeCertId)) {
         setActiveCertId(list[0].id);
-        localStorage.setItem('ssg-active-cert', list[0].id);
+        localStorage.setItem(SSG_APP_STORAGE_KEY, list[0].id);
       }
     }).catch(() => { });
   }, []);
 
   const handleCertChange = (id: string) => {
     setActiveCertId(id);
-    localStorage.setItem('ssg-active-cert', id);
+    localStorage.setItem(SSG_APP_STORAGE_KEY, id);
   };
 
   // Load defaults from the server (Postgres) on mount (overrides localStorage)
@@ -701,6 +722,8 @@ function App({ user }: { user: AuthUser }) {
 
   const handleNavigate = (page: Page) => {
     setActivePage(page);
+    // Keep the URL shareable without re-triggering the router.
+    window.history.replaceState(null, '', `#/console/${page}`);
     setKeyword('');
     lookupApi.reset();
     searchApi.reset();
@@ -4712,7 +4735,7 @@ function App({ user }: { user: AuthUser }) {
 
   return (
     <div className="app">
-      <Sidebar activePage={activePage} onNavigate={handleNavigate} certs={certs} activeCertId={activeCertId} onCertChange={handleCertChange} />
+      <Sidebar activePage={activePage} onNavigate={handleNavigate} certs={certs} activeCertId={activeCertId} onCertChange={handleCertChange} onHome={onHome} userLabel={user.name || user.email || undefined} />
       <main className="main-content">
         <div className="main-content-inner">
           {renderContent()}

@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const proxyRoutes = require('./proxy');
-const { configureAuth } = require('./auth');
+const { configureAuth, requireAuth } = require('./auth');
 const defaultsRoutes = require('./defaults');
 
 const app = express();
@@ -20,8 +20,10 @@ configureAuth(app);
 // swallowed by the catch-all proxy routes.
 app.use('/api/defaults', defaultsRoutes);
 
-// SSG API proxy routes (certificate/mTLS + OAuth fallback)
-app.use('/api', proxyRoutes);
+// SSG API proxy routes (certificate/mTLS + OAuth fallback).
+// These call SSG with our App 1-4 credentials, so they require a signed-in
+// user. The public API catalogue is static and needs no API access.
+app.use('/api', requireAuth, proxyRoutes);
 
 // In production, serve the built React app
 if (process.env.NODE_ENV === 'production') {

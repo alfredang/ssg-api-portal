@@ -30,3 +30,6 @@ server/.cert/
 .DS_Store
 **/.DS_Store
 ~$*
+*.zip
+**/reference/
+.playwright-mcp/

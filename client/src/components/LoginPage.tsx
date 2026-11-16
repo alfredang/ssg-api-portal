@@ -1,6 +1,6 @@
 import { loginWithGoogle } from '../auth';
 
-export default function LoginPage() {
+export default function LoginPage({ onBack }: { onBack?: () => void }) {
   const failed = new URLSearchParams(window.location.search).get('login') === 'failed';
 
   return (
@@ -8,10 +8,10 @@ export default function LoginPage() {
       <div className="login-card">
         <div className="login-header">
           <h1>SSG API Portal</h1>
-          <p>Sign in to continue</p>
+          <p>Sign in to test the SSG APIs with our App 1 – App 4 credentials</p>
         </div>
 
-        {failed && <div className="login-error">Sign-in failed. Please try again.</div>}
+        {failed && <div className="login-error">Sign-in failed. Use a Tertiary Infotech account, or ask an admin to add your email.</div>}
 
         <button type="button" className="login-btn login-google-btn" onClick={loginWithGoogle}>
           <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
@@ -22,6 +22,9 @@ export default function LoginPage() {
           </svg>
           Sign in with Google
         </button>
+        {onBack && (
+          <button type="button" className="login-back" onClick={onBack}>← Back to the API catalogue</button>
+        )}
       </div>
     </div>
   );

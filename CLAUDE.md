@@ -7,6 +7,13 @@
   - OAuth: `https://public-api.ssg-wsg.sg`
 - **Never use mock URLs** (`mock-api.ssg-wsg.sg`, `mock-public-api.ssg-wsg.sg`, or any mock/sandbox URL), even if the example or curl command provided by the user references a mock URL. Always replace with the corresponding production URL.
 
+## SSG App Convention (match ai-lms-tms — never diverge)
+
+- Apps are `app1`, `app2`, `app3` (mTLS cert, env `CERT_1_*`..`CERT_3_*`) and `app4` (OAuth).
+- The client sends the selected app in the `x-ssg-app` header; the server normalises legacy `x-cert-id` / `1`/`2`/`3`/`oauth` with `normaliseSsgApp()`.
+- Names: App 1 = Skilleto, App 2 = TMS_1, App 3 = TMS_3_NEW. PEM files are named `ssg-appN-cert.pem` / `ssg-appN-key.pem`; the master copies live in `../../ssg-api-certs/`.
+- ai-lms-tms is the reference and is never edited from this project.
+
 ## Authentication Method Priority
 
 - **Certificate (mTLS) is always the default** authentication method. Every new API route must try the certificate method first.

@@ -18,7 +18,9 @@
 
 ## Screenshot
 
-![SSG API Portal](ssg-api-portal.png)
+![SSG API Portal — Discover APIs](screenshot.png)
+
+**Live:** https://ssgapi.tertiaryinfotech.com/
 
 ## About
 
@@ -157,8 +159,9 @@ SSG_CLIENT_SECRET=your_client_secret
 
 # mTLS Authentication (api.ssg-wsg.sg)
 SSG_CERT_API_BASE_URL=https://api.ssg-wsg.sg
-CERT_PATH=./server/.cert/your_cert.pem
-CERT_KEY_PATH=./server/.cert/your_key.pem
+CERT_1_NAME=Skilleto
+CERT_1_CERT_FILE=./server/.cert/ssg-app1-cert.pem
+CERT_1_KEY_FILE=./server/.cert/ssg-app1-key.pem
 ```
 
 ### Running Locally
@@ -225,9 +228,9 @@ HTTP endpoint serves cert/key material. Provide them at runtime one of two ways:
 set at the files. PEM files keep real newlines, so there is no `\n`-escaping pain:
 
 ```
-CERT_1_NAME=App 1 (Skilleto)
-CERT_1_CERT_FILE=/app/server/.cert/skilleto_cert.pem
-CERT_1_KEY_FILE=/app/server/.cert/skilleto_key.pem
+CERT_1_NAME=Skilleto
+CERT_1_CERT_FILE=/app/server/.cert/ssg-app1-cert.pem
+CERT_1_KEY_FILE=/app/server/.cert/ssg-app1-key.pem
 CERT_1_ENCRYPTION_KEY=<32-char-key>     # or CERT_1_ENCRYPTION_KEY_FILE
 ```
 
@@ -238,30 +241,55 @@ are normalised automatically. Mark them as secrets so they aren't shown in logs.
 Up to three cert sets are supported (`CERT_1_*`, `CERT_2_*`, `CERT_3_*`); each
 `*_FILE` path takes precedence over its inline value.
 
-#### Populating all four "Certificate / OAuth" dropdown entries
+### Public catalogue, private console
+
+| Route | Who | What |
+|---|---|---|
+| `/#/` | Public | **Discover APIs** — searchable catalogue (name, path, version, method, auth), grouped like the SWDA Developer Portal. Press `/` to search. Data: `client/src/catalog.ts`. |
+| `/#/subscription-form` | Public | Online **API Subscription Form for SSG-WSG APIs**; exports a filled Word file. Nothing is sent to the server. |
+| `/#/console/<page>` | Signed in | **API Console** — test each API live with App 1 – App 4. |
+
+Every `/api/*` route that calls SSG requires a signed-in user whose email is on the allow-list
+(`ALLOWED_EMAIL_DOMAINS`, default `tertiaryinfotech.com,tertiarycourses.com.sg`, plus `ALLOWED_EMAILS`).
+Localhost needs no login.
+
+### SSG App convention (same as ai-lms-tms)
+
+| App | Header value `x-ssg-app` | Env vars | Auth | Name |
+|---|---|---|---|---|
+| App 1 | `app1` | `CERT_1_*` | mTLS cert + AES key | Skilleto |
+| App 2 | `app2` | `CERT_2_*` | mTLS cert + AES key | TMS_1 |
+| App 3 | `app3` | `CERT_3_*` | mTLS cert + AES key | TMS_3_NEW |
+| App 4 | `app4` | `SSG_CLIENT_ID` / `SSG_CLIENT_SECRET` | OAuth | — |
+
+The sidebar "SSG App" selector stores the choice and sends it as `x-ssg-app` on
+every request. The legacy `x-cert-id` header and ids `1`/`2`/`3`/`oauth` are still
+accepted. PEM file names follow ai-lms-tms: `ssg-appN-cert.pem` / `ssg-appN-key.pem`.
+
+#### Populating all four "SSG App" dropdown entries
 
 The dropdown is built at startup by `GET /api/certs`: one entry per cert set that
-loads successfully, plus a hardcoded `TMS 2 (OAuth)` option. So the four entries are:
+loads successfully, plus a fixed `App 4 (OAuth)` option. So the four entries are:
 
 | Slot | Dropdown label | Source |
 |------|----------------|--------|
 | `CERT_1_*` | App 1 (Skilleto) | mTLS certificate |
-| `CERT_2_*` | TMS 1 | mTLS certificate |
-| `CERT_3_*` | TMS 3 | mTLS certificate |
-| — | TMS 2 (OAuth) | always present; uses `OAUTH_CLIENT_ID`/`OAUTH_CLIENT_SECRET`, no cert |
+| `CERT_2_*` | App 2 (TMS_1) | mTLS certificate |
+| `CERT_3_*` | App 3 (TMS_3_NEW) | mTLS certificate |
+| — | App 4 (OAuth) | always present; uses `SSG_CLIENT_ID`/`SSG_CLIENT_SECRET`, no cert |
 
 If only two show, `CERT_2_*` / `CERT_3_*` were never loaded. To add them on Coolify,
 mirror `CERT_1` exactly — add a **File Mount** (Configuration → Persistent Storage)
 per PEM into `/app/server/.cert`, then the env vars:
 
 ```
-CERT_2_NAME=TMS 1
-CERT_2_CERT_FILE=/app/server/.cert/app2_cert.pem
-CERT_2_KEY_FILE=/app/server/.cert/app2_key.pem
-CERT_2_ENCRYPTION_KEY_FILE=/app/server/.cert/app2_enc.key   # optional (AES endpoints)
-CERT_3_NAME=TMS 3
-CERT_3_CERT_FILE=/app/server/.cert/app3_cert.pem
-CERT_3_KEY_FILE=/app/server/.cert/app3_key.pem
+CERT_2_NAME=TMS_1
+CERT_2_CERT_FILE=/app/server/.cert/ssg-app2-cert.pem
+CERT_2_KEY_FILE=/app/server/.cert/ssg-app2-key.pem
+CERT_2_ENCRYPTION_KEY_FILE=/app/server/.cert/ssg-app2-encryption-key.txt   # optional (AES endpoints)
+CERT_3_NAME=TMS_3_NEW
+CERT_3_CERT_FILE=/app/server/.cert/ssg-app3-cert.pem
+CERT_3_KEY_FILE=/app/server/.cert/ssg-app3-key.pem
 ```
 
 Cert sets are read **only at process start** — you must **Redeploy** after changing

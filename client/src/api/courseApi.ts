@@ -9,10 +9,25 @@ const apiClient = axios.create({
   },
 });
 
-// Attach the selected certificate ID to every request
+// SSG App convention (matches ai-lms-tms): 'app1' | 'app2' | 'app3' | 'app4' (OAuth).
+// Older builds stored '1' / '2' / '3' / 'oauth' — normalise those.
+export function normaliseSsgApp(value: string | null | undefined): string {
+  const v = String(value || '').trim().toLowerCase().replace(/\s+/g, '');
+  if (!v) return 'app1';
+  if (v === 'oauth') return 'app4';
+  const m = v.match(/^(?:app)?([1-4])$/);
+  return m ? `app${m[1]}` : v;
+}
+
+export const SSG_APP_STORAGE_KEY = 'ssg-active-cert';
+
+export function getStoredSsgApp(): string {
+  return normaliseSsgApp(localStorage.getItem(SSG_APP_STORAGE_KEY));
+}
+
+// Attach the selected SSG app to every request (x-ssg-app header, as in ai-lms-tms)
 apiClient.interceptors.request.use((config) => {
-  const certId = localStorage.getItem('ssg-active-cert') || '1';
-  config.headers['x-cert-id'] = certId;
+  config.headers['x-ssg-app'] = getStoredSsgApp();
   return config;
 });
 

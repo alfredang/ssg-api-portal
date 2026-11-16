@@ -31,20 +31,36 @@ function authDisabled() {
   return process.env.NODE_ENV !== 'production';
 }
 
+// Who may sign in. The console calls SSG with our certificates, so a Google
+// account alone is not enough: the email must be on the allow-list.
+//   ALLOWED_EMAIL_DOMAINS  comma-separated domains (default: our own domains)
+//   ALLOWED_EMAILS         comma-separated extra addresses
+const list = (v) => (v || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
+const allowedDomains = list(process.env.ALLOWED_EMAIL_DOMAINS ?? 'tertiaryinfotech.com,tertiarycourses.com.sg');
+const allowedEmails = list(process.env.ALLOWED_EMAILS);
+
+function emailAllowed(email) {
+  const e = (email || '').toLowerCase();
+  if (!e.includes('@')) return false;
+  return allowedEmails.includes(e) || allowedDomains.includes(e.split('@')[1]);
+}
+
 const googleConfigured =
   !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET;
 
 // The authenticated user for this request, or null when login is required
 // but the visitor is not signed in.
 function getCurrentUser(req) {
-  if (req.user) return req.user;
+  if (req.user && (authDisabled() || emailAllowed(req.user.email))) return req.user;
   if (authDisabled()) return LOCAL_USER;
   return null;
 }
 
-// Gate for protected API routes.
+// Gate for protected API routes. Sessions issued before the allow-list
+// existed are re-checked here.
 function requireAuth(req, res, next) {
-  if (authDisabled() || req.isAuthenticated?.()) return next();
+  if (authDisabled()) return next();
+  if (req.isAuthenticated?.() && emailAllowed(req.user?.email)) return next();
   res.status(401).json({ error: 'Authentication required' });
 }
 
@@ -88,6 +104,11 @@ function configureAuth(app) {
             process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback',
         },
         (_accessToken, _refreshToken, profile, done) => {
+          const email = profile.emails?.[0]?.value || null;
+          if (!emailAllowed(email)) {
+            console.warn(`[auth] sign-in refused for ${email || 'unknown'} (not on the allow-list)`);
+            return done(null, false);
+          }
           // No persistence — the profile lives in the session cookie.
           done(null, {
             id: `google:${profile.id}`,
@@ -120,7 +141,7 @@ function configureAuth(app) {
     '/auth/google/callback',
     (req, res, next) => {
       if (!googleConfigured) return res.redirect('/');
-      passport.authenticate('google', { failureRedirect: '/?login=failed' })(
+      passport.authenticate('google', { failureRedirect: '/?login=failed#/console' })(
         req,
         res,
         next

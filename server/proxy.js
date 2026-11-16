@@ -29,7 +29,13 @@ const certStore = new AsyncLocalStorage();
 // Multi-certificate support
 // Load up to 3 certificate sets from env vars (CERT_1_*, CERT_2_*, CERT_3_*)
 // Wrap multiline PEM values in double quotes in .env for dotenv to parse them.
-// The active cert is selected per-request via the x-cert-id header.
+//
+// SSG App convention (matches ai-lms-tms):
+//   app1 = CERT_1_*  (Skilleto)      app2 = CERT_2_*  (TMS 1)
+//   app3 = CERT_3_*  (TMS 3)         app4 = OAuth (SSG_CLIENT_ID / SECRET, no PEM)
+// The active app is selected per-request via the x-ssg-app header
+// ('app1'..'app4'). The legacy x-cert-id header and ids '1'/'2'/'3'/'oauth'
+// are still accepted and normalised by normaliseSsgApp().
 // ─────────────────────────────────────────────────────────────────
 // Validate that a PEM string is structurally valid (not a placeholder stub).
 // Checks for correct header/footer and that the base64 body is long enough
@@ -68,6 +74,23 @@ function readCertSource(envName) {
   }
   return value ? value.replace(/\\n/g, '\n') : value;
 }
+
+// Normalise any app selector ('app1', 'App 1', '1', 'oauth', ...) to 'app1'..'app4'.
+function normaliseSsgApp(value) {
+  const v = String(value || '').trim().toLowerCase().replace(/\s+/g, '');
+  if (!v) return 'app1';
+  if (v === 'oauth') return 'app4';
+  const m = v.match(/^(?:app)?([1-4])$/);
+  return m ? `app${m[1]}` : v;
+}
+
+// 'app3' -> 3 (used for CERT_<n>_* env var names in messages)
+function ssgAppNumber(appId) {
+  const m = String(appId || '').match(/([1-4])$/);
+  return m ? Number(m[1]) : 1;
+}
+
+const isOAuthApp = (appId) => normaliseSsgApp(appId) === 'app4';
 
 const certsMap = new Map();
 for (let i = 1; i <= 3; i++) {
@@ -128,9 +151,10 @@ for (let i = 1; i <= 3; i++) {
     console.log(`CERT_${i}_ENCRYPTION_KEY: not set (AES encryption disabled for cert ${i})`);
   }
 
-  certsMap.set(String(i), {
-    id: String(i),
-    name,
+  certsMap.set(`app${i}`, {
+    id: `app${i}`,
+    // Label like ai-lms-tms: "App 1", plus the configured name, e.g. "App 1 (Skilleto)"
+    name: /^app\s*\d/i.test(name) ? name : `App ${i} (${name})`,
     cert: Buffer.from(certPem),
     key: Buffer.from(keyPem),
     encryptionKey: encryptionKeyBuf,
@@ -146,13 +170,13 @@ const certApiBase = process.env.SSG_CERT_API_BASE_URL || 'https://api.ssg-wsg.sg
 
 // Get the active cert for the current request (via AsyncLocalStorage)
 function getActiveCert() {
-  const certId = certStore.getStore() || '1';
+  const certId = normaliseSsgApp(certStore.getStore());
 
-  console.log(`getActiveCert: certId="${certId}"`);
+  console.log(`getActiveCert: ssgApp="${certId}"`);
   console.log('Available cert IDs:', Array.from(certsMap.keys()));
 
-  // OAuth doesn't use certificates
-  if (certId === 'oauth') {
+  // App 4 (OAuth) doesn't use certificates
+  if (isOAuthApp(certId)) {
     console.log('OAuth mode selected - no certificate needed');
     return null;
   }
@@ -174,11 +198,13 @@ function getActiveCert() {
   return cert;
 }
 
-// Middleware: resolve cert selection from x-cert-id header
+// Middleware: resolve SSG app selection from the x-ssg-app header (ai-lms-tms
+// convention); fall back to the legacy x-cert-id header.
 router.use((req, res, next) => {
-  const certId = req.headers['x-cert-id'] || '1';
-  console.log(`[${req.method} ${req.path}] x-cert-id header: "${certId}"`);
-  certStore.run(certId, next);
+  const raw = req.headers['x-ssg-app'] || req.headers['x-cert-id'] || 'app1';
+  const ssgApp = normaliseSsgApp(raw);
+  console.log(`[${req.method} ${req.path}] ssg app: "${ssgApp}"${raw !== ssgApp ? ` (from "${raw}")` : ''}`);
+  certStore.run(ssgApp, next);
 });
 
 // GET /api/certs endpoint
@@ -190,8 +216,8 @@ router.get('/certs', (req, res) => {
     certs.push({ id, name: certData.name });
   }
 
-  // Add OAuth option
-  certs.push({ id: 'oauth', name: 'TMS 2 (OAuth)' });
+  // App 4 = OAuth (no certificate)
+  certs.push({ id: 'app4', name: 'App 4 (OAuth)' });
 
   res.json(certs);
 });
@@ -200,8 +226,8 @@ router.get('/certs', (req, res) => {
 function aesEncrypt(plaintext) {
   const active = getActiveCert();
   if (!active || !active.encryptionKey) {
-    const certId = certStore.getStore() || '1';
-    throw new Error(`AES encryption key not configured for certificate ${certId}. Set CERT_${certId}_ENCRYPTION_KEY to a 32-byte base64-encoded key in .env. Generate one with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`);
+    const certId = normaliseSsgApp(certStore.getStore());
+    throw new Error(`AES encryption key not configured for ${certId}. Set CERT_${ssgAppNumber(certId)}_ENCRYPTION_KEY to a 32-byte base64-encoded key in .env. Generate one with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`);
   }
   const iv = Buffer.from('SSGAPIInitVector', 'utf8');
   const cipher = crypto.createCipheriv('aes-256-cbc', active.encryptionKey, iv);
@@ -213,8 +239,8 @@ function aesEncrypt(plaintext) {
 function aesDecrypt(ciphertext) {
   const active = getActiveCert();
   if (!active || !active.encryptionKey) {
-    const certId = certStore.getStore() || '1';
-    throw new Error(`AES decryption key not configured for certificate ${certId}. Set CERT_${certId}_ENCRYPTION_KEY to a 32-byte base64-encoded key in .env. Generate one with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`);
+    const certId = normaliseSsgApp(certStore.getStore());
+    throw new Error(`AES decryption key not configured for ${certId}. Set CERT_${ssgAppNumber(certId)}_ENCRYPTION_KEY to a 32-byte base64-encoded key in .env. Generate one with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`);
   }
   const iv = Buffer.from('SSGAPIInitVector', 'utf8');
   const decipher = crypto.createDecipheriv('aes-256-cbc', active.encryptionKey, iv);
@@ -1873,8 +1899,8 @@ router.get('/enrolments/details/:enrolmentRefNo', async (req, res) => {
     const certId = certStore.getStore();
     console.log(`View Enrolment: certId="${certId}", enrolmentRefNo="${enrolmentRefNo}", uen="${uen}"`);
 
-    // Check if OAuth is selected (cert ID 'oauth')
-    if (certId === 'oauth') {
+    // Check if App 4 (OAuth) is selected
+    if (isOAuthApp(certId)) {
       console.log('View Enrolment: using OAuth authentication');
       const result = await oauthApiGet(apiPath, {}, { apiVersion: 'v3.0' });
 
