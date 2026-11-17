@@ -32,7 +32,7 @@ allow-listed staff can run calls with the company's SSG apps.
 
 | Feature | Description |
 |---------|-------------|
-| **API reference** | One page per API (55 entries): endpoint, version, auth, request table, example body, and runnable **curl / Python / JavaScript** examples with certificate, OAuth and AES variants |
+| **API reference** | One page per API (55 catalogue entries): endpoint, version, auth, request table, example body, and runnable **curl / Python / JavaScript** examples with certificate, OAuth and AES variants |
 | **Search and navigation** | Sidebar with filter, `/` or `Ctrl/Cmd-K` search palette, breadcrumbs, previous / next |
 | **Getting started and guides** | Auth and AES walkthrough; creating the certificate and encryption keys on **macOS and Windows**; the **SSG API subscription process** |
 | **TPG process** | The 13 Training Partners Gateway steps as a journey map; every guide rendered as HTML with self-drawn visuals (process flow, buttons, schematic screens) |
@@ -85,7 +85,7 @@ allow-listed staff can run calls with the company's SSG apps.
               ▼                              ▼
 ┌─────────────────────────┐  ┌──────────────────────────────────┐
 │  public-api.ssg-wsg.sg  │  │       api.ssg-wsg.sg             │
-│  Course Directory v1.2  │  │  Course Registry/Search v8.0     │
+│  Course Directory v1.2  │  │  Course Registry/Search v2.0     │
 │  (OAuth Bearer Token)   │  │  (mTLS Certificate Auth)         │
 └─────────────────────────┘  └──────────────────────────────────┘
 ```
@@ -96,22 +96,32 @@ allow-listed staff can run calls with the company's SSG apps.
 ssg-api-portal/
 ├── server/
 │   ├── index.js              # Express app: auth, enquiries, SSG proxy, per-URL SEO tags, static files
-│   ├── auth.js               # Google OAuth, cookie sessions, email allow-list, local bypass
-│   ├── proxy.js              # SSG API proxy routes (mTLS certificate + OAuth fallback, AES)
+│   ├── auth.js               # Google and emailed-code sign-in, cookie sessions, local bypass
+│   ├── users.js              # User list: one admin, members (DATA_DIR/users.json)
+│   ├── admin.js              # Admin API: users, mail settings, certificates with logged reveal
+│   ├── settings.js           # Encrypted settings store (mail account)
+│   ├── mailer.js             # Enquiry and sign-in code emails (Gmail API, Resend, SMTP)
+│   ├── proxy.js              # SSG API proxy routes (mTLS + OAuth fallback, AES), request runner, our-courses list
+│   ├── lmstms.js             # Read-only link to AI-LMS-TMS (course runs, enrolment references)
+│   ├── conformance.js        # Conformance test runner: read workbook, run on UAT, write results
 │   ├── oauth.js              # SSG OAuth token fetch + cache
 │   ├── leads.js              # POST /lead (public enquiries), GET /api/leads (staff)
 │   ├── defaults.js           # Per-user defaults API
 │   └── store.js              # File-based defaults store (JSON)
 ├── client/
 │   ├── index.html            # HTML shell with the <!--seo--> block the server fills in
-│   ├── scripts/gen-seo.mts   # Build step: dist/seo.json, sitemap.xml, robots.txt
+│   ├── scripts/gen-seo.mts   # Build step: dist/seo.json, sitemap.xml, robots.txt, api-catalog.json
+│   ├── scripts/test-form.mts # Fills the subscription form with sample data (check the .docx)
+│   ├── public/*.docx         # SWDA subscription form v1.12: blank copy and fill-in template
 │   ├── public/tpg-process/   # The original SSG TPGateway guides (PDF downloads)
 │   └── src/
 │       ├── main.tsx          # Routes: public pages and the signed-in console
 │       ├── router.ts         # Path router (History API), legacy #/ redirects
 │       ├── seo.ts            # Title, description and keywords of every page
 │       ├── catalog.ts        # Every API: path, version, auth, verified / added dates
-│       ├── apiSpecs.ts       # Parameters, example bodies, curl / Python / JS generator
+│       ├── apiSpecs.ts       # Parameters, example bodies, curl / Python / JS generator, request plan
+│       ├── subscriptionDocx.ts # Fills SWDA's Word form in the browser
+│       ├── consoleStore.ts   # Last call per console page (status, timing, JSON)
 │       ├── prefs.ts          # Remembered example language and fill-in values
 │       ├── tpgSteps.ts       # The 13 TPG steps and 5 phases
 │       ├── tpgTypes.ts       # Content model of a TPG guide
@@ -122,14 +132,21 @@ ssg-api-portal/
 │       ├── api/courseApi.ts  # Console API client (sends x-ssg-app)
 │       └── components/
 │           ├── Shell.tsx          # Top bar, search palette, API sidebar, footer
-│           ├── Docs.tsx           # Home, category, API and Getting started pages
+│           ├── Landing.tsx        # Home page: animated hero, three entry blocks
+│           ├── Docs.tsx           # API reference index, category, API and Getting started pages
 │           ├── ApiSpec.tsx        # Request spec, code panel, fill-in values
 │           ├── Guides.tsx         # Keys guide and subscription-process guide
+│           ├── Explainers.tsx     # Animated certificate and encryption walk-through; error codes
 │           ├── TpgProcess.tsx     # TPG journey map and step page
 │           ├── TpgGuide.tsx       # Renders a guide: flow, steps, schematic screens
 │           ├── Marketing.tsx      # Contact page, services page, enquiry form
 │           ├── SubscriptionForm.tsx
 │           ├── LoginPage.tsx      # Two-column sign-in
+│           ├── ChatWidget.tsx     # WhatsApp chat widget on public pages
+│           ├── Workbench.tsx      # Console: Try it / Spec / Code / Response, course picker, our courses
+│           ├── FieldSuggest.tsx   # Console: type-to-search under course, run and enrolment fields
+│           ├── Conformance.tsx    # Console: conformance test runner
+│           ├── AdminPages.tsx     # Console: users, settings, certificates and keys
 │           ├── LeadsPage.tsx      # Console: enquiries
 │           └── …                  # Console result cards and forms
 ├── default-values.csv        # Default form values (UEN, Course Ref, etc.)
