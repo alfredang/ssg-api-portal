@@ -39,7 +39,10 @@ allow-listed staff can run calls with the company's SSG apps.
 | **Subscription form** | SWDA's API Subscription Form (v1.12, Sections 1-3) filled in online and downloaded as a real Word `.docx` (SWDA's own layout), with the submission steps |
 | **Home, services and contact** | Animated home page with three entry blocks (Get Started, API Reference, TPG Processes); Services page for the AI-powered / custom TMS and SSG API integration on Excel, Google Sheets, n8n, Python, React; contact page; WhatsApp chat widget; enquiries stored and emailed as HTML |
 | **Users and settings** | One admin, members managed in the console; sign-in by Google or an emailed 6-digit code; mail account saved encrypted from console Settings |
-| **API console (sign-in)** | Live test pages for courses, feedback, course runs, attendance, grants, SkillsFuture Credit Pay, enrolments, assessments, Skills Passport, SEA and Skills Framework, switchable between **App 1 – App 4** |
+| **API console (sign-in)** | A workbench for every API with four tabs: **Try it** (form and formatted result), **Spec** (headers, parameters, request and response fields, link to the SWDA Developer Portal), **Code** (curl / Python / JavaScript for the chosen app and course, with *Run this request* and *Run on App 1 to 4*) and **Response** (status, timing, formatted or raw JSON). App 1 – 4 switch and a picker of our own funded WSQ courses above every page |
+| **Our WSQ funded courses** | Course title, reference code and funding validity period read from the SSG course registry by our UEN, cached daily, searchable, CSV download |
+| **Certificates & Keys (admin)** | Expiry date, subject and fingerprint for App 1 – 3 and the OAuth client for App 4; PEMs, encryption keys and secrets hidden behind a logged Reveal |
+| **Explainers** | Animated walk-through of how the certificate (mTLS) and AES encryption protect a call; status and error codes (2xx, 3xx, 4xx, 5xx); conformance-test markers on the APIs that need one |
 | **Defaults and known issues** | Per-user default values that fill every form; a known-issues dashboard |
 | **SEO** | Real URLs, per-page titles and descriptions sent by the server, sitemap.xml, robots.txt |
 | **Mobile friendly** | Menu, API drawer and console drawer on small screens |
@@ -261,6 +264,8 @@ Up to three cert sets are supported (`CERT_1_*`, `CERT_2_*`, `CERT_3_*`); each
 | `/start` | Public | **Getting started**: app setup, base URLs, mTLS call, OAuth token, AES, status codes. |
 | `/guides/create-keys` | Public | **Create the certificate and encryption keys** on macOS and Windows. |
 | `/guides/api-subscription` | Public | **SSG API subscription process**, eight stages from Developer Portal app to production. |
+| `/guides/how-it-works` | Public | **How certificates and encryption work**: animated diagram of one protected call (`components/Explainers.tsx`). |
+| `/guides/error-codes` | Public | **Status and error codes**: 200, 3xx, 4xx, 5xx, what each means and what to do. |
 | `/tpg-process[/<slug>]` | Public | **TPG Process**: journey map of the 13 TPGateway steps; each step is rendered as HTML with self-drawn visuals (flow, buttons, schematic screens). Content: `client/src/tpgGuidesA.ts` / `tpgGuidesB.ts` (model in `tpgTypes.ts`, renderer `components/TpgGuide.tsx`); the original PDFs stay in `client/public/tpg-process/` as downloads. |
 | `/subscription-form` | Public | Online **API Subscription Form for SWDA APIs (v1.12)**. The browser fills SWDA's own Word form (`public/subscription-form-template.docx`, via `src/subscriptionDocx.ts`) and downloads a `.docx`. Nothing is sent to the server. |
 | `/ssg-api-services` | Public | **Services / lead magnet**: AI-powered TMS and custom TMS with SSG API built in, integration on Excel, Google Sheets, n8n, Python, React; demo form unlocks the SSG API Integration Checklist. |
@@ -285,6 +290,14 @@ Sign-in is by Google, or by a 6-digit code emailed to a listed address (`POST /a
 `/auth/otp/verify`: 10 minutes, 5 tries, rate limited, same reply whether or not the address is a user).
 The admin manages users and the mail account in the console (`/api/admin/*`, `server/admin.js`); mail secrets are
 stored AES-256-GCM encrypted in `DATA_DIR/settings.enc` and never sent back to the browser.
+
+**Console workbench.** `components/Workbench.tsx` wraps every test page. `POST /api/run` (in `server/proxy.js`) runs a
+catalogue API exactly as its reference page shows it, with the selected app's real credentials; it checks each call
+against `dist/api-catalog.json` (written by the build) and refuses APIs that create, update or cancel. `GET
+/api/our-courses` pages through the SSG course registry for `TP_UEN` (default our UEN) and caches the result in
+`DATA_DIR/our-courses.json` for a day. `/api/admin/certs*` (admin only) lists certificate details and returns a PEM,
+key or secret one at a time; each reveal is appended to `DATA_DIR/audit.jsonl`. Conformance-test markers come from
+`CONFORMANCE` in `client/src/catalog.ts`.
 
 **Chat widget.** `components/ChatWidget.tsx` on every public page opens WhatsApp with a prefilled question.
 

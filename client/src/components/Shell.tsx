@@ -45,6 +45,8 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
     { label: 'Getting started', hint: 'Base URLs, authentication, AES', hash: '/start' },
     { label: 'Create certificate and encryption keys', hint: 'Mac and Windows', hash: '/guides/create-keys' },
     { label: 'SSG API subscription process', hint: 'App to production access', hash: '/guides/api-subscription' },
+    { label: 'How certificates and encryption work', hint: 'Animated walk-through', hash: '/guides/how-it-works' },
+    { label: 'SSG API status and error codes', hint: '200, 3xx, 4xx, 5xx', hash: '/guides/error-codes' },
     { label: 'SSG API integration services', hint: 'We do it for you', hash: '/ssg-api-services' },
     { label: 'Contact us', hint: 'Demo, quote, questions', hash: '/contact' },
     { label: 'TPG Process', hint: '13 TPGateway steps', hash: '/tpg-process' },
@@ -178,8 +180,10 @@ function DocsSidebar({ currentSlug, currentGroup, currentGuide, onNavigate }: { 
           <div className="docs-product-name">Guides</div>
           <ul className="docs-guides">
             <li><a href="/start" className={currentGuide === 'start' ? 'on' : ''} onClick={onNavigate}>Getting started</a></li>
+            <li><a href="/guides/how-it-works" className={currentGuide === 'how-it-works' ? 'on' : ''} onClick={onNavigate}>How certificates and encryption work</a></li>
             <li><a href="/guides/create-keys" className={currentGuide === 'create-keys' ? 'on' : ''} onClick={onNavigate}>Create certificate and keys</a></li>
             <li><a href="/guides/api-subscription" className={currentGuide === 'api-subscription' ? 'on' : ''} onClick={onNavigate}>API subscription process</a></li>
+            <li><a href="/guides/error-codes" className={currentGuide === 'error-codes' ? 'on' : ''} onClick={onNavigate}>Status and error codes</a></li>
           </ul>
         </div>
       )}
@@ -248,6 +252,8 @@ export function Footer() {
           <a href="/start">Getting started</a>
           <a href="/guides/create-keys">Create SSG API keys</a>
           <a href="/guides/api-subscription">API subscription process</a>
+          <a href="/guides/how-it-works">How certificates and encryption work</a>
+          <a href="/guides/error-codes">SSG API error codes</a>
           <a href="/category/enrolments">Enrolment API</a>
           <a href="/category/grant-calculator">Grant API</a>
           <a href="/category/training-providers">Course run API</a>

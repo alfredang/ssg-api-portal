@@ -3038,4 +3038,191 @@ router.post('/tools/sign-data', (req, res) => {
   }
 });
 
+
+// ─────────────────────────────────────────────────────────────────
+// Console workbench: run a catalogue API as documented, our own course
+// list, and certificate details. Added 2026-11-17.
+// ─────────────────────────────────────────────────────────────────
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+const TP_UEN = process.env.TP_UEN || '201200696W';
+
+// The API catalogue, written by the client build (scripts/gen-seo.mts).
+let catalogCache = null;
+function apiCatalog() {
+  if (catalogCache) return catalogCache;
+  try { catalogCache = JSON.parse(fs.readFileSync(path.join(__dirname, '../client/dist/api-catalog.json'), 'utf8')); }
+  catch { return []; }
+  return catalogCache;
+}
+
+const parseMaybeJson = (text) => { try { return JSON.parse(text); } catch { return text; } };
+
+// POST /api/run: run one catalogue API exactly as its reference page shows it,
+// with the selected app's real credentials. Read-only: APIs that create, update
+// or cancel are refused here and stay on their own test forms.
+router.post('/run', async (req, res) => {
+  const started = Date.now();
+  const app = normaliseSsgApp(certStore.getStore());
+  const { slug, path: apiPath, query = {}, headers = {}, body } = req.body || {};
+  const entry = apiCatalog().find((e) => e.slug === slug);
+  if (!entry) return res.status(404).json({ error: 'Unknown API. Rebuild the client so the catalogue is available to the server.' });
+  if (entry.writes) return res.status(403).json({ error: 'This API changes live SSG data. Use its form on the Try it tab.' });
+  if (typeof apiPath !== 'string' || !new RegExp('^' + entry.path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\{\w+\\\}/g, '[^/?#]+') + '$').test(apiPath) || apiPath.includes('..')) {
+    return res.status(400).json({ error: `The path must match ${entry.path}` });
+  }
+  const oauthOnly = isOAuthApp(app);
+  let auth = req.body.auth === 'oauth' ? 'oauth' : 'cert';
+  if (oauthOnly) auth = 'oauth';
+  if (auth === 'oauth' && entry.auth !== 'cert+oauth') {
+    return res.json({ status: 0, ms: 0, app, auth, error: oauthOnly ? 'App 4 is OAuth only, and this API needs a certificate. Choose App 1, 2 or 3.' : 'This API cannot be called with OAuth.' });
+  }
+  const extra = {};
+  for (const name of entry.headers || []) if (headers[name] !== undefined) extra[name] = String(headers[name]);
+  const q = {};
+  for (const [k, v] of Object.entries(query || {})) if (/^[\w.-]+$/.test(k)) q[k] = String(v);
+  const apiVersion = entry.noVersion ? null : entry.version;
+  const base = auth === 'oauth' ? (process.env.SSG_API_BASE_URL || 'https://public-api.ssg-wsg.sg') : certApiBase;
+  const out = { app, auth, method: entry.method, url: base + apiPath + (Object.keys(q).length ? '?' + new URLSearchParams(q) : ''), version: apiVersion, decrypted: false };
+  try {
+    if (auth === 'oauth') {
+      try {
+        out.data = entry.method === 'GET' ? await ssgApiGet(apiPath, q, { apiVersion }) : await ssgApiPost(apiPath, body ?? {}, { apiVersion });
+        out.status = 200;
+      } catch (err) {
+        if (!err.status) throw err;
+        out.status = err.status; out.data = err.body;
+      }
+    } else {
+      if (!getActiveCert() || getActiveCert().id !== app) return res.json({ ...out, status: 0, ms: 0, error: `No certificate is loaded for ${app}.` });
+      let result;
+      if (entry.method === 'GET') result = await certApiGet(apiPath, q, { apiVersion, headers: extra });
+      else if (entry.aesRequest) result = await certApiPost(apiPath, aesEncrypt(JSON.stringify(body ?? {})), { apiVersion, headers: extra });
+      else result = await certApiPost(apiPath, body ?? {}, { apiVersion, headers: extra });
+      out.status = result.status;
+      let data = parseMaybeJson(result.body);
+      if (typeof data === 'string' && data.trim()) {
+        try { data = JSON.parse(aesDecrypt(data.trim())); out.decrypted = true; } catch { /* plain text */ }
+      } else if (data && typeof data === 'object' && (entry.aesRequest || entry.aesResponse)) {
+        const before = JSON.stringify(data);
+        try { data = decryptJsonFields(data); } catch { /* leave as sent */ }
+        for (const k of Object.keys(data)) if (typeof data[k] === 'string') data[k] = parseMaybeJson(data[k]);
+        out.decrypted = JSON.stringify(data) !== before;
+      }
+      out.data = data;
+    }
+  } catch (err) {
+    out.status = 0; out.error = err.message;
+  }
+  out.ms = Date.now() - started;
+  res.json(out);
+});
+
+// ── Our own courses, from the SSG course registry (searched by our UEN) ──
+const COURSES_FILE = path.join(DATA_DIR, 'our-courses.json');
+const COURSES_MAX_AGE = 24 * 3600 * 1000;
+let coursesJob = null;
+let coursesError = null;
+
+function readCourses() { try { return JSON.parse(fs.readFileSync(COURSES_FILE, 'utf8')); } catch { return null; } }
+
+function slimCourse(c) {
+  const support = Array.isArray(c.support) ? c.support : [];
+  const named = (re) => support.find((x) => re.test(String(x.description || '').trim()));
+  const fund = named(/^course fee grant$/i) || named(/^wsq$/i) || named(/^sfc$/i);
+  const periods = (fund && Array.isArray(fund.period) ? fund.period : []).filter((x) => x && x.endDate);
+  periods.sort((a, b) => String(a.endDate).localeCompare(String(b.endDate)));
+  const last = periods[periods.length - 1];
+  return {
+    ref: c.referenceNumber, title: c.title,
+    active: c.isActive === 'Yes', status: c.status && c.status.description,
+    wsq: !!named(/^wsq$/i),
+    fundStart: periods.length ? periods[0].startDate : null, fundEnd: last ? last.endDate : null,
+    fundedBy: fund ? String(fund.description).trim() : null,
+    hours: c.totalTrainingDurationHours ?? null,
+    area: c.areaOfTraining && c.areaOfTraining.description,
+    updated: c.meta && c.meta.updatedDate,
+  };
+}
+
+async function fetchAllCourses() {
+  const today = new Date().toISOString().slice(0, 10);
+  const bodyFor = (page) => ({ keyword: '', page, pageSize: SSG_MAX_PAGE_SIZE, details: 'FULL', sortBy: { field: 'updatedDate', order: 'desc' }, course: { meta: { updatedDate: { from: '2015-01-01', to: today } } } });
+  let lastErr = new Error('No certificate is loaded');
+  for (const appId of certsMap.keys()) {
+    try {
+      return await certStore.run(appId, async () => {
+        const first = await fetchCourseSearchPage(bodyFor(0), TP_UEN);
+        const total = (first.meta && first.meta.total) || 0;
+        const all = [...((first.data && first.data.courses) || [])];
+        const pages = Math.ceil(total / SSG_MAX_PAGE_SIZE);
+        for (let p = 1; p < pages; p += 4) {
+          const batch = await Promise.all([p, p + 1, p + 2, p + 3].filter((n) => n < pages).map((n) => fetchCourseSearchPage(bodyFor(n), TP_UEN)));
+          for (const b of batch) all.push(...((b.data && b.data.courses) || []));
+        }
+        const seen = new Set();
+        const courses = all.filter((c) => c.referenceNumber && !seen.has(c.referenceNumber) && seen.add(c.referenceNumber)).map(slimCourse);
+        return { fetchedAt: new Date().toISOString(), uen: TP_UEN, app: appId, total, courses };
+      });
+    } catch (err) { lastErr = err; }
+  }
+  throw lastErr;
+}
+
+function refreshCourses() {
+  if (!coursesJob) {
+    coursesJob = fetchAllCourses()
+      .then((data) => { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(COURSES_FILE, JSON.stringify(data)); coursesError = null; })
+      .catch((err) => { coursesError = err.message; console.error('[our-courses] refresh failed:', err.message); })
+      .finally(() => { coursesJob = null; });
+  }
+  return coursesJob;
+}
+
+// GET /api/our-courses[?refresh=1]: answers at once from the saved list and
+// refreshes it in the background when it is older than a day.
+router.get('/our-courses', (req, res) => {
+  const saved = readCourses();
+  const stale = !saved || Date.now() - new Date(saved.fetchedAt).getTime() > COURSES_MAX_AGE;
+  if ((stale || req.query.refresh === '1') && !coursesJob) refreshCourses();
+  res.json({ ...(saved || { fetchedAt: null, uen: TP_UEN, total: 0, courses: [] }), refreshing: !!coursesJob, error: coursesError });
+});
+
+// ── Certificates and keys (used by server/admin.js; admin only) ──
+function certificateInfo() {
+  const apps = [];
+  for (let i = 1; i <= 3; i++) {
+    const id = `app${i}`;
+    const c = certsMap.get(id);
+    if (!c) { apps.push({ id, name: `App ${i}`, type: 'certificate', loaded: false }); continue; }
+    const info = { id, name: c.name, type: 'certificate', loaded: true, hasPrivateKey: !!c.key, hasEncryptionKey: !!c.encryptionKey, hasSignatureKey: !!c.privateKey };
+    try {
+      const x = new crypto.X509Certificate(c.cert);
+      Object.assign(info, { subject: x.subject.replace(/\n/g, ', '), issuer: x.issuer.replace(/\n/g, ', '), validFrom: new Date(x.validFrom).toISOString(), validTo: new Date(x.validTo).toISOString(), fingerprint256: x.fingerprint256, serialNumber: x.serialNumber });
+    } catch (err) { info.certError = err.message; }
+    apps.push(info);
+  }
+  apps.push({ id: 'app4', name: 'App 4 (OAuth)', type: 'oauth', loaded: !!(process.env.SSG_CLIENT_ID && process.env.SSG_CLIENT_SECRET), hasClientId: !!process.env.SSG_CLIENT_ID, hasClientSecret: !!process.env.SSG_CLIENT_SECRET });
+  return apps;
+}
+
+/** The actual value of one credential. Callers must check admin rights and log the access. */
+function revealCredential(appId, what) {
+  const id = normaliseSsgApp(appId);
+  if (id === 'app4') {
+    if (what === 'clientId') return process.env.SSG_CLIENT_ID || null;
+    if (what === 'clientSecret') return process.env.SSG_CLIENT_SECRET || null;
+    return null;
+  }
+  const c = certsMap.get(id);
+  if (!c) return null;
+  if (what === 'certificate') return c.cert.toString();
+  if (what === 'privateKey') return c.key.toString();
+  if (what === 'encryptionKey') return c.encryptionKey ? c.encryptionKey.toString('base64') : null;
+  if (what === 'signatureKey') return c.privateKey || null;
+  return null;
+}
+
+router.certificateInfo = certificateInfo;
+router.revealCredential = revealCredential;
+
 module.exports = router;

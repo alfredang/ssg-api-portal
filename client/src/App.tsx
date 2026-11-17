@@ -1,8 +1,10 @@
 import LeadsPage from './components/LeadsPage';
-import { UsersPage, SettingsPage } from './components/AdminPages';
+import { UsersPage, SettingsPage, CertificatesPage } from './components/AdminPages';
+import Workbench, { ContextBar, OurCoursesPage, pickable } from './components/Workbench';
+import { setConsolePage } from './consoleStore';
+import { getOurCourses } from './api/courseApi';
+import type { OurCourses } from './api/courseApi';
 import { ALL_APIS } from './catalog';
-import { RequestSpec, CodePanel } from './components/ApiSpec';
-import { MethodTag } from './components/Shell';
 import { useState, useMemo, useEffect } from 'react';
 import { logout } from './auth';
 import type { AuthUser } from './auth';
@@ -35,7 +37,7 @@ type Page = 'course-lookup' | 'course-search' | 'popular-courses' | 'tp-courses'
   | 'default-values'
   | 'api-issues'
   | 'api-references'
-  | 'leads' | 'users' | 'settings';
+  | 'leads' | 'users' | 'settings' | 'our-courses' | 'direct-applications' | 'certificates';
 
 interface NavCategory {
   label: string;
@@ -50,12 +52,14 @@ interface NavCategory {
 // Console menu, in the order a class runs: find the course, run it, enrol and
 // fund the learners, assess them, then the skills data and the tools.
 const NAV_ITEMS: NavCategory[] = [
+  { section: 'Our courses', icon: 'list', label: 'WSQ Funded Courses', id: 'our-courses' },
   { section: 'Courses', icon: 'book', label: 'Course Directory', children: [
     { id: 'course-lookup', label: 'Lookup by Ref No' },
     { id: 'course-search', label: 'Course Search' },
     { id: 'popular-courses', label: 'Popular Courses' },
     { id: 'tp-courses', label: 'Courses by TP UEN' },
   ] },
+  { section: 'Courses', icon: 'inbox', label: 'Direct Applications', id: 'direct-applications' },
   { section: 'Courses', icon: 'star', label: 'Course Feedback', children: [
     { id: 'course-quality', label: 'Retrieve Course Quality' },
     { id: 'course-outcome', label: 'Retrieve Course Outcome' },
@@ -124,7 +128,7 @@ const NAV_ITEMS: NavCategory[] = [
     { id: 'sea-skill-extract', label: 'Skill Extraction' },
     { id: 'sea-skill-search', label: 'Skill Search' },
   ] },
-  { section: 'Setup & reference', icon: 'key', label: 'Certificates & Keys', children: [
+  { section: 'Setup & reference', icon: 'key', label: 'Generate Keys', children: [
     { id: 'tools-generate-cert', label: 'Generate Certificate' },
     { id: 'tools-generate-keypair', label: 'Generate Digital Signature' },
     { id: 'tools-encryption-key', label: 'Generate Encryption Key' },
@@ -133,6 +137,7 @@ const NAV_ITEMS: NavCategory[] = [
   { section: 'Setup & reference', icon: 'alert', label: 'Known API Issues', id: 'api-issues' },
   { section: 'Setup & reference', icon: 'link', label: 'SSG API References', id: 'api-references' },
   { section: 'Admin', icon: 'inbox', label: 'Enquiries', id: 'leads' },
+  { section: 'Admin', icon: 'lock', label: 'Certificates & Keys', id: 'certificates' },
   { section: 'Admin', icon: 'shield', label: 'Users', id: 'users' },
   { section: 'Admin', icon: 'gear', label: 'Settings', id: 'settings' },
 ];
@@ -157,6 +162,8 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   link: <><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.700l-1 1" /><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.700l1-1" /></>,
   inbox: <><path d="M3 13l3-8h12l3 8v6H3z" /><path d="M3 13h5l1 3h6l1-3h5" /></>,
   shield: <><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /><path d="M9 12l2 2 4-4" /></>,
+  list: <path d="M8 6h13M8 12h13M8 18h13M3.5 6h0M3.5 12h0M3.5 18h0" />,
+  lock: <><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></>,
   gear: <><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.900l2.1 2.100M17 17l2.1 2.100M19.1 4.900L17 7M7 17l-2.1 2.1" /></>,
 };
 function NavIcon({ name }: { name: string }) {
@@ -235,7 +242,7 @@ function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange, on
   const [navQuery, setNavQuery] = useState('');
   const nq = navQuery.trim().toLowerCase();
   // Filter the menu as the user types; matching categories open automatically.
-  const ADMIN_ONLY = ['users', 'settings'];
+  const ADMIN_ONLY = ['users', 'settings', 'certificates'];
   const allowed = NAV_ITEMS.filter((c) => isAdmin || !c.id || !ADMIN_ONLY.includes(c.id));
   const navItems = !nq ? allowed : allowed
     .map((cat) => cat.children
@@ -266,7 +273,7 @@ function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange, on
           <h1>SSG API Portal</h1>
         </div>
         <p>API Console</p>
-        {onHome && <button className="sidebar-home" onClick={onHome}>← API catalogue</button>}
+        {onHome && <button className="sidebar-home" onClick={onHome}>← API reference</button>}
         {certs.length > 0 && (
           <div className="cert-switcher">
             <label htmlFor="cert-select">SSG App</label>
@@ -354,31 +361,6 @@ function Sidebar({ activePage, onNavigate, certs, activeCertId, onCertChange, on
   );
 }
 
-/** The API spec and code examples for the page being tested, from the public reference. */
-function ConsoleSpec({ page }: { page: string }) {
-  const apis = ALL_APIS.filter((a) => a.page === page && a.auth !== 'local');
-  if (apis.length === 0) return null;
-  return (
-    <div className="console-spec">
-      {apis.map((a) => (
-        <details key={a.slug}>
-          <summary>
-            <MethodTag method={a.method} />
-            <code>{a.path}</code>
-            <span className="console-spec-ver">{/^v/.test(a.version) ? a.version : 'no version header'}</span>
-            <span className="console-spec-open">API spec and code</span>
-          </summary>
-          <div className="console-spec-body">
-            <p>{a.desc} <a href={`/docs/${a.slug}`} target="_blank" rel="noopener">Open the reference page ↗</a></p>
-            <RequestSpec api={a} />
-            <CodePanel api={a} />
-          </div>
-        </details>
-      ))}
-    </div>
-  );
-}
-
 function PlaceholderPage({ title }: { title: string }) {
   return (
     <>
@@ -395,7 +377,7 @@ interface DefaultEntry { key: string; label: string; category: string; value: st
 
 const INITIAL_DEFAULTS: DefaultEntry[] = [
   { key: 'uen', label: 'UEN', category: 'General', value: '201200696W' },
-  { key: 'courseRefNo', label: 'Course Reference Number', category: 'General', value: 'TGS-2020505444' },
+  { key: 'courseRefNo', label: 'Course Reference Number', category: 'General', value: 'TGS-2020513213' },
   { key: 'nric', label: 'NRIC / ID Number', category: 'General', value: 'S9876543A' },
   { key: 'traineeId', label: 'Trainee ID', category: 'General', value: 'S0118316H' },
   { key: 'adminEmail', label: 'Admin Email', category: 'General', value: 'admin@tertiary.edu.sg' },
@@ -460,6 +442,23 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
       })
       .catch(() => { /* offline — use localStorage */ });
   }, []);
+
+  // Our own courses from the SSG registry: the course picker and the WSQ Funded Courses page.
+  const [ourCourses, setOurCourses] = useState<OurCourses | null>(null);
+  const loadCourses = (refresh = false) => getOurCourses(refresh).then(setOurCourses).catch(() => { /* keep what we have */ });
+  useEffect(() => { loadCourses(); }, []);
+  useEffect(() => {
+    if (!ourCourses?.refreshing) return;
+    const t = window.setTimeout(() => loadCourses(), 5000);
+    return () => window.clearTimeout(t);
+  }, [ourCourses]);
+  setConsolePage(activePage);
+  // Every course reference field offers our own funded courses as suggestions.
+  useEffect(() => {
+    document.querySelectorAll<HTMLInputElement>('.main-content form input[type="text"]').forEach((el) => {
+      if (/course.?ref|courseid|refno/i.test(`${el.name} ${el.id}`) && !/run/i.test(`${el.name} ${el.id}`)) el.setAttribute('list', 'our-courses-list');
+    });
+  });
 
   const d = (key: string) => defaults[key] ?? '';
   const setDefaults = (next: Record<string, string>) => {
@@ -1101,7 +1100,7 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
                 name="qualityRefNo"
                 type="text"
                 defaultValue={d('courseRefNo')}
-                placeholder="e.g. TGS-2020505444"
+                placeholder="e.g. TGS-2020513213"
                 disabled={qualityApi.loading}
               />
             </div>
@@ -1144,7 +1143,7 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
                 name="outcomeRefNo"
                 type="text"
                 defaultValue={d('courseRefNo')}
-                placeholder="e.g. TGS-2020505444"
+                placeholder="e.g. TGS-2020513213"
                 disabled={outcomeApi.loading}
               />
             </div>
@@ -1220,7 +1219,7 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
                 name="sessCourseRef"
                 type="text"
                 defaultValue={d('courseRefNo')}
-                placeholder="e.g. TGS-2020505444"
+                placeholder="e.g. TGS-2020513213"
                 disabled={sessionsApi.loading}
               />
             </div>
@@ -1305,7 +1304,7 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
                 name="attCourseRef"
                 type="text"
                 defaultValue={d('courseRefNo')}
-                placeholder="e.g. TGS-2020505444"
+                placeholder="e.g. TGS-2020513213"
                 disabled={attendanceApi.loading}
               />
             </div>
@@ -2344,7 +2343,7 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
           >
             <div className="search-input-group">
               <label htmlFor="crrCourseRef">Course Reference Number (required)</label>
-              <input id="crrCourseRef" name="crrCourseRef" type="text" defaultValue={d('courseRefNo')} placeholder="e.g. TGS-2020505444" disabled={courseRunsByRefApi.loading} />
+              <input id="crrCourseRef" name="crrCourseRef" type="text" defaultValue={d('courseRefNo')} placeholder="e.g. TGS-2020513213" disabled={courseRunsByRefApi.loading} />
             </div>
             <div className="search-input-group">
               <label htmlFor="crrUen">UEN (optional)</label>
@@ -2569,7 +2568,7 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
           }}>
             <div className="form-group">
               <label htmlFor="gbCourses">Courses (one per line: UEN, CourseRefNo)</label>
-              <textarea id="gbCourses" name="courses" rows={3} defaultValue="201200696W, TGS-2020505444" disabled={grantBaselineApi.loading} style={{ width: '100%', fontFamily: 'monospace', padding: 8 }} />
+              <textarea id="gbCourses" name="courses" rows={3} defaultValue="201200696W, TGS-2020513213" disabled={grantBaselineApi.loading} style={{ width: '100%', fontFamily: 'monospace', padding: 8 }} />
             </div>
             <div style={{ marginTop: 12 }}>
               <button type="submit" disabled={grantBaselineApi.loading}>
@@ -4754,6 +4753,9 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
     }
 
     if (activePage === 'leads') return <LeadsPage />;
+    if (activePage === 'our-courses') return <OurCoursesPage data={ourCourses} onRefresh={() => loadCourses(true)} onUse={(ref, page) => { setDefaults({ ...defaults, courseRefNo: ref }); handleNavigate(page as Page); }} />;
+    if (activePage === 'certificates') return isAdmin ? <CertificatesPage /> : <p>Only the admin can view certificates and keys.</p>;
+    if (activePage === 'direct-applications') return null;
     if (activePage === 'users') return isAdmin ? <UsersPage /> : <p>Only the admin can manage users.</p>;
     if (activePage === 'settings') return isAdmin ? <SettingsPage /> : <p>Only the admin can change settings.</p>;
 
@@ -4814,8 +4816,16 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
           {onHome && <button className="console-bar-home" onClick={onHome}>API reference</button>}
         </div>
         <div className="main-content-inner">
-          <ConsoleSpec page={activePage} />
-          {renderContent()}
+          {ALL_APIS.some((a) => a.page === activePage && a.auth !== 'local') && (
+            <ContextBar apps={certs} appId={activeCertId} onApp={handleCertChange} courses={ourCourses} courseRef={d('courseRefNo')}
+              onCourse={(ref) => setDefaults({ ...defaults, courseRefNo: ref })} />
+          )}
+          <datalist id="our-courses-list">{(ourCourses ? pickable(ourCourses.courses) : []).map((c) => <option key={c.ref} value={c.ref}>{c.title}</option>)}</datalist>
+          {/* key: forms read their defaults when they mount, so a new course or app remounts them */}
+          <Workbench key={`${activePage}|${d('courseRefNo')}`} page={activePage} appId={activeCertId}
+            vars={{ uen: d('uen') || '201200696W', refNo: d('courseRefNo'), runId: d('runId'), cert: `ssg-${activeCertId === 'app4' ? 'app1' : activeCertId}-cert.pem`, key: `ssg-${activeCertId === 'app4' ? 'app1' : activeCertId}-key.pem` }}>
+            {renderContent()}
+          </Workbench>
           <p className="console-foot powered-by">Powered by <a href="https://www.tertiaryinfotech.com/" target="_blank" rel="noopener">Tertiary Infotech Academy Pte Ltd</a></p>
         </div>
       </main>

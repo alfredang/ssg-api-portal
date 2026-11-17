@@ -8,7 +8,7 @@ interface SearchFormProps {
 }
 
 export default function SearchForm({ onSearch, loading, defaults = {}, onSetDefaults }: SearchFormProps) {
-  const [refNo, setRefNo] = useState(defaults.courseRefNo || 'TGS-2020505444');
+  const [refNo, setRefNo] = useState(defaults.courseRefNo || 'TGS-2020513213');
   const [uen, setUen] = useState(defaults.uen || '201200696W');
   const [courseRunStartDate, setCourseRunStartDate] = useState(defaults.courseRunStartDate || '');
   const [saved, setSaved] = useState(false);
@@ -32,7 +32,7 @@ export default function SearchForm({ onSearch, loading, defaults = {}, onSetDefa
           type="text"
           value={refNo}
           onChange={(e) => setRefNo(e.target.value)}
-          placeholder="e.g. TGS-2020505444"
+          placeholder="e.g. TGS-2020513213"
           disabled={loading}
         />
       </div>

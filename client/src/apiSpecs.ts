@@ -2,7 +2,7 @@
 // catalog.ts. Samples are generated from the catalogue entry + the request
 // shape below, so the catalogue stays the single source for path / version / auth.
 //
-// Values are illustrative placeholders (S1234567A, TGS-2020001685, run 123456).
+// Values are illustrative placeholders (S1234567A, TGS-2020513213, run 123456).
 // The official schema of each API is on the SWDA Developer Portal ("Official docs").
 
 import type { ApiEntry } from './catalog';
@@ -23,7 +23,7 @@ export interface Spec {
 }
 
 const UEN = '201200696W';
-const REF = 'TGS-2020001685';
+const REF = 'TGS-2020513213';
 const paging: Field[] = [
   { name: 'pageSize', example: '20', desc: 'Records per page.' },
   { name: 'page', example: '0', desc: 'Zero-based page number.' },
@@ -219,6 +219,20 @@ function filledPath(api: ApiEntry): string {
   return api.path.replace(/\{(\w+)\}/g, (_, k: string) => PATH_PARAMS[k]?.example ?? k);
 }
 
+
+/** The request an example makes, as data: used by the console to run the same call the code shows. */
+export interface RequestPlan { path: string; query: Record<string, string>; headers: Record<string, string>; body?: unknown }
+export function requestPlan(api: ApiEntry, vars: Vars): RequestPlan {
+  const spec = SPECS[api.page] ?? {};
+  const query = (spec.query ?? []).filter((f) => f.required || ['pageSize', 'page', 'includeExpired'].includes(f.name));
+  const plan: RequestPlan = {
+    path: filledPath(api),
+    query: Object.fromEntries(query.map((f) => [f.name, f.example])),
+    headers: Object.fromEntries((spec.headers ?? []).map((h) => [h.name, h.example])),
+    body: api.method === 'POST' ? (spec.body ?? {}) : undefined,
+  };
+  return JSON.parse(applyVars(JSON.stringify(plan), vars));
+}
 
 const indent = (s: string, n: number) => s.split('\n').map((l, i) => (i ? ' '.repeat(n) + l : l)).join('\n');
 const pyLiteral = (v: unknown) => JSON.stringify(v, null, 4).replace(/\btrue\b/g, 'True').replace(/\bfalse\b/g, 'False').replace(/\bnull\b/g, 'None');

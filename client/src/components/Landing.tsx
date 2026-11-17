@@ -18,19 +18,19 @@ type Tok = [kind: 'k' | 's' | 'c' | 't', text: string];
 const SAMPLE: Record<Lang, Tok[][]> = {
   curl: [
     [['c', '# Look up a course by its reference number']],
-    [['k', 'curl '], ['s', 'https://public-api.ssg-wsg.sg/courses/directory/TGS-2020001685'], ['t', ' \\']],
+    [['k', 'curl '], ['s', 'https://public-api.ssg-wsg.sg/courses/directory/TGS-2020513213'], ['t', ' \\']],
     [['t', '  -H '], ['s', '"Authorization: Bearer $TOKEN"'], ['t', ' \\']],
     [['t', '  -H '], ['s', '"x-api-version: v1.2"']],
   ],
   python: [
     [['k', 'import '], ['t', 'requests']],
     [['t', 'r = requests.get(']],
-    [['t', '    '], ['s', '"https://public-api.ssg-wsg.sg/courses/directory/TGS-2020001685"'], ['t', ',']],
+    [['t', '    '], ['s', '"https://public-api.ssg-wsg.sg/courses/directory/TGS-2020513213"'], ['t', ',']],
     [['t', '    headers={'], ['s', '"Authorization"'], ['t', ': '], ['s', 'f"Bearer {token}"'], ['t', ', '], ['s', '"x-api-version"'], ['t', ': '], ['s', '"v1.2"'], ['t', '})']],
   ],
   javascript: [
     [['k', 'const '], ['t', 'res = '], ['k', 'await '], ['t', 'fetch(']],
-    [['t', '  '], ['s', "'https://public-api.ssg-wsg.sg/courses/directory/TGS-2020001685'"], ['t', ',']],
+    [['t', '  '], ['s', "'https://public-api.ssg-wsg.sg/courses/directory/TGS-2020513213'"], ['t', ',']],
     [['t', '  { headers: { Authorization: '], ['s', '`Bearer ${token}`'], ['t', ', '], ['s', "'x-api-version'"], ['t', ': '], ['s', "'v1.2'"], ['t', ' } },']],
     [['t', ');']],
   ],
@@ -66,7 +66,7 @@ function HeroCode() {
       </pre>
       <div className="lp-code-res" key={`r-${lang}`}>
         <span className="lp-status"><i aria-hidden="true" />200 OK</span>
-        <code>{'{ "data": { "courses": [ { "referenceNumber": "TGS-2020001685", … } ] } }'}</code>
+        <code>{'{ "data": { "courses": [ { "referenceNumber": "TGS-2020513213", … } ] } }'}</code>
       </div>
     </div>
   );

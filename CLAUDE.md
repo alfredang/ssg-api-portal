@@ -13,6 +13,15 @@
 - Console menu sections and icons: `NAV_ITEMS` / `NAV_ICONS` in `client/src/App.tsx`. A catalogue entry's `page`
   links it to a console page; `ConsoleSpec` shows that API's spec and code on the test page.
 - The server reads `dist/index.html` once at start: restart it after `npm run build`.
+- Console workbench (`components/Workbench.tsx`): Try it / Spec / Code / Response on every catalogue page. `POST /api/run`
+  runs read-only catalogue APIs only; never add a write API to it. A page with a catalogue entry but no form gets a
+  generic form automatically (this is how Direct Applications is tested).
+- Sample course codes must be our own: the examples use `TGS-2020513213` (ours, WSQ, funded to Nov 2028). Never use
+  another provider's TGS code in examples or defaults. Our course list comes from `GET /api/our-courses`.
+- Certificates & Keys page: values are returned only by `/api/admin/certs/reveal`, admin only, logged to
+  `DATA_DIR/audit.jsonl`. Never send a PEM, key or secret to the browser any other way, and never log the value.
+- Conformance markers: `CONFORMANCE` in `client/src/catalog.ts`, from the workbooks SSG issued us
+  (`../../ssg_api_subscription/conformance-tests/`). Add an entry only when SSG issues a workbook or confirms none.
 
 ## API URL Policy
 

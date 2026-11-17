@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { recordCall } from '../consoleStore';
 import type { CourseResponse, CourseSearchResponse, CourseQualityResponse, CourseOutcomeResponse, SessionAttendanceResponse, CourseSessionsResponse, UploadAttendanceRequest, UploadAttendanceResponse, TrainersResponse, UpdateTrainerRequest, UpdateTrainerResponse, PopularCoursesResponse, PublishCourseRunRequest, PublishCourseRunResponse, EditCourseRunRequest, EditCourseRunResponse, CourseRunByIdResponse, CourseRunsByRefResponse, GrantBaselineRequest, GrantBaselineResponse, GrantPersonalisedRequest, GrantPersonalisedResponse, GrantSearchRequest, GrantSearchResponse, GrantDetailsResponse, GrantCodeLookupResponse, SfClaimDetailsResponse, SfCancelClaimRequest, SfCancelClaimResponse, EnrolmentResponse } from '../types/course';
 
 const apiClient = axios.create({
@@ -27,9 +28,53 @@ export function getStoredSsgApp(): string {
 
 // Attach the selected SSG app to every request (x-ssg-app header, as in ai-lms-tms)
 apiClient.interceptors.request.use((config) => {
-  config.headers['x-ssg-app'] = getStoredSsgApp();
+  if (!config.headers['x-ssg-app']) config.headers['x-ssg-app'] = getStoredSsgApp();
   return config;
 });
+
+// Every console call is recorded so the workbench can show its status, timing and raw JSON.
+apiClient.interceptors.request.use((config) => {
+  (config as unknown as { startedAt: number }).startedAt = Date.now();
+  return config;
+});
+const noteCall = (config: { method?: string; url?: string; headers?: Record<string, unknown> } | undefined, status: number, data: unknown) => {
+  if (!config) return;
+  const started = (config as unknown as { startedAt?: number }).startedAt ?? Date.now();
+  const inner = config.url === '/run' && data && typeof data === 'object' ? (data as Record<string, unknown>) : null;
+  recordCall({
+    at: Date.now(), ms: inner && typeof inner.ms === 'number' ? inner.ms : Date.now() - started,
+    method: (inner?.method as string) || (config.method || 'get').toUpperCase(),
+    url: (inner?.url as string) || `/api${config.url}`,
+    status: inner ? Number(inner.status) || 0 : status,
+    app: (inner?.app as string) || String(config.headers?.['x-ssg-app'] || ''),
+    auth: inner?.auth as string | undefined,
+    data: inner ? (inner.error ? { error: inner.error } : inner.data) : data,
+  });
+};
+apiClient.interceptors.response.use(
+  (res) => { noteCall(res.config, res.status, res.data); return res; },
+  (err) => { noteCall(err.config, err.response?.status ?? 0, err.response?.data ?? { error: err.message }); return Promise.reject(err); },
+);
+
+export interface RunResult { status: number; ms: number; app: string; auth: string; method?: string; url?: string; version?: string | null; decrypted?: boolean; data?: unknown; error?: string }
+/** Run one catalogue API as documented (read-only APIs only). `app` overrides the selected SSG app. */
+export async function runCatalogApi(req: { slug: string; path: string; query: Record<string, string>; headers: Record<string, string>; body?: unknown; auth: string }, app?: string): Promise<RunResult> {
+  try {
+    const response = await apiClient.post<RunResult>('/run', req, app ? { headers: { 'x-ssg-app': app } } : undefined);
+    return response.data;
+  } catch (err) {
+    const e = err as { response?: { status?: number; data?: { error?: string } }; message?: string };
+    return { status: 0, ms: 0, app: app || getStoredSsgApp(), auth: req.auth, error: e.response?.data?.error || e.message || 'Request failed' };
+  }
+}
+
+export interface OurCourse { ref: string; title: string; active: boolean; status?: string; wsq: boolean; fundStart: string | null; fundEnd: string | null; fundedBy: string | null; hours: number | null; area?: string; updated?: string }
+export interface OurCourses { fetchedAt: string | null; uen: string; total: number; courses: OurCourse[]; refreshing: boolean; error: string | null }
+export async function getOurCourses(refresh = false): Promise<OurCourses> {
+  const res = await fetch(`/api/our-courses${refresh ? '?refresh=1' : ''}`, { credentials: 'include' });
+  if (!res.ok) throw new Error(`Could not load our courses (${res.status})`);
+  return res.json();
+}
 
 export async function getCourseByRefNo(refNo: string, includeExpired = true) {
   const response = await apiClient.get<CourseResponse>(

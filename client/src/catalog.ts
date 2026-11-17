@@ -227,6 +227,21 @@ export const CATALOG: ApiProduct[] = [
   },
 ];
 
+// Conformance tests: before production access, SSG sends a UAT test workbook for
+// some APIs and asks for the completed results. 'required' = SSG issued us a
+// workbook for this API (course runs, attendance, enrolments, assessments,
+// trainers). 'none' = SSG confirmed there is no test package. Anything not
+// listed has not come up on our tickets, so we do not claim either way.
+export const CONFORMANCE: Record<string, 'required' | 'none'> = {
+  'publish-course-run': 'required', 'edit-course-run': 'required', 'course-run-by-id': 'required',
+  'upload-attendance': 'required', 'session-attendance': 'required',
+  'trainer-details': 'required', 'update-trainer': 'required',
+  'enrol-create': 'required', 'enrol-update': 'required', 'enrol-search': 'required', 'enrol-view': 'required', 'enrol-fee-collection': 'required',
+  'assess-create': 'required', 'assess-update': 'required', 'assess-search': 'required', 'assess-view': 'required',
+  'sfw-skills': 'none',
+};
+export const conformanceOf = (a: { page: string }): 'required' | 'none' | undefined => CONFORMANCE[a.page];
+
 export const AUTH_LABEL: Record<AuthMode, string> = {
   'cert': 'Certificate',
   'cert+oauth': 'Certificate + OAuth',

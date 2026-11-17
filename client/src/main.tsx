@@ -11,6 +11,7 @@ import SubscriptionForm from './components/SubscriptionForm'
 import TpgProcess from './components/TpgProcess'
 import { ContactPage, ServicesPage } from './components/Marketing'
 import { KeysGuide, SubscriptionGuide } from './components/Guides'
+import { HowItWorksGuide, ErrorCodesGuide } from './components/Explainers'
 import { startRouter, usePath, navigate } from './router'
 import { applySeo } from './seo'
 import ChatWidget from './components/ChatWidget'
@@ -76,7 +77,7 @@ function AuthGate() {
   if (route.view === 'console') {
     if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: '#56678F' }}>Loading...</div>;
     return user
-      ? <App key="console" user={user} initialPage={route.page} onHome={() => navigate('/')} />
+      ? <App key="console" user={user} initialPage={route.page} onHome={() => navigate('/api-reference')} />
       : <LoginPage onBack={() => navigate('/')} />;
   }
 
@@ -91,7 +92,11 @@ function AuthGate() {
     case 'api': return <ApiPage key={route.slug} user={user} slug={route.slug} />;
     case 'services': return <ServicesPage user={user} />;
     case 'contact': return <ContactPage user={user} />;
-    case 'guide': return route.id === 'api-subscription' ? <SubscriptionGuide user={user} /> : <KeysGuide user={user} />;
+    case 'guide':
+      if (route.id === 'api-subscription') return <SubscriptionGuide user={user} />;
+      if (route.id === 'how-it-works') return <HowItWorksGuide user={user} />;
+      if (route.id === 'error-codes') return <ErrorCodesGuide user={user} />;
+      return <KeysGuide user={user} />;
     case 'reference': return <Home user={user} />;
     default: return <Landing user={user} />;
   }

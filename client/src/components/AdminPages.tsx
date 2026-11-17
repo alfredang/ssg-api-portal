@@ -162,3 +162,137 @@ export function SettingsPage() {
     </>
   );
 }
+
+// ── Certificates & Keys (admin only) ────────────────────────────
+interface CertApp {
+  id: string; name: string; type: 'certificate' | 'oauth'; loaded: boolean; portalExpiry: string;
+  subject?: string; issuer?: string; validFrom?: string; validTo?: string; fingerprint256?: string; serialNumber?: string; certError?: string;
+  hasPrivateKey?: boolean; hasEncryptionKey?: boolean; hasSignatureKey?: boolean; hasClientId?: boolean; hasClientSecret?: boolean;
+}
+interface AuditRow { at: string; user: string; action: string; app?: string; what?: string }
+const ITEM_LABEL: Record<string, string> = { certificate: 'Certificate (public PEM)', privateKey: 'Private key (PEM)', encryptionKey: 'Encryption key (AES-256, base64)', signatureKey: 'Signature private key (PEM)', clientId: 'Client ID', clientSecret: 'Client secret' };
+const day = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
+const daysLeft = (iso?: string) => (iso ? Math.floor((new Date(iso).getTime() - Date.now()) / 864e5) : null);
+
+function Expiry({ label, iso }: { label: string; iso?: string }) {
+  const left = daysLeft(iso);
+  const cls = left === null ? 'none' : left < 0 ? 'expired' : left <= 90 ? 'soon' : 'funded';
+  return (
+    <div className="ck-expiry">
+      <span>{label}</span>
+      <b>{day(iso)}</b>
+      {left !== null && <i className={`fund ${cls}`}>{left < 0 ? `Expired ${-left} days ago` : left > 3650 ? `${Math.round(left / 365)} years left` : `${left} days left`}</i>}
+    </div>
+  );
+}
+
+export function CertificatesPage() {
+  const [apps, setApps] = useState<CertApp[] | null>(null);
+  const [auditLog, setAuditLog] = useState<AuditRow[]>([]);
+  const [error, setError] = useState('');
+  const [shown, setShown] = useState<{ app: string; what: string; value: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const load = () => api<{ apps: CertApp[]; audit: AuditRow[] }>('/api/admin/certs').then((d) => { setApps(d.apps); setAuditLog(d.audit); }).catch((e) => setError(e.message));
+  useEffect(() => { load(); }, []);
+  // A revealed value is taken off the screen again after a minute.
+  useEffect(() => {
+    if (!shown) return;
+    const t = window.setTimeout(() => setShown(null), 60000);
+    return () => window.clearTimeout(t);
+  }, [shown]);
+
+  const reveal = async (app: CertApp, what: string) => {
+    if (!window.confirm(`Show the ${ITEM_LABEL[what]} for ${app.name}?\n\nThis is recorded in the access log with your name and the time.`)) return;
+    setError(''); setCopied(false);
+    try {
+      const d = await api<{ value: string; audit: AuditRow[] }>('/api/admin/certs/reveal', { method: 'POST', body: JSON.stringify({ app: app.id, what }) });
+      setShown({ app: app.id, what, value: d.value }); setAuditLog(d.audit);
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not show it'); }
+  };
+  const savePortalDate = async (app: CertApp, date: string) => {
+    setError('');
+    try { await api(`/api/admin/certs/${app.id}/portal-expiry`, { method: 'PUT', body: JSON.stringify({ date }) }); load(); }
+    catch (err) { setError(err instanceof Error ? err.message : 'Could not save'); }
+  };
+  const download = (name: string, value: string) => {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([value.endsWith('\n') ? value : value + '\n'], { type: 'text/plain' })); a.download = name; a.click(); URL.revokeObjectURL(a.href);
+  };
+  const fileName = (app: string, what: string) => (what === 'certificate' ? `ssg-${app}-cert.pem` : what === 'privateKey' ? `ssg-${app}-key.pem` : what === 'signatureKey' ? `ssg-${app}-signature-key.pem` : `ssg-${app}-${what}.txt`);
+
+  const item = (app: CertApp, what: string, present: boolean | undefined) => (
+    <li key={what}>
+      <span className={`ck-dot ${present ? 'on' : ''}`} aria-hidden="true" />
+      <span className="ck-item">{ITEM_LABEL[what]}<small>{present ? 'Loaded on the server' : 'Not set'}</small></span>
+      {present && (shown?.app === app.id && shown.what === what
+        ? <button className="admin-link" onClick={() => setShown(null)}>Hide</button>
+        : <button className="admin-link" onClick={() => reveal(app, what)}>Reveal</button>)}
+    </li>
+  );
+
+  return (
+    <>
+      <h2 className="page-title">Certificates &amp; Keys</h2>
+      <p className="admin-lead">The credentials the server uses for App 1 to App 4. Details and expiry dates are shown here; the values themselves stay hidden until you press Reveal, and every reveal is logged. Only the admin can open this page.</p>
+      {error && <div className="error-alert">{error}</div>}
+      {!apps && !error && <p className="admin-muted">Loading…</p>}
+      <div className="ck-grid">
+        {apps?.map((a) => (
+          <section key={a.id} className="admin-card ck-card">
+            <header>
+              <h3>{a.name}</h3>
+              <span className={`fund ${a.loaded ? 'funded' : 'expired'}`}>{a.loaded ? 'Loaded' : 'Not configured'}</span>
+              <span className="admin-role member">{a.type === 'oauth' ? 'OAuth client' : 'mTLS certificate'}</span>
+            </header>
+            {a.type === 'certificate' && a.loaded && (
+              <>
+                <div className="ck-dates">
+                  <Expiry label="Certificate expires" iso={a.validTo} />
+                  <div className="ck-expiry">
+                    <span>Developer Portal expiry</span>
+                    <input type="date" defaultValue={a.portalExpiry} onBlur={(e) => { if (e.target.value !== a.portalExpiry) savePortalDate(a, e.target.value); }} aria-label={`Developer Portal expiry date for ${a.name}`} />
+                    {a.portalExpiry ? <i className={`fund ${(daysLeft(a.portalExpiry) ?? 0) < 0 ? 'expired' : (daysLeft(a.portalExpiry) ?? 999) <= 90 ? 'soon' : 'funded'}`}>{daysLeft(a.portalExpiry)} days left</i> : <small>Enter the date the portal shows</small>}
+                  </div>
+                </div>
+                <dl className="ck-meta">
+                  <div><dt>Subject</dt><dd>{a.subject}</dd></div>
+                  <div><dt>Valid from</dt><dd>{day(a.validFrom)}</dd></div>
+                  <div><dt>SHA-256 fingerprint</dt><dd><code>{a.fingerprint256}</code></dd></div>
+                </dl>
+                {a.certError && <div className="error-alert">Could not read the certificate: {a.certError}</div>}
+              </>
+            )}
+            {a.type === 'oauth' && <p className="admin-muted">App 4 signs in with a client ID and secret and has no certificate, so there is no PEM or certificate expiry. Access tokens last about 30 minutes and are fetched automatically.</p>}
+            <ul className="ck-items">
+              {a.type === 'certificate'
+                ? [item(a, 'certificate', a.loaded), item(a, 'privateKey', a.hasPrivateKey), item(a, 'encryptionKey', a.hasEncryptionKey), item(a, 'signatureKey', a.hasSignatureKey)]
+                : [item(a, 'clientId', a.hasClientId), item(a, 'clientSecret', a.hasClientSecret)]}
+            </ul>
+            {shown?.app === a.id && (
+              <div className="ck-shown">
+                <div><b>{ITEM_LABEL[shown.what]}</b><span>Hidden again after one minute</span></div>
+                <textarea readOnly rows={shown.value.includes('\n') ? 8 : 2} value={shown.value} spellCheck={false} onFocus={(e) => e.target.select()} />
+                <div className="admin-actions">
+                  <button className="admin-btn ghost" onClick={() => navigator.clipboard?.writeText(shown.value).then(() => setCopied(true))}>{copied ? 'Copied' : 'Copy'}</button>
+                  <button className="admin-btn ghost" onClick={() => download(fileName(a.id, shown.what), shown.value)}>Download</button>
+                  <button className="admin-btn ghost" onClick={() => setShown(null)}>Hide now</button>
+                </div>
+              </div>
+            )}
+          </section>
+        ))}
+      </div>
+
+      <h3 className="ck-h">Access log</h3>
+      <div className="admin-card admin-table-wrap">
+        <table className="admin-table">
+          <thead><tr><th>When</th><th>Who</th><th>App</th><th>What was shown</th></tr></thead>
+          <tbody>
+            {auditLog.map((r, i) => <tr key={i}><td>{when(r.at)}</td><td>{r.user}</td><td>{r.app?.replace('app', 'App ')}</td><td>{ITEM_LABEL[r.what || ''] || r.what}</td></tr>)}
+            {auditLog.length === 0 && <tr><td colSpan={4} className="admin-muted">Nothing has been revealed yet.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}

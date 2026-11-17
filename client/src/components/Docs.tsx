@@ -1,4 +1,4 @@
-import { CATALOG, ALL_APIS, AUTH_LABEL, BASE_URLS, findApi, findGroup } from '../catalog';
+import { CATALOG, ALL_APIS, AUTH_LABEL, BASE_URLS, findApi, findGroup, conformanceOf } from '../catalog';
 import type { FlatApi } from '../catalog';
 import type { AuthUser } from '../auth';
 import { useLang } from '../prefs';
@@ -25,12 +25,20 @@ export function StatusBadge({ api }: { api: FlatApi }) {
     : <span className="badge neutral" title="The example follows the same tested template, but this API has not been called live from the portal.">Not yet verified</span>;
 }
 
+/** Whether SSG asks for a UAT conformance test before production access to this API. */
+export function ConformanceBadge({ api, short }: { api: { page: string }; short?: boolean }) {
+  const c = conformanceOf(api);
+  if (c === 'required') return <a className="badge warn" href="/guides/api-subscription" title="SSG sends a UAT test workbook for this API and asks for the completed results before production access.">{short ? 'Conformance' : 'Conformance test required'}</a>;
+  if (c === 'none' && !short) return <span className="badge neutral" title="SSG confirmed there is no conformance test package for this API.">No conformance test</span>;
+  return null;
+}
+
 function ApiRow({ a }: { a: FlatApi }) {
   return (
     <li>
       <a className="pub-api-row" href={`/docs/${a.slug}`}>
         <MethodTag method={a.method} />
-        <span className="pub-api-name">{a.name}</span>
+        <span className="pub-api-name">{a.name}{conformanceOf(a) === 'required' && <span className="badge warn conf-tag" title="Conformance test required before production access">Conformance</span>}</span>
         <code className="pub-api-path">{a.path}</code>
         <span className="pub-api-ver">{a.version === 'none' || a.version === '—' ? '' : a.version}</span>
       </a>
@@ -134,6 +142,7 @@ export function ApiPage({ user, slug }: { user: AuthUser | null; slug: string })
       <div className="api-head">
         <h1>{api.name}</h1>
         <StatusBadge api={api} />
+        <ConformanceBadge api={api} />
       </div>
       <p className="api-desc">{api.desc}</p>
 
@@ -211,9 +220,9 @@ export function StartPage({ user }: { user: AuthUser | null }) {
     javascript: `import crypto from 'node:crypto';\n\nconst KEY = Buffer.from(process.env.SSG_ENCRYPTION_KEY, 'base64'); // 32 bytes\nconst IV = Buffer.from('SSGAPIInitVector');\n\nexport const encrypt = (obj) => {\n  const c = crypto.createCipheriv('aes-256-cbc', KEY, IV);\n  return c.update(JSON.stringify(obj), 'utf8', 'base64') + c.final('base64');\n};\nexport const decrypt = (text) => {\n  const d = crypto.createDecipheriv('aes-256-cbc', KEY, IV);\n  return JSON.parse(d.update(text, 'base64', 'utf8') + d.final('utf8'));\n};`,
   }[lang];
   const mtls = {
-    curl: `curl -s "${BASE_URLS.cert}/tpg/courses/registry/details/TGS-2020001685?uen=201200696W" \\\n  --cert ssg-app1-cert.pem --key ssg-app1-key.pem \\\n  -H "x-api-version: v2.0"`,
-    python: `import requests\n\nresp = requests.get(\n    "${BASE_URLS.cert}/tpg/courses/registry/details/TGS-2020001685",\n    params={"uen": "201200696W"},\n    headers={"x-api-version": "v2.0"},\n    cert=("ssg-app1-cert.pem", "ssg-app1-key.pem"),\n)\nprint(resp.status_code, resp.json())`,
-    javascript: `import fs from 'node:fs';\nimport https from 'node:https';\n\nhttps.get('${BASE_URLS.cert}/tpg/courses/registry/details/TGS-2020001685?uen=201200696W', {\n  cert: fs.readFileSync('ssg-app1-cert.pem'),\n  key: fs.readFileSync('ssg-app1-key.pem'),\n  headers: { 'x-api-version': 'v2.0' },\n}, (res) => {\n  let data = '';\n  res.on('data', (c) => (data += c));\n  res.on('end', () => console.log(res.statusCode, JSON.parse(data)));\n});`,
+    curl: `curl -s "${BASE_URLS.cert}/tpg/courses/registry/details/TGS-2020513213?uen=201200696W" \\\n  --cert ssg-app1-cert.pem --key ssg-app1-key.pem \\\n  -H "x-api-version: v2.0"`,
+    python: `import requests\n\nresp = requests.get(\n    "${BASE_URLS.cert}/tpg/courses/registry/details/TGS-2020513213",\n    params={"uen": "201200696W"},\n    headers={"x-api-version": "v2.0"},\n    cert=("ssg-app1-cert.pem", "ssg-app1-key.pem"),\n)\nprint(resp.status_code, resp.json())`,
+    javascript: `import fs from 'node:fs';\nimport https from 'node:https';\n\nhttps.get('${BASE_URLS.cert}/tpg/courses/registry/details/TGS-2020513213?uen=201200696W', {\n  cert: fs.readFileSync('ssg-app1-cert.pem'),\n  key: fs.readFileSync('ssg-app1-key.pem'),\n  headers: { 'x-api-version': 'v2.0' },\n}, (res) => {\n  let data = '';\n  res.on('data', (c) => (data += c));\n  res.on('end', () => console.log(res.statusCode, JSON.parse(data)));\n});`,
   }[lang];
 
   return (

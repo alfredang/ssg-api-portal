@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { AuthUser } from '../auth';
 import { DocsLayout } from './Shell';
 import { CodeBlock } from './ApiSpec';
+import { SecureFlow } from './Explainers';
 
 // Two how-to guides under Getting started:
 //   /guides/create-keys        certificate, private key and encryption key on Mac and Windows
@@ -77,6 +78,8 @@ icacls "$env:USERPROFILE\\.ssg" /inheritance:r /grant:r "$($env:USERNAME):(OI)(C
       <nav className="crumbs" aria-label="Breadcrumb"><a href="/start">Getting started</a><span>›</span><span>Guides</span></nav>
       <div className="api-head"><h1>Create your SSG API certificate and encryption keys</h1></div>
       <p className="api-desc">An SSG / SWDA API app needs up to three things you generate yourself: a certificate with its private key, an AES encryption key, and (for a few APIs) a signature key pair. Here is how on Mac and on Windows.</p>
+      <SecureFlow />
+      <p className="api-desc">The steps below create each file, then show how to submit the certificate and encryption key to SSG on the Developer Portal. <a href="/guides/how-it-works">More on how they are used</a>.</p>
       <div className="start-lang"><span>Show commands for</span><OsTabs os={os} setOs={setOs} /></div>
 
       <div className="keys-map" aria-label="What each file is for">
