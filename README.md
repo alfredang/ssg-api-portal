@@ -43,6 +43,8 @@ allow-listed staff can run calls with the company's SSG apps.
 | **Our WSQ funded courses** | Course title, reference code and funding validity period read from the SSG course registry by our UEN, cached daily, searchable, CSV download |
 | **Certificates & Keys (admin)** | Expiry date, subject and fingerprint for App 1 – 3 and the OAuth client for App 4; PEMs, encryption keys and secrets hidden behind a logged Reveal |
 | **Explainers** | Animated walk-through of how the certificate (mTLS) and AES encryption protect a call; status and error codes (2xx, 3xx, 4xx, 5xx); conformance-test markers on the APIs that need one |
+| **Real data only** | Test forms hold no made-up samples: course fields search our funded WSQ courses, course run and enrolment reference fields suggest real records from AI-LMS-TMS (read-only, no learner details), dates default to the coming weeks |
+| **Conformance test runner** | Upload SSG's UAT test workbook, complete and run each step on UAT only, download the same workbook with actual results, Pass/Fail, tester and date filled in, plus an evidence log |
 | **Defaults and known issues** | Per-user default values that fill every form; a known-issues dashboard |
 | **SEO** | Real URLs, per-page titles and descriptions sent by the server, sitemap.xml, robots.txt |
 | **Mobile friendly** | Menu, API drawer and console drawer on small screens |
@@ -298,6 +300,15 @@ against `dist/api-catalog.json` (written by the build) and refuses APIs that cre
 `DATA_DIR/our-courses.json` for a day. `/api/admin/certs*` (admin only) lists certificate details and returns a PEM,
 key or secret one at a time; each reveal is appended to `DATA_DIR/audit.jsonl`. Conformance-test markers come from
 `CONFORMANCE` in `client/src/catalog.ts`.
+
+**AI-LMS-TMS link.** `server/lmstms.js` exposes `GET /api/lms/course-runs` and `/api/lms/enrolments`. It calls two
+GET endpoints of AI-LMS-TMS with `LMS_TMS_API_KEY`, nothing else, and returns IDs, dates and statuses only.
+`components/FieldSuggest.tsx` shows the suggestions under matching fields in any test form.
+
+**Conformance tests.** `server/conformance.js`: `/api/conformance/parse` reads the workbook's test sheets and the
+request each step describes; `/run` sends one step to `UAT_API_BASE` with the UAT certificate (any other host is
+refused, so it cannot reach production); `/export` writes results into the original workbook cell by cell, keeping
+SSG's formatting. The server stores nothing; the browser holds the workbook. Page: `components/Conformance.tsx`.
 
 **Chat widget.** `components/ChatWidget.tsx` on every public page opens WhatsApp with a prefilled question.
 

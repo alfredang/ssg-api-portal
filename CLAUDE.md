@@ -20,6 +20,12 @@
   another provider's TGS code in examples or defaults. Our course list comes from `GET /api/our-courses`.
 - Certificates & Keys page: values are returned only by `/api/admin/certs/reveal`, admin only, logged to
   `DATA_DIR/audit.jsonl`. Never send a PEM, key or secret to the browser any other way, and never log the value.
+- No made-up sample data in console forms. Course, run and enrolment fields get real values through
+  `components/FieldSuggest.tsx`; leave other identity fields blank rather than inventing a person.
+- AI-LMS-TMS is read through `server/lmstms.js` only: GET, two allow-listed paths, no personal data returned.
+  Never add a write call, and never edit the ai-lms-tms project from here.
+- Conformance runner (`server/conformance.js`) must only ever call the UAT host. Workbook label variants it
+  handles are in `parseStep`; test a new workbook with the parser before relying on it.
 - Conformance markers: `CONFORMANCE` in `client/src/catalog.ts`, from the workbooks SSG issued us
   (`../../ssg_api_subscription/conformance-tests/`). Add an entry only when SSG issues a workbook or confirms none.
 

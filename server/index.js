@@ -32,6 +32,8 @@ app.use('/api/admin', require('./admin'));
 // SSG API proxy routes (certificate/mTLS + OAuth fallback).
 // These call SSG with our App 1-4 credentials, so they require a signed-in
 // user. The public API catalogue is static and needs no API access.
+app.use('/api/lms', requireAuth, require('./lmstms'));
+app.use('/api/conformance', requireAuth, express.json({ limit: '40mb' }), require('./conformance'));
 app.use('/api', requireAuth, proxyRoutes);
 
 // In production, serve the built React app
