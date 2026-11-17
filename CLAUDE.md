@@ -8,7 +8,7 @@
   is SWDA's form with `{{placeholders}}`; `client/src/subscriptionDocx.ts` fills it in the browser. When SWDA issues a
   new version, rebuild the template from the new blank form and run `npx tsx scripts/test-form.mts out.docx 5`.
   The template must contain none of our own company details.
-- Users: one admin (`ADMIN_EMAIL` in `server/users.js`), members managed in console > Users. No domain allow-list.
+- Users: admins are fixed in `ADMIN_EMAILS` in `server/users.js` (angch@ and danny@, 17 Nov 2026); members are managed in console > Users. No domain allow-list.
   Sign-in by Google or emailed code. Mail account: console > Settings or env (`server/mailer.js`, `server/settings.js`).
 - Console menu sections and icons: `NAV_ITEMS` / `NAV_ICONS` in `client/src/App.tsx`. A catalogue entry's `page`
   links it to a console page; `ConsoleSpec` shows that API's spec and code on the test page.

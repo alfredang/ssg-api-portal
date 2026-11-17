@@ -38,7 +38,7 @@ export function UsersPage() {
   return (
     <>
       <h2 className="page-title">Users</h2>
-      <p className="admin-lead">Only the people listed here can sign in, with Google or an emailed code. There is one admin; everyone else is a member who can use the console but cannot manage users or settings.</p>
+      <p className="admin-lead">Only the people listed here can sign in, with Google or an emailed code. Admins manage users and settings and can view the certificates and keys; everyone else is a member who can use the console only. Admins are fixed and cannot be removed here.</p>
       {error && <div className="error-alert">{error}</div>}
 
       <form className="admin-card admin-add" onSubmit={add}>
@@ -233,7 +233,7 @@ export function CertificatesPage() {
   return (
     <>
       <h2 className="page-title">Certificates &amp; Keys</h2>
-      <p className="admin-lead">The credentials the server uses for App 1 to App 4. Details and expiry dates are shown here; the values themselves stay hidden until you press Reveal, and every reveal is logged. Only the admin can open this page.</p>
+      <p className="admin-lead">The credentials the server uses for App 1 to App 4. Details and expiry dates are shown here; the values themselves stay hidden until you press Reveal, and every reveal is logged. Only admins can open this page.</p>
       {error && <div className="error-alert">{error}</div>}
       {!apps && !error && <p className="admin-muted">Loading…</p>}
       <div className="ck-grid">

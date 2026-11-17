@@ -4765,10 +4765,10 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
     if (activePage === 'leads') return <LeadsPage />;
     if (activePage === 'our-courses') return <OurCoursesPage data={ourCourses} onRefresh={() => loadCourses(true)} onUse={(ref, page) => { setDefaults({ ...defaults, courseRefNo: ref }); handleNavigate(page as Page); }} />;
     if (activePage === 'conformance') return <ConformancePage tester={user.name || user.email || ''} />;
-    if (activePage === 'certificates') return isAdmin ? <CertificatesPage /> : <p>Only the admin can view certificates and keys.</p>;
+    if (activePage === 'certificates') return isAdmin ? <CertificatesPage /> : <p>Only an admin can view certificates and keys.</p>;
     if (activePage === 'direct-applications') return null;
-    if (activePage === 'users') return isAdmin ? <UsersPage /> : <p>Only the admin can manage users.</p>;
-    if (activePage === 'settings') return isAdmin ? <SettingsPage /> : <p>Only the admin can change settings.</p>;
+    if (activePage === 'users') return isAdmin ? <UsersPage /> : <p>Only an admin can manage users.</p>;
+    if (activePage === 'settings') return isAdmin ? <SettingsPage /> : <p>Only an admin can change settings.</p>;
 
     if (activePage === 'api-references') {
       return (

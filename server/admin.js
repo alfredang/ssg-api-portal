@@ -1,4 +1,4 @@
-// Admin-only API (the one admin is fixed in users.js):
+// Admin-only API (the admins are fixed in users.js):
 //   /api/admin/users           list, add, remove backend users
 //   /api/admin/settings/mail   the enquiry / sign-in-code mail account and recipients
 //   /api/admin/settings/mail/test   send a sample enquiry email to the admin
@@ -11,7 +11,7 @@ const mailer = require('./mailer');
 const router = express.Router();
 router.use(requireAdmin);
 
-router.get('/users', (_req, res) => res.json({ admin: users.ADMIN_EMAIL, users: users.list() }));
+router.get('/users', (_req, res) => res.json({ admins: users.ADMIN_EMAILS, users: users.list() }));
 router.post('/users', (req, res) => {
   try { users.add(req.body?.email, getCurrentUser(req)?.email || 'admin'); res.json({ users: users.list() }); }
   catch (err) { res.status(400).json({ error: err.message }); }

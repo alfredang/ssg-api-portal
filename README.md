@@ -38,7 +38,7 @@ allow-listed staff can run calls with the company's SSG apps.
 | **TPG process** | The 13 Training Partners Gateway steps as a journey map; every guide rendered as HTML with self-drawn visuals (process flow, buttons, schematic screens) |
 | **Subscription form** | SWDA's API Subscription Form (v1.12, Sections 1-3) filled in online and downloaded as a real Word `.docx` (SWDA's own layout), with the submission steps |
 | **Home, services and contact** | Animated home page with three entry blocks (Get Started, API Reference, TPG Processes); Services page for the AI-powered / custom TMS and SSG API integration on Excel, Google Sheets, n8n, Python, React; contact page; WhatsApp chat widget; enquiries stored and emailed as HTML |
-| **Users and settings** | One admin, members managed in the console; sign-in by Google or an emailed 6-digit code; mail account saved encrypted from console Settings |
+| **Users and settings** | Fixed admins, members managed in the console; sign-in by Google or an emailed 6-digit code; mail account saved encrypted from console Settings |
 | **API console (sign-in)** | A workbench for every API with four tabs: **Try it** (form and formatted result), **Spec** (headers, parameters, request and response fields, link to the SWDA Developer Portal), **Code** (curl / Python / JavaScript for the chosen app and course, with *Run this request* and *Run on App 1 to 4*) and **Response** (status, timing, formatted or raw JSON). App 1 – 4 switch and a picker of our own funded WSQ courses above every page |
 | **Our WSQ funded courses** | Course title, reference code and funding validity period read from the SSG course registry by our UEN, cached daily, searchable, CSV download |
 | **Certificates & Keys (admin)** | Expiry date, subject and fingerprint for App 1 – 3 and the OAuth client for App 4; PEMs, encryption keys and secrets hidden behind a logged Reveal |
@@ -97,7 +97,7 @@ ssg-api-portal/
 ├── server/
 │   ├── index.js              # Express app: auth, enquiries, SSG proxy, per-URL SEO tags, static files
 │   ├── auth.js               # Google and emailed-code sign-in, cookie sessions, local bypass
-│   ├── users.js              # User list: one admin, members (DATA_DIR/users.json)
+│   ├── users.js              # User list: fixed admins, members (DATA_DIR/users.json)
 │   ├── admin.js              # Admin API: users, mail settings, certificates with logged reveal
 │   ├── settings.js           # Encrypted settings store (mail account)
 │   ├── mailer.js             # Enquiry and sign-in code emails (Gmail API, Resend, SMTP)
@@ -303,8 +303,8 @@ acknowledgement. Mail goes out through the first configured account: Gmail API, 
 (`server/mailer.js`). With no account configured, enquiries are still stored and shown in the console under
 Enquiries, but no email is sent. `LEAD_WEBHOOK_URL` optionally posts each enquiry to a chat or CRM.
 
-**Users and sign-in.** `server/users.js` keeps the user list in `DATA_DIR/users.json`. There is exactly one admin
-(`ADMIN_EMAIL`); everyone else is a member. No domain is allowed wholesale: a person signs in only if listed.
+**Users and sign-in.** `server/users.js` keeps the user list in `DATA_DIR/users.json`. The admins are fixed in code
+(`ADMIN_EMAILS`); everyone else is a member. No domain is allowed wholesale: a person signs in only if listed.
 Sign-in is by Google, or by a 6-digit code emailed to a listed address (`POST /auth/otp/request`,
 `/auth/otp/verify`: 10 minutes, 5 tries, rate limited, same reply whether or not the address is a user).
 The admin manages users and the mail account in the console (`/api/admin/*`, `server/admin.js`); mail secrets are
