@@ -106,6 +106,12 @@ of public git and `client/public`.
 
 ### Recovery without hosting-dashboard access
 
+The existing DATA_DIR is shared with portal users, defaults and settings. See
+[portal data storage](portal-data-storage.md) for the attachment, backup and
+redeployment verification procedure. Settings > Server data storage reports
+retention separately from write access. Once retention survives an app update,
+the browser backup becomes optional for confirmed requests.
+
 The workbench saves an encrypted recovery copy to IndexedDB in the signed-in
 admin's browser. It contains original evidence, saved attempts, custom templates,
 notes and original workbooks. The server encrypts/authenticates it with AES-GCM

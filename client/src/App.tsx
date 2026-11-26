@@ -3,6 +3,7 @@ import { UsersPage, SettingsPage, CertificatesPage } from './components/AdminPag
 import Workbench, { ContextBar, OurCoursesPage, pickable } from './components/Workbench';
 import FieldSuggest from './components/FieldSuggest';
 import ConformancePage from './components/Conformance';
+import PortalStoragePanel from './components/PortalStoragePanel';
 import { setConsolePage } from './consoleStore';
 import { getOurCourses } from './api/courseApi';
 import type { OurCourses } from './api/courseApi';
@@ -4768,7 +4769,7 @@ function App({ user, initialPage, onHome }: { user: AuthUser; initialPage?: stri
     if (activePage === 'certificates') return isAdmin ? <CertificatesPage /> : <p>Only an admin can view certificates and keys.</p>;
     if (activePage === 'direct-applications') return null;
     if (activePage === 'users') return isAdmin ? <UsersPage /> : <p>Only an admin can manage users.</p>;
-    if (activePage === 'settings') return isAdmin ? <SettingsPage /> : <p>Only an admin can change settings.</p>;
+    if (activePage === 'settings') return isAdmin ? <><SettingsPage /><PortalStoragePanel /></> : <p>Only an admin can change settings.</p>;
 
     if (activePage === 'api-references') {
       return (

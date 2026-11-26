@@ -135,6 +135,8 @@ async function run(data, user) {
     if (!draft || draft.createdBy !== user || draft.digest !== data.digest || data.confirmation !== 'CONFIRM AND RUN ONCE') throw new Error('Load and review the current request before confirming.');
     const history = await store.history(); const previous = history.find(r => r.draftId === draft.id);
     if (previous) return previous;
+    const recoveredAt = await require('./portal-storage').recoveryTime();
+    if (recoveredAt && Date.parse(draft.createdAt) <= Date.parse(recoveredAt)) throw new Error('This preview predates server data recovery. Load and review the request again.');
     if (Date.now() - Date.parse(draft.createdAt) > 30 * 60 * 1000) throw new Error('This preview expired. Load and review it again.');
     const template = await templates.get(draft.template.id);
     if (templates.digest(template) !== draft.templateDigest) throw new Error('The template changed. Load and review the request again.');

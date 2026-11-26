@@ -23,9 +23,10 @@ RUN npm ci --omit=dev
 # Server code + the client build output served as static files
 COPY server/ ./server/
 COPY --from=client-build /app/client/dist ./client/dist
+COPY scripts/portal-data.cjs ./scripts/portal-data.cjs
 
-# Per-user defaults are written here as JSON. Mount a Coolify persistent
-# volume at this path (or set DATA_DIR) so they survive redeploys.
+# All portal data shares this folder. The deployment must reattach the SAME
+# existing volume here on every update; VOLUME alone does not ensure reuse.
 ENV DATA_DIR=/app/server/data
 RUN mkdir -p /app/server/data
 VOLUME ["/app/server/data"]

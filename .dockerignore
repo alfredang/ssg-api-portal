@@ -13,3 +13,5 @@ known-api-issues.csv
 **/.DS_Store
 server/.cert
 server/data
+.codex-tmp
+**/*encrypted-backup*.json

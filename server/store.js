@@ -15,7 +15,7 @@ const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
 
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+const DATA_DIR = require('./data-directory').dataDirectory();
 const FILE = path.join(DATA_DIR, 'defaults.json');
 
 // Ensure the data directory exists up front.

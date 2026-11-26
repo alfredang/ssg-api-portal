@@ -2,7 +2,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const legacy = require('./conformance-records');
-const root = () => path.join(process.env.DATA_DIR || path.join(__dirname, 'data'), 'conformance', 'workbench');
+const root = () => path.join(require('./data-directory').dataDirectory(), 'conformance', 'workbench');
 const valid = id => typeof id === 'string' && /^[a-z0-9][a-z0-9-]{0,100}$/.test(id);
 function file(group, id) {
   if (!['runs', 'drafts', 'templates', 'locks', 'notes'].includes(group) || !valid(id)) throw new Error('Invalid record identifier.');

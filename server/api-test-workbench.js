@@ -14,9 +14,11 @@ router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); 
 const visibleDraft = ({ credentialVersion, ...draft }) => draft;
 router.get('/', route(async (req, res) => {
   const history = await store.history(); const available = await templates.all();
+  const storageStatus = await require('./portal-storage').status();
   const context = history.find(r => r.testUen);
   res.json({ templates: available, runs: history.map(store.visible), canManage: getCurrentUser(req)?.role === 'admin',
     application: context?.application || '', testUen: context?.testUen || '', backupOwner: user(req),
+    storage: { writable: storageStatus.writable, backupOptional: storageStatus.backupOptional, deploymentVerifiedAt: storageStatus.deploymentVerifiedAt || null },
     profiles: { 'uat-mtls': uat.readiness({ auth: 'uat-mtls' }), 'uat-oauth': uat.readiness({ auth: 'uat-oauth' }) },
     readiness: Object.fromEntries(available.map(t => [t.id, uat.readiness({ auth: t.auth, encrypt: t.encrypt })])),
     notes: (await store.list('notes')).map(({ file, ...note }) => note), environment: 'UAT', base: uat.BASE });

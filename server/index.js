@@ -27,6 +27,7 @@ app.use(leads.publicRouter);
 app.use('/api/leads', leads.adminRouter);
 
 // Admin-only: backend users and settings.
+app.use('/api/admin/storage', require('./portal-storage-routes'));
 app.use('/api/admin', require('./admin'));
 
 // SSG API proxy routes (certificate/mTLS + OAuth fallback).
@@ -97,7 +98,7 @@ module.exports = app;
 // Start server only when run directly
 if (require.main === module) {
   const PORT = process.env.PORT || 3001;
-  app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  require('./portal-storage').initialize().then(() => {
+    app.listen(PORT, () => { console.log(`Server running on http://localhost:${PORT}`); });
+  }).catch(() => { console.error('Portal storage could not be initialized. Check the existing data folder attachment and permissions.'); process.exitCode = 1; });
 }

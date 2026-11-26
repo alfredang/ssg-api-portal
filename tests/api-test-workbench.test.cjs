@@ -97,6 +97,12 @@ test('old backups do not overwrite completed responses, reconciliations or newer
   assert.equal((await store.get('templates', 'synthetic-backup')).revision, 3);
   assert.equal(ctx.count(), 1);
 });
+test('whole-folder recovery invalidates saved execution previews without sending UAT requests', async t => {
+  const ctx = await setup(t); const draft = await addDraft(ctx.call);
+  const directory = require('../server/portal-storage');
+  await fs.writeFile(path.join(process.env.DATA_DIR, directory.STATE), JSON.stringify({ restoredAt: new Date(Date.now() + 1000).toISOString() }));
+  const result = await confirm(ctx.call, draft); assert.equal(result.status, 400); assert.match(result.body.error, /predates server data recovery/); assert.equal(ctx.count(), 0);
+});
 test('a verified final response can replace its restored recovery marker and retain workflow provenance', async t => {
   const ctx = await setup(t); backupSecret(t); const draft = await addDraft(ctx.call);
   const pendingArchive = (await ctx.call('/backup', 'POST', { pending: { draftId: draft.id, digest: draft.digest } })).body;
