@@ -188,8 +188,7 @@ const fileBytes = (req) => {
 };
 
 router.get('/status', (_req, res) => {
-  const u = uat();
-  res.json({ ready: u.ready, hasEncryptionKey: !!u.encKey, certificateExpires: u.validTo, base: UAT_BASE });
+  res.json(require('./uat').credentials().status);
 });
 
 router.post('/parse', (req, res) => {
@@ -206,6 +205,7 @@ router.post('/run', async (req, res) => {
   let target;
   try { target = new URL(String(url)); } catch { return res.status(400).json({ error: 'The URL is not valid' }); }
   if (target.protocol !== 'https:' || target.hostname !== UAT_HOST) return res.status(400).json({ error: `Conformance tests run on UAT only. The URL must start with ${UAT_BASE}` });
+  if (method === 'POST' && /^\/trainingProviders\/[^/]+\/trainers\/?$/.test(target.pathname)) return res.status(409).json({ error: 'Run Add TP Trainers from the DP-15411 ticket page so the identity, scope and evidence are tracked.' });
   if (!/^(GET|POST|PUT|PATCH|DELETE)$/.test(method)) return res.status(400).json({ error: 'Unknown method' });
   const u = uat();
   if (!u.ready) return res.status(503).json({ error: 'The UAT certificate is not configured on the server (UAT_CERT and UAT_KEY).' });

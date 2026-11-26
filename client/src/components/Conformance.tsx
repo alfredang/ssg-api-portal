@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ALL_APIS, CONFORMANCE } from '../catalog';
+import TicketConformance from './TicketConformance';
 
 // Conformance test runner (console). SSG sends a UAT test workbook for some
 // APIs; this page reads it, lets the tester complete and run each step against
@@ -33,6 +34,7 @@ async function post<T>(url: string, body: unknown): Promise<T> {
 }
 
 export default function ConformancePage({ tester: defaultTester }: { tester: string }) {
+  const [view, setView] = useState<'ticket' | 'workbook'>('ticket');
   const [status, setStatus] = useState<Status | null>(null);
   const [file, setFile] = useState<{ name: string; b64: string } | null>(null);
   const [sheets, setSheets] = useState<Sheet[]>([]);
@@ -112,8 +114,11 @@ export default function ConformancePage({ tester: defaultTester }: { tester: str
   const setEdit = (k: string, patch: Partial<Edit>) => setEdits((prev) => ({ ...prev, [k]: { ...prev[k], ...patch } }));
   const setResult = (k: string, patch: Partial<Result>) => setResults((prev) => ({ ...prev, [k]: { ...prev[k], ...patch } }));
 
+  const switcher = <div className="cf-view-switch"><button className="admin-btn ghost" aria-pressed={view === 'ticket'} onClick={() => setView('ticket')}>DP-15411 · Add trainer</button><button className="admin-btn ghost" aria-pressed={view === 'workbook'} onClick={() => setView('workbook')}>Other workbook tests</button></div>;
+  if (view === 'ticket') return <>{switcher}<TicketConformance /></>;
   return (
     <>
+      {switcher}
       <h2 className="page-title">Conformance Tests</h2>
       <p className="admin-lead">Upload the test workbook SSG sent for an API. The page reads every test step, you complete the values SSG leaves to the tester, run each step on SSG’s UAT environment, and download the same workbook with the actual results filled in.</p>
 
