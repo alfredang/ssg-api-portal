@@ -1,0 +1,17 @@
+# Storage fragment, not a replacement deployment. Merge into the ACTUAL portal
+# service; preserve its image, proxy labels, network, ports and credentials.
+# Reuse the existing volume name found by docker inspect; do not create an empty
+# replacement volume. This external declaration fails if that volume is absent.
+services:
+  portal:
+    environment:
+      DATA_DIR: ${PORTAL_DATA_MOUNT_PATH:-/app/server/data}
+      PORTAL_DATA_ID: ${PORTAL_DATA_ID:-}
+    volumes:
+      - type: volume
+        source: existing_portal_data
+        target: ${PORTAL_DATA_MOUNT_PATH:-/app/server/data}
+volumes:
+  existing_portal_data:
+    external: true
+    name: ${PORTAL_EXISTING_DATA_VOLUME:?Set the existing portal data volume name}

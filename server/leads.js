@@ -11,7 +11,7 @@ const { sendLeadEmail, sendLeadAutoreply, transportName } = require('./mailer');
 
 if (!transportName()) console.warn('[lead] no mail account configured: enquiries are stored but not emailed (console > Settings)');
 
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+const DATA_DIR = require('./data-directory').dataDirectory();
 const FILE = path.join(DATA_DIR, 'leads.jsonl');
 
 const clean = (v, max) => String(v ?? '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').trim().slice(0, max);

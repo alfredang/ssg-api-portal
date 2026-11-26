@@ -2,7 +2,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const DIR = () => path.join(process.env.DATA_DIR || path.join(__dirname, 'data'), 'conformance', 'DP-15411');
+const DIR = () => path.join(require('./data-directory').dataDirectory(), 'conformance', 'DP-15411');
 const sha = value => crypto.createHash('sha256').update(value).digest('hex');
 const parse = value => { if (typeof value !== 'string') return value; try { return JSON.parse(value); } catch { return value; } };
 function targetOf(c) {

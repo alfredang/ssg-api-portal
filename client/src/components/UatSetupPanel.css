@@ -1,0 +1,27 @@
+.uat-setup { margin:22px 0; padding:24px; background:#fff; border:1px solid #d8e2ef; border-radius:9px; color:#243552; }
+.uat-setup-heading { display:flex; flex-wrap:wrap; gap:18px; justify-content:space-between; align-items:flex-start; }
+.uat-setup h3 { font-size:24px; margin:6px 0; }
+.uat-setup p { line-height:1.6; }
+.uat-setup-state { background:#fff4db; color:#785217; padding:8px 12px; border-radius:5px; font-size:12px; font-weight:600; }
+.uat-setup-state.ready { background:#e9f6ec; color:#22613a; }
+.uat-setup-status { border-left:3px solid #91a8d4; background:#f5f8fd; padding:14px 18px; margin:20px 0; }
+.uat-setup-status p { margin:6px 0; }
+.uat-setup-status code { overflow-wrap:anywhere; }
+.uat-setup-fields { border:1px solid #dce4ef; border-radius:7px; padding:20px; margin:22px 0; min-width:0; }
+.uat-setup-fields legend { padding:0 8px; font-size:15px; font-weight:600; }
+.uat-setup-fields label { display:flex; flex-direction:column; gap:8px; margin-bottom:20px; font-size:13px; font-weight:600; }
+.uat-setup-fields input:not([type=checkbox]) { font:inherit; padding:11px; border:1px solid #b9c9e4; border-radius:6px; width:100%; box-sizing:border-box; color:#243552; background:#fff; }
+.uat-setup-fields input:focus-visible { outline:3px solid #c7d6ff; outline-offset:1px; }
+.uat-setup-fields small { font-size:12px; line-height:1.5; color:#5b6b83; font-weight:400; }
+.uat-setup-files { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+.uat-setup-fields .uat-setup-confirm { display:flex; flex-direction:row; align-items:flex-start; gap:10px; margin-bottom:0; line-height:1.6; font-weight:400; }
+.uat-setup-confirm input { margin-top:4px; }
+.uat-setup-actions { display:flex; flex-wrap:wrap; gap:12px; margin:18px 0; }
+.uat-setup-validation { background:#f5f8fd; border:1px solid #dce4ef; border-radius:7px; padding:18px; }
+.uat-setup-validation h4 { margin:0 0 14px; }
+.uat-setup-validation ul { list-style:none; padding:0; margin:0; }
+.uat-setup-validation li { margin:9px 0; font-size:13px; }
+.uat-setup-validation b { display:inline-block; min-width:36px; margin-right:10px; }
+.uat-setup-validation .pass { color:#24633b; }
+.uat-setup-validation .fail { color:#a6323c; }
+@media(max-width:650px) { .uat-setup { padding:17px; } .uat-setup-files { grid-template-columns:1fr; gap:0; } .uat-setup-fields { padding:15px; } }

@@ -54,6 +54,11 @@ enabled by uploading a template.
 
 ## Authentication and encryption
 
+Admins can configure the dedicated certificate/key/AES profile directly in
+**Conformance Tests > UAT Setup**. See [UAT setup](uat-setup.md) for upload,
+validation, encrypted storage and readiness. Saving does not execute a test;
+load and review a new preview afterward. Production App 1–3 settings are unchanged.
+
 `uat-mtls` uses the confirmed `UAT_CERT[_FILE]`, `UAT_KEY[_FILE]` and
 `UAT_EXPECTED_CERT_SHA256` configuration. Certificate dates, private-key match
 and fingerprint are checked before execution.
@@ -74,7 +79,7 @@ set `UAT_OAUTH_USE_MTLS=true` if the provider requires the certificate as well.
 Access tokens are cached only in process memory and never included in evidence.
 No production OAuth credentials are reused or used as an automatic fallback.
 
-Keep credential values in secure hosting configuration. The workbench exposes
+Keep credential values in encrypted UAT Setup or secure hosting configuration. The workbench exposes
 readiness and the certificate fingerprint, never private keys or client secrets.
 
 ## Dependencies and repeats
@@ -105,6 +110,12 @@ persistent storage for server-wide durability. Keep all reports and bundles out
 of public git and `client/public`.
 
 ### Recovery without hosting-dashboard access
+
+The existing DATA_DIR is shared with portal users, defaults and settings. See
+[portal data storage](portal-data-storage.md) for the attachment, backup and
+redeployment verification procedure. Settings > Server data storage reports
+retention separately from write access. Once retention survives an app update,
+the browser backup becomes optional for confirmed requests.
 
 The workbench saves an encrypted recovery copy to IndexedDB in the signed-in
 admin's browser. It contains original evidence, saved attempts, custom templates,

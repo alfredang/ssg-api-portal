@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+const DATA_DIR = require('./data-directory').dataDirectory();
 const FILE = path.join(DATA_DIR, 'users.json');
 
 // Admins, fixed in code: changing who is an admin is a code change, not a console action.
@@ -25,7 +25,8 @@ function load() {
   if (cache) return cache;
   try {
     cache = JSON.parse(fs.readFileSync(FILE, 'utf8'));
-  } catch {
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw new Error('The saved user list cannot be read. Preserve the data folder and restore its backup; it will not be overwritten.');
     const now = new Date().toISOString();
     cache = { users: [...ADMIN_EMAILS, ...SEED_MEMBERS]
       .map((email) => ({ email, role: ADMIN_EMAILS.includes(email) ? 'admin' : 'member', addedAt: now, addedBy: 'system', lastLogin: null })) };

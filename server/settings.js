@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+const DATA_DIR = require('./data-directory').dataDirectory();
 const FILE = path.join(DATA_DIR, 'settings.enc');
 const KEY = crypto.scryptSync(process.env.SESSION_SECRET || 'dev-insecure-secret-change-me', 'ssg-api-portal-settings', 32);
 
@@ -30,7 +30,7 @@ function load() {
     const d = crypto.createDecipheriv('aes-256-gcm', KEY, iv); d.setAuthTag(tag);
     cache = JSON.parse(Buffer.concat([d.update(data), d.final()]).toString('utf8'));
   } catch (err) {
-    if (err.code !== 'ENOENT') console.warn('[settings] could not read settings.enc (wrong SESSION_SECRET?); starting empty');
+    if (err.code !== 'ENOENT') throw new Error('Saved settings cannot be decrypted. Keep the original data folder and server session secret; settings will not be overwritten.');
     cache = { mail: {} };
   }
   return cache;

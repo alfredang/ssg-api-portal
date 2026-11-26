@@ -3043,7 +3043,7 @@ router.post('/tools/sign-data', (req, res) => {
 // Console workbench: run a catalogue API as documented, our own course
 // list, and certificate details. Added 2026-11-17.
 // ─────────────────────────────────────────────────────────────────
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+const DATA_DIR = require('./data-directory').dataDirectory();
 const TP_UEN = process.env.TP_UEN || '201200696W';
 
 // The API catalogue, written by the client build (scripts/gen-seo.mts).
