@@ -45,4 +45,9 @@
 .wb-workbook b { flex:1; }
 .wb-workbook span { font-size:13px; color:#596b88; }
 .wb-page .ticket-setup textarea { margin:10px 0; }
+.wb-backup { display:flex; flex-wrap:wrap; align-items:center; gap:14px; border:1px solid #cbd9eb; background:#f4f8fe; border-radius:7px; padding:16px; margin:16px 0; }
+.wb-backup > div:first-child { flex:1; min-width:220px; }
+.wb-backup p { margin:5px 0; }
+.wb-backup small { color:#526580; }
+.wb-backup-restore { background:#fff9e9; border-color:#d9b565; }
 @media(max-width:760px) { .wb-case-picker { align-items:stretch; flex-direction:column; } .wb-fields,.wb-template-list { grid-template-columns:1fr; } .wb-editor,.wb-review,.wb-latest { padding:17px; } .wb-load-row { align-items:flex-start; flex-direction:column; } .wb-tabs button { flex-basis:40%; } }

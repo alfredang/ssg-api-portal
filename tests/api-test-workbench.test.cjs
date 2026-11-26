@@ -9,6 +9,7 @@ const templates = require('../server/api-test-templates');
 const runner = require('../server/api-test-runner');
 const legacy = require('../server/conformance-records');
 const uat = require('../server/uat');
+const backup = require('../server/api-test-backup');
 const { configureAuth, requireAuth } = require('../server/auth');
 const router = require('../server/api-test-workbench');
 const URL = uat.BASE + '/trainingProviders/SYNTHETICUEN/trainers';
@@ -42,6 +43,76 @@ async function successfulCreate(ctx) {
   ctx.response(async () => ({ status: 200, body: { status: 200, data: { trainer: { id: 'synthetic-created-id' } }, error: {} }, ms: 2 }));
   const draft = await addDraft(ctx.call); const result = await confirm(ctx.call, draft); assert.equal(result.body.run.outcome, 'pass'); return result.body.run;
 }
+
+function backupSecret(t) {
+  const previous = process.env.SESSION_SECRET; process.env.SESSION_SECRET = 'synthetic-stable-backup-secret';
+  t.after(() => { if (previous === undefined) delete process.env.SESSION_SECRET; else process.env.SESSION_SECRET = previous; });
+}
+test('encrypted backup restores original evidence, templates and workbooks after data-directory loss without UAT calls', async t => {
+  const ctx = await setup(t); backupSecret(t); await addDraft(ctx.call);
+  await store.save('notes', 'workbook-synthetic', { id: 'workbook-synthetic', filename: 'synthetic.xlsx', file: 'synthetic-private-workbook' });
+  await store.save('templates', 'synthetic-backup', { ...await templates.get('trainer-retrieve'), id: 'synthetic-backup', revision: 3 });
+  const result = await ctx.call('/backup', 'POST', {}); assert.equal(result.status, 200);
+  const archive = result.body; assert.equal(archive.runIds.length, 1); assert.equal(JSON.stringify(archive).includes('SYNTHETIC-EXISTING'), false);
+  const original = (await store.history())[0];
+  await fs.rm(path.join(process.env.DATA_DIR, 'conformance'), { recursive: true });
+  assert.equal((await store.history()).length, 0);
+  assert.equal((await ctx.call('/backup/restore', 'POST', { archive })).body.restored, 1);
+  const restored = (await store.history())[0]; assert.deepEqual(restored.evidence, original.evidence); assert.deepEqual(restored.request, original.request);
+  assert.equal((await store.get('notes', 'workbook-synthetic')).file, 'synthetic-private-workbook');
+  assert.equal((await store.get('templates', 'synthetic-backup')).revision, 3);
+  assert.equal((await store.list('drafts')).length, 0);
+  assert.equal((await ctx.call('/backup/restore', 'POST', { archive })).body.restored, 0); assert.equal(ctx.count(), 0);
+});
+test('backup rejects tampering, other accounts, changed secrets and missing configuration before restoring records', async t => {
+  const ctx = await setup(t); backupSecret(t); await addDraft(ctx.call);
+  const archive = (await ctx.call('/backup', 'POST', {})).body;
+  const tampered = { ...archive, encrypted: (archive.encrypted[0] === 'A' ? 'B' : 'A') + archive.encrypted.slice(1) };
+  assert.throws(() => backup.open(tampered, archive.owner), /cannot be verified/);
+  assert.throws(() => backup.open(archive, 'another@example.test'), /cannot be verified/);
+  process.env.SESSION_SECRET = 'different-synthetic-secret'; assert.throws(() => backup.open(archive, archive.owner), /cannot be verified/);
+  delete process.env.SESSION_SECRET; assert.equal((await ctx.call('/backup', 'POST', {})).status, 400);
+  assert.equal((await store.history()).length, 1); assert.equal(ctx.count(), 0);
+});
+test('restoring a pre-confirmation recovery marker conservatively holds writes without claiming execution', async t => {
+  const ctx = await setup(t); backupSecret(t); const draft = await addDraft(ctx.call);
+  const archive = (await ctx.call('/backup', 'POST', { pending: { draftId: draft.id, digest: draft.digest } })).body;
+  assert.equal(archive.runIds.length, 2); assert.equal(ctx.count(), 0);
+  await fs.rm(path.join(process.env.DATA_DIR, 'conformance'), { recursive: true });
+  assert.equal((await ctx.call('/backup/restore', 'POST', { archive })).body.restored, 2);
+  const marker = (await store.history()).find(r => r.origin === 'Browser recovery');
+  assert.equal(marker.state, 'uncertain'); assert.equal(marker.response, null); assert.equal(marker.outcome, 'unknown');
+  assert.match((await addDraft(ctx.call)).blockers.join(' '), /reconciliation/);
+  assert.equal(ctx.count(), 0);
+});
+test('old backups do not overwrite completed responses, reconciliations or newer templates', async t => {
+  const ctx = await setup(t); backupSecret(t); const draft = await addDraft(ctx.call);
+  await store.save('templates', 'synthetic-backup', { ...await templates.get('trainer-retrieve'), id: 'synthetic-backup', revision: 2 });
+  const archive = (await ctx.call('/backup', 'POST', { pending: { draftId: draft.id, digest: draft.digest } })).body;
+  const confirmation = await confirm(ctx.call, draft); assert.equal(confirmation.status, 200, JSON.stringify(confirmation.body)); const actual = confirmation.body.run;
+  await store.save('templates', 'synthetic-backup', { ...await templates.get('trainer-retrieve'), id: 'synthetic-backup', revision: 3 });
+  await ctx.call('/backup/restore', 'POST', { archive });
+  assert.deepEqual((await store.findRun(actual.id)).response, actual.response);
+  assert.equal((await store.findRun(actual.id)).state, 'completed');
+  assert.equal((await store.get('templates', 'synthetic-backup')).revision, 3);
+  assert.equal(ctx.count(), 1);
+});
+test('a verified final response can replace its restored recovery marker and retain workflow provenance', async t => {
+  const ctx = await setup(t); backupSecret(t); const draft = await addDraft(ctx.call);
+  const pendingArchive = (await ctx.call('/backup', 'POST', { pending: { draftId: draft.id, digest: draft.digest } })).body;
+  ctx.response(async () => ({ status: 200, body: { status: 200, data: { trainer: { id: 'synthetic-created-id' } } }, ms: 2 }));
+  const actual = (await confirm(ctx.call, draft)).body.run;
+  const finalArchive = (await ctx.call('/backup', 'POST', {})).body;
+  await fs.rm(path.join(process.env.DATA_DIR, 'conformance'), { recursive: true });
+  await ctx.call('/backup/restore', 'POST', { archive: pendingArchive });
+  assert.equal((await store.findRun(actual.id)).origin, 'Browser recovery');
+  await ctx.call('/backup/restore', 'POST', { archive: finalArchive });
+  assert.equal((await store.findRun(actual.id)).origin, 'Portal UAT run');
+  assert.equal((await store.findRun(actual.id)).outcome, 'pass');
+  assert.equal(ctx.count(), 1);
+  const update = await ctx.call('/load', 'POST', { templateId: 'trainer-update', dependencyRunId: actual.id });
+  assert.equal(update.status, 200, JSON.stringify(update.body)); assert.equal(update.body.draft.blockers.length, 0);
+});
 test('all routes require staff sign-in', async t => {
   const { call } = await setup(t, false); assert.equal((await call()).status, 401); assert.equal((await call('/load', 'POST', {})).status, 401);
 });
@@ -212,5 +283,5 @@ test('members may view templates/history but cannot load, run, change templates 
   const server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
   t.after(async () => { await new Promise(resolve => server.close(resolve)); Object.assign(users, saved); process.env.AUTH_DISABLED = oldAuth; });
   const base = `http://127.0.0.1:${server.address().port}/w`; assert.equal((await fetch(base)).status, 200);
-  for (const endpoint of ['/load', '/run', '/templates', '/import', '/workbooks']) assert.equal((await fetch(base + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status, 403);
+  for (const endpoint of ['/load', '/run', '/templates', '/import', '/workbooks', '/backup', '/backup/restore']) assert.equal((await fetch(base + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status, 403);
 });

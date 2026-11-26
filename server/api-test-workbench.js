@@ -6,6 +6,7 @@ const store = require('./api-test-store');
 const runner = require('./api-test-runner');
 const legacy = require('./conformance-records');
 const uat = require('./uat');
+const backup = require('./api-test-backup');
 const router = express.Router();
 const user = req => getCurrentUser(req)?.email || 'Local tester';
 const route = work => (req, res, next) => Promise.resolve(work(req, res)).catch(next);
@@ -15,11 +16,13 @@ router.get('/', route(async (req, res) => {
   const history = await store.history(); const available = await templates.all();
   const context = history.find(r => r.testUen);
   res.json({ templates: available, runs: history.map(store.visible), canManage: getCurrentUser(req)?.role === 'admin',
-    application: context?.application || '', testUen: context?.testUen || '',
+    application: context?.application || '', testUen: context?.testUen || '', backupOwner: user(req),
     profiles: { 'uat-mtls': uat.readiness({ auth: 'uat-mtls' }), 'uat-oauth': uat.readiness({ auth: 'uat-oauth' }) },
     readiness: Object.fromEntries(available.map(t => [t.id, uat.readiness({ auth: t.auth, encrypt: t.encrypt })])),
     notes: (await store.list('notes')).map(({ file, ...note }) => note), environment: 'UAT', base: uat.BASE });
 }));
+router.post('/backup', requireAdmin, route(async (req, res) => res.json(await runner.serial(() => backup.create(user(req), req.body?.pending)))));
+router.post('/backup/restore', requireAdmin, route(async (req, res) => res.json(await runner.serial(() => backup.restore(req.body?.archive, user(req))))));
 router.get('/initial/:templateId', route(async (req, res) => res.json(await runner.initial(req.params.templateId, req.query.sourceRunId, req.query.dependencyRunId))));
 router.post('/load', requireAdmin, route(async (req, res) => res.json({ draft: visibleDraft(await runner.load(req.body || {}, user(req))) })));
 router.post('/run', requireAdmin, route(async (req, res) => res.json({ run: store.visible(await runner.run(req.body || {}, user(req))) })));

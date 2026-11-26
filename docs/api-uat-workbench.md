@@ -101,8 +101,37 @@ The eleven previously imported Add attempts remain in
 `DATA_DIR/conformance/DP-15411` and are read without migration or alteration.
 New attempts, draft snapshots, reviewed custom templates, notes and original
 workbooks are stored under `DATA_DIR/conformance/workbench`. Mount DATA_DIR on
-persistent storage and back it up privately. Keep all reports and bundles out
+persistent storage for server-wide durability. Keep all reports and bundles out
 of public git and `client/public`.
+
+### Recovery without hosting-dashboard access
+
+The workbench saves an encrypted recovery copy to IndexedDB in the signed-in
+admin's browser. It contains original evidence, saved attempts, custom templates,
+notes and original workbooks. The server encrypts/authenticates it with AES-GCM
+using a key derived from the existing `SESSION_SECRET`; neither that secret nor
+UAT credentials are placed in the browser backup. Keep SESSION_SECRET stable
+across deployments. Backups are scoped to the account that created them.
+
+When the server is missing saved records, the browser preserves its existing
+copy and shows **Restore browser backup**. Restoration adds missing records,
+keeps current server records and never calls SWDA or restores executable drafts.
+Before confirmation, a recovery marker is saved in the browser. If the final
+result is lost, restoring the marker holds further writes until the provider
+confirms the outcome; it never assumes that a lost response means failure.
+
+Use **Download encrypted backup** for a separate private copy. History accepts
+both evidence files and encrypted backups, with a **Paste private evidence or
+encrypted backup JSON** option when file selection is unavailable. Existing
+original evidence remains usable if the server secret changes.
+
+This is recovery for one browser profile, not shared database storage. Clearing
+site data, private browsing, lost devices, unavailable browser storage or a
+changed session secret can make the copy unavailable. Other devices need the
+downloaded backup or original reports. Leave the workbench open after a run so
+its completed result can be backed up; a lost connection may retain only the
+conservative recovery marker. The UI reports backup errors and will not start a
+new confirmed request if its recovery copy cannot be saved.
 
 History supports ticket/type filters, source-attempt links, expanded request and
 response details, assertion results and JSON evidence downloads. Diagnostics are
