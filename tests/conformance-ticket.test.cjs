@@ -90,71 +90,8 @@ test('private multi-report bundle imports once and rejects invalid bundles befor
   bundle.reports.push({ filename: 'invalid.json', report: { privateKey: 'secret' } });
   assert.equal((await call('/import', 'POST', { filename: 'private-bundle.json', report: bundle })).status, 400);
 });
-test('requires original fixture, synthetic identity and declared scope', async t => {
+test('legacy write URLs direct users to the shared reviewed workbench', async t => {
   const call = await setup(t);
-  const form = { idNumber: 'UAT-FRESH-001', idType: 'SP', sourceReference: 'SWDA confirmed synthetic fixture', syntheticConfirmed: true, scope: 'add-only-retain' };
-  assert.equal((await call('/preparation', 'PUT', form)).status, 400);
-  await archive.importReport(evidence(), 'fixture.json', 'test');
-  assert.equal((await call('/preparation', 'PUT', { ...form, idNumber: 'WORKBOOK-EXISTING-ID' })).status, 400);
-  assert.equal((await call('/preparation', 'PUT', { ...form, syntheticConfirmed: false })).status, 400);
-  assert.equal((await call('/preparation', 'PUT', { ...form, scope: 'delete-all' })).status, 400);
-});
-test('requires confirmed credentials, current preparation and explicit run confirmation', async t => {
-  const call = await setup(t); const revision = await prepare(call);
-  uat.credentials = () => ({ status: { ready: true, hasEncryptionKey: true, encryptionSourceConfirmed: false } });
-  assert.equal((await call('/run', 'POST', { revision, confirmation: 'RUN TS01 ON UAT' })).status, 400);
-  uat.credentials = goodCredentials;
-  assert.equal((await call('/run', 'POST', { revision: 'stale', confirmation: 'RUN TS01 ON UAT' })).status, 400);
-  assert.equal((await call('/run', 'POST', { revision, confirmation: false })).status, 400);
-});
-test('records before outbound call; concurrent/repeated submits create only once and preserve returned trainer ID', async t => {
-  const call = await setup(t); const revision = await prepare(call); let calls = 0;
-  uat.credentials = goodCredentials;
-  uat.send = async request => {
-    calls++; assert.equal(request.url, URL); assert.equal(request.encrypt, true);
-    assert.equal((await archive.list()).filter(r => r.state === 'running').length, 1);
-    assert.equal(JSON.parse(request.body).trainer.idNumber, 'UAT-FRESH-001');
-    return { status: 200, body: { status: 200, data: { trainer: { id: 'created-in-this-run' } } }, rawBody: '{}', ms: 20, encryptedRequest: 'ciphertext' };
-  };
-  const body = { revision, confirmation: 'RUN TS01 ON UAT' };
-  const [a, b] = await Promise.all([call('/run', 'POST', body), call('/run', 'POST', body)]);
-  assert.equal(a.status, 200); assert.equal(b.status, 200); assert.equal(calls, 1);
-  assert.equal(a.body.run.outcome, 'pass'); assert.equal(a.body.run.trainerId, 'created-in-this-run');
-  assert.equal(a.body.run.id, b.body.run.id); assert.equal((await call()).body.ready, false);
-  assert.equal((await call('/run', 'POST', body)).body.run.id, a.body.run.id); assert.equal(calls, 1);
-  assert.equal((await call('/preparation', 'PUT', { idNumber: 'UAT-FRESH-001', idType: 'SP', sourceReference: 'SWDA identity reply', syntheticConfirmed: true, scope: 'add-only-retain' })).status, 400);
-});
-for (const scenario of ['timeout', '200 without ID', 'HTTP 200 API 400', 'HTTP 500']) test(`${scenario} holds new Add attempts and survives archive reload`, async t => {
-  const call = await setup(t); const revision = await prepare(call); uat.credentials = goodCredentials;
-  uat.send = async () => {
-    if (scenario === 'timeout') throw new Error('timeout');
-    return { status: scenario === 'HTTP 500' ? 500 : 200, body: { status: scenario === 'HTTP 200 API 400' ? 400 : 200, data: {} }, rawBody: '{}', ms: 10 };
-  };
-  const result = await call('/run', 'POST', { revision, confirmation: 'RUN TS01 ON UAT' });
-  assert.equal(result.body.run.state, 'uncertain');
-  const page = await call(); assert.equal(page.body.ready, false); assert.match(page.body.blocker, /reconciliation/);
-  const record = (await archive.list()).find(r => r.id === result.body.run.id); assert.equal(record.state, 'uncertain');
-  assert.equal((await call('/preparation', 'PUT', { idNumber: 'UAT-FRESH-002', idType: 'SP', sourceReference: 'SWDA fresh identity reply', syntheticConfirmed: true, scope: 'add-only-retain' })).status, 400);
-  assert.equal((await call(`/runs/${record.id}/reconcile`, 'POST', { confirmed: true, note: 'SWDA confirmed no record was created, reply DP-15411 test reference.' })).status, 200);
-  assert.ok((await archive.list()).find(r => r.id === record.id).review);
-});
-test('structured HTTP 400 records failed conformance, releases lock and does not retry', async t => {
-  const call = await setup(t); const revision = await prepare(call); let calls = 0; uat.credentials = goodCredentials;
-  uat.send = async () => { calls++; return { status: 400, body: { status: 400, error: { message: 'Bad Request' } }, ms: 1 }; };
-  const result = await call('/run', 'POST', { revision, confirmation: 'RUN TS01 ON UAT' });
-  assert.equal(result.body.run.state, 'completed'); assert.equal(result.body.run.outcome, 'fail'); assert.equal(calls, 1);
-  await assert.rejects(fs.stat(path.join(archive.DIR(), 'live-run.lock')), { code: 'ENOENT' });
-});
-test('member sessions can view history but cannot prepare or execute writes', async t => {
-  const oldData = process.env.DATA_DIR; const oldAuth = process.env.AUTH_DISABLED;
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'dp15411-member-'));
-  process.env.DATA_DIR = dir; process.env.AUTH_DISABLED = 'false';
-  const users = require('../server/users'); const oldFind = users.find; const oldIsAdmin = users.isAdmin; const oldRole = users.roleOf;
-  users.find = () => ({ role: 'member' }); users.isAdmin = () => false; users.roleOf = () => 'member';
-  const app = express(); app.use(express.json()); app.use((req, _res, next) => { req.user = { email: 'member@example.invalid' }; req.isAuthenticated = () => true; next(); }); app.use('/ticket', requireAuth, router);
-  const server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
-  t.after(async () => { await new Promise(resolve => server.close(resolve)); users.find = oldFind; users.isAdmin = oldIsAdmin; users.roleOf = oldRole; if (oldData === undefined) delete process.env.DATA_DIR; else process.env.DATA_DIR = oldData; if (oldAuth === undefined) delete process.env.AUTH_DISABLED; else process.env.AUTH_DISABLED = oldAuth; await fs.rm(dir, { recursive: true, force: true }); });
-  const base = `http://127.0.0.1:${server.address().port}/ticket`;
-  assert.equal((await fetch(base)).status, 200);
-  for (const endpoint of ['/import', '/run']) assert.equal((await fetch(base + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status, 403);
+  assert.equal((await call('/preparation', 'PUT', {})).status, 409);
+  assert.equal((await call('/run', 'POST', {})).status, 409);
 });

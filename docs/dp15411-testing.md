@@ -1,5 +1,10 @@
 # DP-15411: Add TP Trainers UAT history and testing
 
+The general [API/UAT workbench](api-uat-workbench.md) now provides execution.
+Use its Load test data / Confirm and run once flow. The older fresh-identity
+preparation procedure below is retained for historical context; legacy write
+URLs are disabled and known failed identities can be deliberately repeated.
+
 Open `/console/conformance` while signed in. DP-15411 is the default view;
 the previous workbook runner is available through Other workbook tests.
 

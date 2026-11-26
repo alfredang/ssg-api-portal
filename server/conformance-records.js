@@ -16,7 +16,7 @@ function checkSecrets(value) {
   if (typeof value === 'string' && /-----BEGIN (?:RSA |EC |ENCRYPTED )?(?:PRIVATE KEY|CERTIFICATE)-----|\bBearer\s+[A-Za-z0-9._~-]{16}/.test(value)) throw new Error('Evidence must not contain PEM credentials or bearer tokens.');
   if (!value || typeof value !== 'object') return;
   for (const [key, child] of Object.entries(value)) {
-    if (/^(?:privateKey|clientSecret|accessToken|refreshToken|encryptionKey|(?:UAT|SFW)_(?:KEY|CERT)(?:_PEM)?|(?:UAT|SFW_RESPONSE)_ENCRYPTION_KEY|authorization|cookie|password)$/i.test(key) && child && !(key === 'authorization' && typeof child === 'string' && !/bearer|basic /i.test(child) && child.includes('Danny'))) throw new Error('Evidence contains a credential field. Remove credentials before importing.');
+    if (/^(?:privateKey|clientSecret|client_secret|accessToken|access_token|refreshToken|refresh_token|api[-_]?key|x-api-key|encryptionKey|(?:UAT|SFW)_(?:KEY|CERT)(?:_PEM)?|(?:UAT|SFW_RESPONSE)_ENCRYPTION_KEY|authorization|cookie|password)$/i.test(key) && child && !(key === 'authorization' && typeof child === 'string' && !/bearer|basic /i.test(child) && child.includes('Danny'))) throw new Error('Evidence contains a credential field. Remove credentials before importing.');
     checkSecrets(child);
   }
 }

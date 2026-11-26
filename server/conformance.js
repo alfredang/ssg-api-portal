@@ -152,18 +152,37 @@ function parseWorkbook(wb) {
     const statusHeader = cols.status ? cells[`${cols.status}${headerRow}`] : '';
     const rowsWithDesc = Object.keys(cells).filter((r) => r.replace(/\d+/, '') === cols.desc).map((r) => Number(r.replace(/[A-Z]+/, ''))).filter((n) => n > headerRow).sort((a, b) => a - b);
     const steps = [];
+    let pendingPayload = null;
+    let caseId = '';
+    let caseTitle = '';
     for (const row of rowsWithDesc) {
       const desc = cells[`${cols.desc}${row}`];
+      const rowCaseId = cols.id ? cells[`${cols.id}${row}`] || '' : '';
+      if (rowCaseId && rowCaseId !== caseId) pendingPayload = null;
+      caseId = rowCaseId || caseId;
+      caseTitle = (cols.title && cells[`${cols.title}${row}`]) || (rowCaseId ? '' : caseTitle);
       const expected = cols.expected ? cells[`${cols.expected}${row}`] || '' : '';
       const parsed = parseStep(desc, expected);
       const last = steps[steps.length - 1];
       if (!parsed.url) {
-        // A row with no URL: either a note, or the payload for the step above ("Sample payload is in next row").
+        // Workbooks place payload preparation either before the request row
+        // (trainer TS01/TS03/TS05) or after it ("Sample payload is in next row").
         const extra = PAYLOAD_LABEL.test(desc) ? payloadOf(desc) : '';
-        if (extra && last && !last.body) { last.body = extra; if (last.method === 'GET' && !/Request(?:\s*type)?\s*:\s*GET/i.test(last.description)) last.method = 'POST'; last.description += `\n\n${desc}`; }
+        if (extra && last && !last.body && (!rowCaseId || rowCaseId === last.id)) {
+          last.body = extra;
+          if (last.method === 'GET' && !/Request(?:\s*type)?\s*:\s*GET/i.test(last.description)) last.method = 'POST';
+          last.description += `\n\n${desc}`;
+        } else if (extra) {
+          pendingPayload = { body: extra, description: desc };
+        }
         continue;
       }
-      steps.push({ row, id: (cols.id && cells[`${cols.id}${row}`]) || `Row ${row}`, title: (cols.title && cells[`${cols.title}${row}`]) || '', description: desc, expected, ...parsed, existing: cells[`${cols.actual}${row}`] || '' });
+      if (pendingPayload && !parsed.body && parsed.method !== 'GET') {
+        parsed.body = pendingPayload.body;
+      }
+      const description = pendingPayload && parsed.body === pendingPayload.body ? `${pendingPayload.description}\n\n${desc}` : desc;
+      steps.push({ row, id: caseId || `Row ${row}`, title: caseTitle, description, expected, ...parsed, existing: cells[`${cols.actual}${row}`] || '' });
+      pendingPayload = null;
     }
     if (!steps.length) continue;
     for (const st of steps) {
@@ -200,45 +219,7 @@ router.post('/parse', (req, res) => {
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
-router.post('/run', async (req, res) => {
-  const { method = 'GET', url, headers = {}, body = '', encrypt = false } = req.body || {};
-  let target;
-  try { target = new URL(String(url)); } catch { return res.status(400).json({ error: 'The URL is not valid' }); }
-  if (target.protocol !== 'https:' || target.hostname !== UAT_HOST) return res.status(400).json({ error: `Conformance tests run on UAT only. The URL must start with ${UAT_BASE}` });
-  if (method === 'POST' && /^\/trainingProviders\/[^/]+\/trainers\/?$/.test(target.pathname)) return res.status(409).json({ error: 'Run Add TP Trainers from the DP-15411 ticket page so the identity, scope and evidence are tracked.' });
-  if (!/^(GET|POST|PUT|PATCH|DELETE)$/.test(method)) return res.status(400).json({ error: 'Unknown method' });
-  const u = uat();
-  if (!u.ready) return res.status(503).json({ error: 'The UAT certificate is not configured on the server (UAT_CERT and UAT_KEY).' });
-  const send = { Accept: 'application/json' };
-  for (const [k, v] of Object.entries(headers || {})) if (/^[\w-]{1,60}$/.test(k) && typeof v === 'string' && v.length < 500 && !/[\r\n]/.test(v)) send[k] = v;
-  let payload = null;
-  if (method !== 'GET' && String(body).trim()) {
-    if (encrypt) {
-      if (!u.encKey) return res.status(503).json({ error: 'The UAT encryption key is not configured on the server (UAT_ENCRYPTION_KEY).' });
-      payload = aes('enc', u.encKey, String(body));
-    } else payload = String(body);
-    send['Content-Type'] = 'application/json';
-    send['Content-Length'] = Buffer.byteLength(payload);
-  }
-  const started = Date.now();
-  try {
-    const result = await new Promise((resolve, reject) => {
-      const r = https.request({ hostname: target.hostname, port: 443, path: target.pathname + target.search, method, cert: u.cert, key: u.key, headers: send, timeout: 45000 }, (resp) => {
-        let data = ''; resp.on('data', (c) => { data += c; }); resp.on('end', () => resolve({ status: resp.statusCode, body: data }));
-      });
-      r.on('timeout', () => r.destroy(new Error('SSG UAT did not answer within 45 seconds')));
-      r.on('error', reject);
-      if (payload !== null) r.write(payload);
-      r.end();
-    });
-    let text = result.body; let decrypted = false;
-    if (u.encKey && text.trim() && !/^[\[{<]/.test(text.trim())) { try { text = aes('dec', u.encKey, text.trim()); decrypted = true; } catch { /* plain */ } }
-    let json = null; try { json = JSON.parse(text); } catch { /* not JSON */ }
-    res.json({ status: result.status, ms: Date.now() - started, at: new Date().toISOString(), decrypted, encryptedRequest: !!(encrypt && payload), body: json ?? text });
-  } catch (err) {
-    res.json({ status: 0, ms: Date.now() - started, at: new Date().toISOString(), error: err.message, body: null });
-  }
-});
+router.post('/run', (_req, res) => res.status(409).json({ error: 'Load this request in the API/UAT workbench, then confirm it once.' }));
 
 router.post('/export', (req, res) => {
   try {

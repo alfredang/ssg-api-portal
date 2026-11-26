@@ -6,6 +6,9 @@ const { requireAdmin, getCurrentUser } = require('./auth');
 const archive = require('./conformance-records');
 const uat = require('./uat');
 const router = express.Router();
+// Legacy history/import URLs remain compatible. Writes use the reviewed workbench.
+router.put('/preparation', requireAdmin, (_req, res) => res.status(409).json({ error: 'Use Load test data in the API/UAT workbench.' }));
+router.post('/run', requireAdmin, (_req, res) => res.status(409).json({ error: 'Use Confirm and run once in the API/UAT workbench.' }));
 router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 const who = req => getCurrentUser(req)?.email || 'Local tester';
 const publicRecord = ({ evidence, identityHash, ...record }) => record;
