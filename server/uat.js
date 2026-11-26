@@ -4,6 +4,7 @@ const crypto = require('node:crypto');
 const https = require('node:https');
 const BASE = 'https://uat-api.ssg-wsg.sg';
 const IV = Buffer.from('SSGAPIInitVector');
+const settings = require('./uat-settings');
 
 function source(name) {
   try {
@@ -12,8 +13,11 @@ function source(name) {
   } catch { return undefined; }
 }
 function credentials() {
-  const cert = source('UAT_CERT'); const key = source('UAT_KEY');
-  const encoded = source('UAT_ENCRYPTION_KEY');
+  let saved; let configurationError;
+  try { saved = settings.read(); } catch (e) { configurationError = e.message; }
+  const cert = saved?.certificate || (!configurationError ? source('UAT_CERT') : undefined);
+  const key = saved?.privateKey || (!configurationError ? source('UAT_KEY') : undefined);
+  const encoded = saved?.encryptionKey || (!configurationError ? source('UAT_ENCRYPTION_KEY') : undefined);
   let encKey;
   if (encoded && /^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) {
     const bytes = Buffer.from(encoded, 'base64');
@@ -24,13 +28,16 @@ function credentials() {
   const fingerprint = certificate?.fingerprint256.replace(/:/g, '').toLowerCase() || null;
   const now = Date.now();
   const certificateValid = !!certificate && now >= Date.parse(certificate.validFrom) && now < Date.parse(certificate.validTo);
-  const fingerprintMatches = !!fingerprint && fingerprint === (process.env.UAT_EXPECTED_CERT_SHA256 || '').replace(/:/g, '').toLowerCase();
+  const expectedFingerprint = settings.fingerprint(process.env.UAT_EXPECTED_CERT_SHA256) || saved?.expectedFingerprint || '';
+  const fingerprintMatches = !!fingerprint && fingerprint === expectedFingerprint;
   const hostAllowed = !process.env.UAT_API_BASE || process.env.UAT_API_BASE.replace(/\/+$/, '') === BASE;
-  const encryptionSourceConfirmed = !!process.env.UAT_ENCRYPTION_KEY_SOURCE?.trim();
-  const status = { base: BASE, ready: !!(certificateValid && keyMatches && fingerprintMatches && hostAllowed), hasCertificate: !!cert, hasPrivateKey: !!key,
+  const encryptionKeySource = saved ? `swda-${saved.keyReplyDate}` : !configurationError ? process.env.UAT_ENCRYPTION_KEY_SOURCE?.trim() : '';
+  const encryptionSourceConfirmed = !!encryptionKeySource;
+  const status = { base: BASE, ready: !!(certificateValid && keyMatches && fingerprintMatches && hostAllowed && !configurationError), hasCertificate: !!cert, hasPrivateKey: !!key,
     hasEncryptionKey: !!encKey, certificateValid, keyMatches, fingerprintMatches, fingerprint, hostAllowed, encryptionSourceConfirmed,
-    certificateExpires: certificate ? new Date(certificate.validTo).toISOString() : null };
-  return { cert, key, encKey, status };
+    certificateExpires: certificate ? new Date(certificate.validTo).toISOString() : null,
+    configurationError: configurationError || null, profileSource: saved ? 'Saved UAT settings' : configurationError ? 'Saved settings unavailable' : 'Hosting UAT configuration' };
+  return { cert, key, encKey, status, expectedFingerprint, encryptionKeySource, revision: saved?.revision || '' };
 }
 function aes(mode, key, text) {
   const cipher = mode === 'enc' ? crypto.createCipheriv('aes-256-cbc', key, IV) : crypto.createDecipheriv('aes-256-cbc', key, IV);
@@ -38,6 +45,7 @@ function aes(mode, key, text) {
 }
 function readiness({ auth = 'uat-mtls', encrypt = false } = {}) {
   const u = credentials(); const missing = [];
+  if (u.status.configurationError && (auth === 'uat-mtls' || encrypt || process.env.UAT_OAUTH_USE_MTLS === 'true')) missing.push(u.status.configurationError);
   if (!u.status.hostAllowed) missing.push('SWDA UAT host configuration');
   if (auth === 'uat-mtls' || process.env.UAT_OAUTH_USE_MTLS === 'true') {
     if (!u.status.hasCertificate) missing.push('UAT certificate');
@@ -57,7 +65,7 @@ function readiness({ auth = 'uat-mtls', encrypt = false } = {}) {
 }
 function version() {
   const u = credentials();
-  return crypto.createHash('sha256').update(JSON.stringify([u.cert, u.key, u.encKey?.toString('base64'), process.env.UAT_EXPECTED_CERT_SHA256, process.env.UAT_ENCRYPTION_KEY_SOURCE, process.env.UAT_API_BASE, source('UAT_OAUTH_CLIENT_ID'), source('UAT_OAUTH_CLIENT_SECRET'), process.env.UAT_OAUTH_TOKEN_URL, process.env.UAT_OAUTH_USE_MTLS])).digest('hex');
+  return crypto.createHash('sha256').update(JSON.stringify([u.cert, u.key, u.encKey?.toString('base64'), u.expectedFingerprint, u.encryptionKeySource, u.revision, process.env.UAT_API_BASE, source('UAT_OAUTH_CLIENT_ID'), source('UAT_OAUTH_CLIENT_SECRET'), process.env.UAT_OAUTH_TOKEN_URL, process.env.UAT_OAUTH_USE_MTLS])).digest('hex');
 }
 let tokenCache;
 async function oauthToken(u) {

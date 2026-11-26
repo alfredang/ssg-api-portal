@@ -27,6 +27,7 @@ app.use(leads.publicRouter);
 app.use('/api/leads', leads.adminRouter);
 
 // Admin-only: backend users and settings.
+app.use('/api/admin/uat', require('./uat-setup-routes'));
 app.use('/api/admin/storage', require('./portal-storage-routes'));
 app.use('/api/admin', require('./admin'));
 
